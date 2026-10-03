@@ -250,7 +250,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   PRO
                 </span>
               </h1>
-               <h6 className="font-bold text-xs tracking-tight text-white flex items-center gap-1.5 truncate">
+               <h6 className="font-bold text-[6px] tracking-tight text-white flex items-center gap-1.5 truncate">
                  GV.Hồ Nguyễn Đa Thiện
                </h6>  
               <p className="text-[10px] text-slate-400 truncate">
