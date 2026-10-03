@@ -249,8 +249,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span className="text-[10px] px-1 py-0.2 rounded bg-blue-500/30 text-blue-300 font-semibold border border-blue-400/30 shrink-0">
                   PRO
                 </span>
-               
               </h1>
+               <h4 className="font-bold text-sm tracking-tight text-white flex items-center gap-1.5 truncate">
+                 GV.Hồ Nguyễn Đa Thiện
+               </h4>  
               <p className="text-[10px] text-slate-400 truncate">
                 {appMode === 'easy' ? ' Dễ dùng cho giáo viên' : 'Chế độ Chuyên sâu'}
               </p>
