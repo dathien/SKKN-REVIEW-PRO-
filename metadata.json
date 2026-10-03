@@ -1,0 +1,6 @@
+{
+  "name": "SKKN REVIEW PRO – Trợ lý Chấm & Phản biện Sáng kiến Giáo dục",
+  "description": "Chấm có căn cứ – Phản biện có chiều sâu – Sửa đúng điểm yếu. Trợ lý phân tích, chấm điểm theo rubric, phản biện Red Team, kiểm tra tính mới, minh chứng và dữ liệu cho sáng kiến giáo dục.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
