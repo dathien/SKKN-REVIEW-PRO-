@@ -252,7 +252,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                
               </h1>
               <p className="text-[10px] text-slate-400 truncate">
-                {appMode === 'easy' ? ' GV.HO NGUYEN DA THIEN' : 'Chế độ Chuyên sâu'}
+                {appMode === 'easy' ? ' Dễ dùng cho giáo viên' : 'Chế độ Chuyên sâu'}
               </p>
             </div>
           </div>
