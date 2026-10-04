@@ -1,9 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   X,
-  Plus,
   RefreshCw,
-  ArrowRight
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  FileSpreadsheet,
+  Files,
+  Plus,
+  ExternalLink,
+  FolderOpen
 } from 'lucide-react';
 import { SKKNAnalysisResult } from '../types';
 
@@ -16,6 +22,8 @@ interface DocumentProfileDrawerProps {
   onStartNewDocument: () => void;
   onViewProfileDetail?: () => void;
   isSample: boolean;
+  hasCustomAnalysis?: boolean;
+  workflowStatus?: string;
   skknFileName?: string;
   rubricFileName?: string;
 }
@@ -28,11 +36,21 @@ export const DocumentProfileDrawer: React.FC<DocumentProfileDrawerProps> = ({
   onOpenSampleSelector,
   onStartNewDocument,
   onViewProfileDetail,
-  isSample
+  isSample,
+  hasCustomAnalysis = false,
+  workflowStatus = 'IDLE',
+  skknFileName,
+  rubricFileName
 }) => {
+  const [showDetailAccordion, setShowDetailAccordion] = useState(false);
+
   if (!isOpen) return null;
 
-  const { metadata, evidenceChain } = analysis;
+  // Determine if a dossier is currently active
+  // True if user is evaluating a sample OR has evaluated/uploaded custom analysis
+  const hasActiveDossier = isSample || hasCustomAnalysis || workflowStatus !== 'IDLE';
+
+  const { metadata, evidenceChain } = analysis || {};
   const evidenceCount = evidenceChain?.length || 4;
 
   const sampleLabel = selectedSampleIndex === 0
@@ -41,154 +59,303 @@ export const DocumentProfileDrawer: React.FC<DocumentProfileDrawerProps> = ({
     ? 'Mẫu 2 · Toán 10'
     : 'Hồ sơ của tôi';
 
+  const handleStartNew = () => {
+    onClose();
+    onStartNewDocument();
+  };
+
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden select-none animate-in fade-in duration-200">
-      {/* Backdrop */}
+    <div className="fixed inset-0 z-50 overflow-y-auto select-none animate-in fade-in duration-150 flex items-center justify-center p-4 sm:p-6">
+      {/* Backdrop: Overlay phía sau chỉ tối nhẹ rgba(15,23,42,0.25) + blur nhẹ 2px */}
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+        className="fixed inset-0 bg-slate-900/25 backdrop-blur-[2px] transition-opacity"
       />
 
-      {/* Slide-over Right Panel */}
-      <div className="fixed inset-y-0 right-0 max-w-full flex md:pl-10">
-        <div className="w-screen md:w-[350px] bg-white shadow-2xl flex flex-col h-full border-l border-slate-200">
-          
-          {/* Header */}
-          <div className="px-5 py-3.5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
-            <h2 className="text-xs font-black tracking-wider text-white uppercase">
-              HỒ SƠ
+      {/* Modal Container: width min(600px, calc(100vw - 40px)), max-height 80vh, rounded-2xl */}
+      <div
+        className="relative bg-white border border-slate-200/90 rounded-2xl shadow-xl flex flex-col z-10 animate-in zoom-in-95 duration-150 overflow-hidden"
+        style={{
+          width: 'min(600px, calc(100vw - 40px))',
+          maxHeight: '80vh'
+        }}
+      >
+        {/* ======================================================================= */}
+        {/* HEADER MODAL (Trang nhã, không dùng header navy lớn như drawer cũ)      */}
+        {/* ======================================================================= */}
+        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
+          <div>
+            <h2 className="text-sm font-bold text-slate-900 tracking-tight uppercase">
+              HỒ SƠ ĐÁNH GIÁ
             </h2>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-              title="Đóng"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">
+              Quản lý hồ sơ và tài liệu đang sử dụng
+            </p>
           </div>
 
-          {/* Body */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 text-slate-800 text-xs">
-            
-            {/* ========================================================================= */}
-            {/* 1. ĐANG DÙNG                                                              */}
-            {/* ========================================================================= */}
-            <div className="space-y-1.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                ĐANG DÙNG
-              </span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            title="Đóng"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
 
-              {/* Sample Badge + Name */}
-              <div className="flex items-center gap-2">
-                {isSample ? (
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 shrink-0">
-                    HỒ SƠ MẪU
-                  </span>
-                ) : (
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shrink-0">
-                    HỒ SƠ CỦA TÔI
-                  </span>
-                )}
-                <span className="font-bold text-xs text-slate-700">
-                  {sampleLabel}
-                </span>
+        {/* ======================================================================= */}
+        {/* BODY MODAL (Cuộn bên trong nếu nội dung dài)                           */}
+        {/* ======================================================================= */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-4 text-slate-800 text-xs">
+          
+          {/* TRƯỜNG HỢP 1: CHƯA CÓ HỒ SƠ ĐÁNH GIÁ */}
+          {!hasActiveDossier ? (
+            <div className="py-6 px-4 rounded-xl border border-dashed border-slate-200 bg-slate-50/60 flex flex-col items-center justify-center text-center space-y-2.5">
+              <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shadow-2xs">
+                <FolderOpen className="w-5 h-5" />
               </div>
-
-              {/* Tên sáng kiến (tối đa 2 dòng) */}
-              <p
-                className="text-xs font-semibold text-slate-900 leading-snug line-clamp-2"
-                title={metadata.title}
-              >
-                {metadata.title || 'Sáng kiến kinh nghiệm'}
-              </p>
-
-              {/* Tác giả */}
-              {metadata.author && (
-                <p className="text-[11px] text-slate-500 font-medium">
-                  {metadata.author}
+              <div className="space-y-1">
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-tight">
+                  CHƯA CÓ HỒ SƠ ĐÁNH GIÁ
+                </h3>
+                <p className="text-xs text-slate-500 max-w-sm leading-relaxed">
+                  Tải SKKN hoặc dán nội dung để bắt đầu chấm và phản biện.
                 </p>
-              )}
-
-              {/* Nút Đổi hồ sơ */}
-              <div className="pt-1">
-                <button
-                  type="button"
-                  onClick={onOpenSampleSelector}
-                  className="py-1 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-200 shadow-2xs"
-                >
-                  <RefreshCw className="w-3 h-3 text-slate-500" />
-                  <span>Đổi hồ sơ</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Divider */}
-            <div className="border-t border-slate-200" />
-
-            {/* ========================================================================= */}
-            {/* 2. TÀI LIỆU                                                               */}
-            {/* ========================================================================= */}
-            <div className="space-y-2.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                TÀI LIỆU
-              </span>
-
-              {/* Danh sách trạng thái tài liệu tinh gọn */}
-              <div className="space-y-1.5 text-xs text-slate-700 font-medium pl-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-emerald-600 font-bold">✓</span>
-                  <span>SKKN</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-emerald-600 font-bold">✓</span>
-                  <span>Phiếu chấm</span>
-                </div>
-
-                <div className="flex items-center gap-2 pl-4 text-slate-600">
-                  <span>{evidenceCount} Minh chứng</span>
-                </div>
               </div>
 
-              {/* Nút [Xem chi tiết hồ sơ →] */}
-              <div className="pt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    onClose();
-                    if (onViewProfileDetail) onViewProfileDetail();
-                  }}
-                  className="w-full py-2 px-3 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-800 hover:text-blue-700 border border-slate-200 font-bold text-xs inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs group"
-                >
-                  <span>Xem chi tiết hồ sơ</span>
-                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                </button>
-              </div>
-            </div>
-
-            {/* Divider */}
-            <div className="border-t border-slate-200" />
-
-            {/* ========================================================================= */}
-            {/* 3. BẮT ĐẦU HỒ SƠ MỚI                                                      */}
-            {/* ========================================================================= */}
-            <div>
               <button
                 type="button"
-                onClick={() => {
-                  onClose();
-                  onStartNewDocument();
-                }}
-                className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
+                onClick={handleStartNew}
+                className="mt-1 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
               >
-                <span>+ Bắt đầu hồ sơ mới</span>
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ TẠO HỒ SƠ ĐÁNH GIÁ</span>
               </button>
             </div>
+          ) : (
+            /* TRƯỜNG HỢP 2: HỒ SƠ ĐANG DÙNG */
+            <>
+              {/* Card Hồ sơ đang đánh giá */}
+              <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/90 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 uppercase tracking-wide">
+                      <span className="w-2 h-2 rounded-full bg-blue-600" />
+                      <span>HỒ SƠ ĐANG ĐÁNH GIÁ</span>
+                    </span>
+                    {isSample ? (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 shrink-0">
+                        HỒ SƠ MẪU
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shrink-0">
+                        HỒ SƠ CỦA TÔI
+                      </span>
+                    )}
+                  </div>
 
-          </div>
+                  {/* Nút ĐỔI HỒ SƠ */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onOpenSampleSelector();
+                    }}
+                    className="py-1 px-2.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-semibold text-[11px] inline-flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                  >
+                    <RefreshCw className="w-3 h-3 text-slate-500" />
+                    <span>ĐỔI HỒ SƠ</span>
+                  </button>
+                </div>
+
+                {/* Tên mẫu nếu có */}
+                {isSample && (
+                  <p className="text-[11px] font-semibold text-blue-700">
+                    {sampleLabel}
+                  </p>
+                )}
+
+                {/* Tên đề tài tối đa 2 dòng */}
+                <h4
+                  className="text-xs sm:text-sm font-bold text-slate-900 leading-snug line-clamp-2"
+                  title={metadata?.title}
+                >
+                  {metadata?.title || 'Ứng dụng sáng kiến kinh nghiệm trong giảng dạy'}
+                </h4>
+
+                {/* Tác giả */}
+                {metadata?.author && (
+                  <p className="text-xs text-slate-500 font-medium">
+                    {metadata.author}
+                  </p>
+                )}
+              </div>
+
+              {/* TÀI LIỆU TRỰC QUAN */}
+              <div className="p-4 rounded-xl border border-slate-200/90 space-y-3 bg-white">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                  TÀI LIỆU HỒ SƠ
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {/* Item 1: SKKN */}
+                  <div className="flex items-start gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100">
+                    <span className="text-emerald-600 font-bold text-sm leading-none mt-0.5">✓</span>
+                    <div className="min-w-0">
+                      <span className="font-bold text-slate-800 block text-xs">SKKN</span>
+                      <span className="text-[11px] text-slate-500 truncate block" title={skknFileName || 'Đã có nội dung'}>
+                        {skknFileName || 'Đã có nội dung'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Item 2: Phiếu chấm */}
+                  <div className="flex items-start gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100">
+                    <span className="text-emerald-600 font-bold text-sm leading-none mt-0.5">✓</span>
+                    <div className="min-w-0">
+                      <span className="font-bold text-slate-800 block text-xs">Phiếu chấm</span>
+                      <span className="text-[11px] text-slate-500 truncate block" title={rubricFileName || 'Rubric chính thức'}>
+                        {rubricFileName || 'Rubric chính thức'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Item 3: Minh chứng */}
+                  <div className="flex items-start gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100">
+                    <span className="text-emerald-600 font-bold text-sm leading-none mt-0.5">✓</span>
+                    <div className="min-w-0">
+                      <span className="font-bold text-slate-800 block text-xs">Minh chứng</span>
+                      <span className="text-[11px] text-slate-500 block">
+                        {evidenceCount} tài liệu
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Nút Xem chi tiết tài liệu (Mở Accordion ngay trong modal) */}
+                <div className="pt-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowDetailAccordion(!showDetailAccordion)}
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-800 inline-flex items-center gap-1 cursor-pointer transition-colors"
+                  >
+                    <span>{showDetailAccordion ? 'Thu gọn chi tiết tài liệu' : 'Xem chi tiết tài liệu'}</span>
+                    {showDetailAccordion ? (
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
+
+                {/* ACCORDION NGAY TRONG MODAL (Không mở popup khác) */}
+                {showDetailAccordion && (
+                  <div className="mt-2.5 p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-3 animate-in fade-in duration-150">
+                    {/* SKKN Detail */}
+                    <div className="flex items-center justify-between gap-3 pb-2.5 border-b border-slate-200/80">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileText className="w-4 h-4 text-blue-600 shrink-0" />
+                        <div className="min-w-0">
+                          <span className="font-bold text-slate-800 block text-xs">SKKN</span>
+                          <span className="text-[11px] text-slate-500 truncate block">
+                            {skknFileName || metadata?.title || 'Nội dung văn bản đã nhập'}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleStartNew}
+                        className="px-2.5 py-1 rounded-md bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-semibold text-[11px] shrink-0 transition-colors cursor-pointer shadow-2xs"
+                      >
+                        Thay SKKN
+                      </button>
+                    </div>
+
+                    {/* Rubric Detail */}
+                    <div className="flex items-center justify-between gap-3 pb-2.5 border-b border-slate-200/80">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <div className="min-w-0">
+                          <span className="font-bold text-slate-800 block text-xs">Phiếu chấm</span>
+                          <span className="text-[11px] text-slate-500 truncate block">
+                            {rubricFileName || 'Tiêu chuẩn đánh giá SKKN Bộ GD&ĐT'}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleStartNew}
+                        className="px-2.5 py-1 rounded-md bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-semibold text-[11px] shrink-0 transition-colors cursor-pointer shadow-2xs"
+                      >
+                        Thay phiếu chấm
+                      </button>
+                    </div>
+
+                    {/* Evidence Detail */}
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Files className="w-4 h-4 text-indigo-600 shrink-0" />
+                        <div className="min-w-0">
+                          <span className="font-bold text-slate-800 block text-xs">Minh chứng</span>
+                          <span className="text-[11px] text-slate-500 block">
+                            {evidenceCount} tài liệu đính kèm
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {onViewProfileDetail && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onClose();
+                              onViewProfileDetail();
+                            }}
+                            className="px-2.5 py-1 rounded-md bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-semibold text-[11px] transition-colors cursor-pointer shadow-2xs inline-flex items-center gap-1"
+                          >
+                            <span>Xem</span>
+                            <ExternalLink className="w-3 h-3 text-slate-400" />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={handleStartNew}
+                          className="px-2.5 py-1 rounded-md bg-white hover:bg-slate-100 text-blue-700 border border-blue-200 font-semibold text-[11px] transition-colors cursor-pointer shadow-2xs inline-flex items-center gap-0.5"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>Bổ sung</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
         </div>
+
+        {/* ======================================================================= */}
+        {/* FOOTER MODAL: [ĐÓNG] (bên trái) và [+ TẠO HỒ SƠ MỚI] (bên phải)         */}
+        {/* ======================================================================= */}
+        <div className="px-5 py-3.5 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-semibold text-xs transition-colors cursor-pointer shadow-2xs"
+          >
+            Đóng
+          </button>
+
+          <button
+            type="button"
+            onClick={handleStartNew}
+            className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>+ TẠO HỒ SƠ MỚI</span>
+          </button>
+        </div>
+
       </div>
     </div>
   );

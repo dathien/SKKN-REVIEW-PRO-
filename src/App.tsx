@@ -370,6 +370,8 @@ export default function App() {
         originalText,
         problem,
         whyRevise: data.whyRevise || 'Cần chuẩn hóa học thuật',
+        basis: data.basis || 'Căn cứ tiêu chí đánh giá SKKN, quy chuẩn phương pháp nghiên cứu sư phạm và quy tắc liêm chính khoa học',
+        category: 'Tự yêu cầu',
         revisionGoal: data.revisionGoal || 'Nâng cao tính thuyết phục',
         howToRevise: data.howToRevise || 'Điều chỉnh diễn đạt và kiểm soát biến số',
         lightRevision: data.lightRevision || originalText,
@@ -435,7 +437,7 @@ export default function App() {
       });
 
       if (!resp.ok) {
-        throw new Error('Lỗi chấm lại');
+        throw new Error('Lỗi thẩm định lại');
       }
 
       const rescoreData = await resp.json();
@@ -460,10 +462,28 @@ export default function App() {
         };
       });
 
-      alert(`Đã hoàn tất thẩm định lại! Điểm mới: ${rescoreData.newScore.toFixed(1)}đ (${rescoreData.scoreDifference >= 0 ? '+' : ''}${rescoreData.scoreDifference.toFixed(1)}đ)`);
+      if (customAnalysis) {
+        setCustomAnalysis(prev => {
+          if (!prev) return null;
+          let updatedCriteria = [...prev.rubricCriteria];
+          if (rescoreData.updatedCriteria && Array.isArray(rescoreData.updatedCriteria)) {
+            updatedCriteria = prev.rubricCriteria.map(c => {
+              const match = rescoreData.updatedCriteria.find((u: any) => u.criterionName === c.criterionName);
+              if (match && typeof match.newScore === 'number') {
+                return { ...c, proposedScore: match.newScore };
+              }
+              return c;
+            });
+          }
+          return {
+            ...prev,
+            rubricCriteria: updatedCriteria,
+            rescoreHistory: rescoreData
+          };
+        });
+      }
     } catch (err: any) {
       console.error(err);
-      alert('Không thể chấm lại: ' + err.message);
     } finally {
       setIsRescoring(false);
     }
@@ -651,8 +671,11 @@ export default function App() {
                 {activeTab === 'suggestions' && (
                   <SuggestionsView
                     suggestions={currentAnalysis.suggestions}
+                    issues={currentAnalysis.redTeamCards}
+                    onUpdateIssueStatus={handleUpdateCardStatus}
                     onGenerateCustomSuggestion={handleGenerateCustomSuggestion}
                     isGenerating={isGeneratingSuggestion}
+                    onNavigateTab={(tab) => setActiveTab(tab)}
                   />
                 )}
 
@@ -707,7 +730,7 @@ export default function App() {
         onClose={() => setIsHelpOpen(false)}
       />
 
-      {/* Document Profile Drawer */}
+      {/* Document Profile Modal */}
       <DocumentProfileDrawer
         isOpen={isProfileDrawerOpen}
         onClose={() => setIsProfileDrawerOpen(false)}
@@ -723,9 +746,22 @@ export default function App() {
           setIsDemoMode(false);
           setWorkflowStatus('IDLE');
           setActiveTab('dashboard');
+          // Cuộn mượt đến khu vực TẠO HỒ SƠ ĐÁNH GIÁ và highlight nhẹ 1 giây
+          setTimeout(() => {
+            const section = document.getElementById('create-dossier-section');
+            if (section) {
+              section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              section.classList.add('ring-4', 'ring-blue-400/60', 'ring-offset-2', 'rounded-2xl', 'transition-all', 'duration-300');
+              setTimeout(() => {
+                section.classList.remove('ring-4', 'ring-blue-400/60', 'ring-offset-2');
+              }, 1200);
+            }
+          }, 150);
         }}
         onViewProfileDetail={handleViewProfileDetail}
         isSample={isDemoMode}
+        hasCustomAnalysis={Boolean(customAnalysis)}
+        workflowStatus={workflowStatus}
       />
 
       {/* Profile Selector Modal */}

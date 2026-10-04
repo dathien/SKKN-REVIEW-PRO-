@@ -68,17 +68,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setAppMode
 }) => {
   const totalIssues = analysis.redTeamCards.length;
-  const processedIssues = analysis.redTeamCards.filter(c => c.status === 'Đã xử lý').length;
+  const processedIssues = analysis.redTeamCards.filter(c => 
+    c.status === 'Đã xử lý' || c.status === 'resolved' || c.status === 'Bỏ qua' || c.status === 'ignored'
+  ).length;
+  const remainingIssues = totalIssues - processedIssues;
 
-  // Requirement 1: Progress badge processedIssues / totalIssues (0/5 ... 5/5 ✓)
+  // Badge trên sidebar: Dùng đúng số issue chưa xử lý. Nếu còn 0: hiển thị ✓ (success), không hiển thị "0" đỏ
   const isShowIssueProgress = Boolean(hasEvaluated && totalIssues > 0);
   const issueProgressBadge = isShowIssueProgress
-    ? processedIssues === totalIssues
-      ? `${processedIssues}/${totalIssues} ✓`
-      : `${processedIssues}/${totalIssues}`
+    ? remainingIssues === 0
+      ? '✓'
+      : `${remainingIssues}`
     : undefined;
   const issueBadgeType: 'success' | 'danger' | 'warning' | 'neutral' = 
-    processedIssues === totalIssues ? 'success' : processedIssues > 0 ? 'warning' : 'danger';
+    remainingIssues === 0 ? 'success' : 'danger';
 
   const missingEvidenceCount = analysis.evidenceChain.filter(
     e => e.status === 'chua_tim_thay_minh_chung'
@@ -92,7 +95,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const hasNoveltyRisk = analysis.novelty.overallLevel === 'tuong_dong_dang_ke' || 
     analysis.novelty.overallLevel === 'nguy_co_trung_lap_cao';
 
-  // 1. CHẾ ĐỘ DỄ DÙNG: CỰC GỌN (Chỉ 5 mục luồng thao tác)
+  // 1. CHẾ ĐỘ DỄ DÙNG: CỰC GỌN (5 mục luồng thao tác)
   const easyNavItems: NavItemConfig[] = [
     {
       id: 'dashboard',
@@ -107,6 +110,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: ShieldAlert,
       badge: issueProgressBadge,
       badgeType: issueBadgeType
+    },
+    {
+      id: 'suggestions',
+      label: 'GỢI Ý SỬA & HOÀN THIỆN',
+      desc: 'Chỉ rõ lỗi, căn cứ, cách sửa và gợi ý viết lại 3 mức độ',
+      icon: PenTool,
+      badge: analysis.suggestions.length,
+      badgeType: 'neutral'
     },
     {
       id: 'rescore',
@@ -188,8 +199,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'suggestions',
-      label: 'GỢI Ý CHỈNH SỬA',
-      desc: 'Đề xuất viết lại theo 3 mức độ tôn trọng dữ liệu gốc',
+      label: 'GỢI Ý SỬA & HOÀN THIỆN',
+      desc: 'Chỉ rõ lỗi, căn cứ, cách sửa và gợi ý viết lại 3 mức độ',
       icon: PenTool,
       badge: analysis.suggestions.length,
       badgeType: 'neutral'
@@ -238,24 +249,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
           : 'hidden lg:flex static'
       }`}>
         {/* App Branding */}
-        <div className="p-4 border-b border-slate-800 bg-slate-950/80">
+        <div className="px-3.5 py-3 border-b border-slate-800 bg-slate-950/80">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 flex items-center justify-center font-bold text-white shadow-md text-xs shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 flex items-center justify-center font-black text-white shadow-md text-xs shrink-0 tracking-wider">
               PRO
             </div>
-            <div className="min-w-0">
-              <h1 className="font-bold text-sm tracking-tight text-white flex items-center gap-1.5 truncate">
-                SKKN REVIEW
-                <span className="text-[10px] px-1 py-0.2 rounded bg-blue-500/30 text-blue-300 font-semibold border border-blue-400/30 shrink-0">
+            <div className="min-w-0 flex flex-col justify-center">
+              <div className="flex items-center gap-1.5 leading-none">
+                <span className="font-extrabold text-[13px] tracking-tight text-white truncate">
+                  SKKN REVIEW
+                </span>
+                <span className="text-[9px] px-1 py-0.5 rounded bg-blue-500/25 text-blue-400 font-bold border border-blue-400/30 leading-none shrink-0">
                   PRO
                 </span>
-              </h1>
-               <h5 className="font-bold text-[10px] tracking-tight text-white flex items-center gap-1.5 truncate">
-                 GV.Hồ Nguyễn Đa Thiện
-               </h5>  
-              <p className="text-[10px] text-slate-400 truncate">
-                {appMode === 'easy' ? ' Dễ dùng cho giáo viên' : 'Chế độ Chuyên sâu'}
-              </p>
+              </div>
+              <div className="text-[11.5px] font-semibold text-white/90 tracking-tight leading-tight mt-1 truncate">
+                GV.Hồ Nguyễn Đa Thiện
+              </div>
+              <div className="text-[10.5px] font-normal text-slate-400 tracking-tight leading-tight mt-0.5 truncate">
+                Trợ lý Chấm & Phản biện
+              </div>
             </div>
           </div>
         </div>

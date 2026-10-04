@@ -22,6 +22,11 @@ export type FindingStatus =
   | 'Chưa xử lý' 
   | 'Đang xử lý' 
   | 'Đã xử lý' 
+  | 'Bỏ qua'
+  | 'open'
+  | 'in_progress'
+  | 'resolved'
+  | 'ignored'
   | 'Cần minh chứng'
   | 'Cần kiểm chứng nguồn'
   | 'Tác giả không đồng ý';
@@ -226,6 +231,8 @@ export interface SuggestionRewrite {
   originalText: string;
   problem: string;
   whyRevise: string;
+  basis?: string;            // CĂN CỨ: Quy chuẩn, tiêu chí chấm, công văn hoặc nguyên tắc nghiên cứu
+  category?: string;         // Phân loại: Tính mới, Số liệu, Minh chứng, Quy chuẩn trình bày
   revisionGoal: string;
   howToRevise: string;
   lightRevision: string;     // SỬA NHẸ: Giữ gần nguyên nội dung
@@ -255,6 +262,33 @@ export interface PriorityActionItem {
   rubricImpact: string;
 }
 
+export type IssueResolutionComparisonStatus = 
+  | 'ĐÃ KHẮC PHỤC' 
+  | 'CẢI THIỆN MỘT PHẦN' 
+  | 'CHƯA KHẮC PHỤC' 
+  | 'PHÁT SINH MÂU THUẪN MỚI'
+  | 'KHÔNG XÁC ĐỊNH';
+
+export interface IssueComparisonItem {
+  id?: string;
+  issueTitle: string;
+  originalQuote: string;
+  revisedQuote: string;
+  status: IssueResolutionComparisonStatus;
+  explanation: string;
+}
+
+export interface UpdatedCriterionItem {
+  criterionName: string;
+  previousScore: number;
+  newScore: number;
+  changeDifference: number;
+  whatChanged: string;       // Điều gì đã thay đổi?
+  evidenceFoundAt: string;   // Minh chứng nằm ở đâu?
+  impactReason: string;      // Vì sao thay đổi này ảnh hưởng điểm?
+  rubricMetReason: string;   // Tiêu chí Rubric nào được đáp ứng tốt hơn?
+}
+
 export interface RescoreComparison {
   previousScore: number;
   newScore: number;
@@ -265,6 +299,9 @@ export interface RescoreComparison {
   newEvidenceAdded: string[];
   newFiguresAdded: string[];
   justificationForChange: string;
+  issueComparisons?: IssueComparisonItem[];
+  updatedCriteria?: UpdatedCriterionItem[];
+  evaluatedAt?: string;
 }
 
 export interface SKKNAnalysisResult {

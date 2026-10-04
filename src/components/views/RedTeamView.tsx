@@ -118,13 +118,15 @@ export const RedTeamView: React.FC<RedTeamViewProps> = ({
             : isMed
             ? 'bg-amber-100 text-amber-800'
             : 'bg-blue-100 text-blue-800';
-          const isDone = card.status === 'Đã xử lý';
+          const isDone = card.status === 'Đã xử lý' || card.status === 'resolved';
+          const isIgnored = card.status === 'Bỏ qua' || card.status === 'ignored' || card.status === 'Tác giả không đồng ý';
+          const isInProgress = card.status === 'Đang xử lý' || card.status === 'in_progress';
 
           return (
             <div
               key={card.id}
               className={`p-4 hover:bg-slate-50/80 transition-colors flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${
-                isDone ? 'opacity-60 bg-slate-50/40' : ''
+                isDone ? 'opacity-60 bg-slate-50/40' : isIgnored ? 'opacity-50 bg-slate-50/30' : ''
               }`}
             >
               <div className="flex items-center gap-3 min-w-0">
@@ -145,8 +147,18 @@ export const RedTeamView: React.FC<RedTeamViewProps> = ({
                     <span>•</span>
                     <span className="truncate max-w-[260px]">{card.affectedCriterion}</span>
                     {isDone && (
-                      <span className="text-emerald-700 font-bold text-[10px] bg-emerald-100 px-1.5 py-0.2 rounded ml-1">
+                      <span className="text-emerald-700 font-bold text-[10px] bg-emerald-100 px-1.5 py-0.5 rounded ml-1 border border-emerald-200">
                         ✓ Đã xử lý
+                      </span>
+                    )}
+                    {isInProgress && (
+                      <span className="text-blue-700 font-bold text-[10px] bg-blue-100 px-1.5 py-0.5 rounded ml-1 border border-blue-200">
+                        ⚡ Đang xử lý
+                      </span>
+                    )}
+                    {isIgnored && (
+                      <span className="text-slate-600 font-bold text-[10px] bg-slate-100 px-1.5 py-0.5 rounded ml-1 border border-slate-200">
+                        Bỏ qua
                       </span>
                     )}
                   </div>

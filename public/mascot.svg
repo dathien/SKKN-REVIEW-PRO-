@@ -1,0 +1,219 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 390" fill="none">
+  <defs>
+    <!-- Soft 3D Skin Gradient -->
+    <radialGradient id="skknSkin" cx="48%" cy="38%" r="65%">
+      <stop offset="0%" stop-color="#FFF8F4"/>
+      <stop offset="45%" stop-color="#FCE5D8"/>
+      <stop offset="80%" stop-color="#F5CBB6"/>
+      <stop offset="100%" stop-color="#E5AF98"/>
+    </radialGradient>
+
+    <!-- Silk Hair Gradient -->
+    <linearGradient id="skknHair" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#4E3126"/>
+      <stop offset="40%" stop-color="#351E16"/>
+      <stop offset="80%" stop-color="#23120C"/>
+      <stop offset="100%" stop-color="#140905"/>
+    </linearGradient>
+
+    <linearGradient id="skknHairSheen" x1="10%" y1="0%" x2="90%" y2="100%">
+      <stop offset="0%" stop-color="#A5715B" stop-opacity="0.8"/>
+      <stop offset="50%" stop-color="#6E4432" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#351E16" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Navy Blazer Gradient -->
+    <linearGradient id="skknBlazer" x1="15%" y1="0%" x2="85%" y2="100%">
+      <stop offset="0%" stop-color="#24344E"/>
+      <stop offset="40%" stop-color="#17243C"/>
+      <stop offset="80%" stop-color="#0E1729"/>
+      <stop offset="100%" stop-color="#080E1C"/>
+    </linearGradient>
+
+    <!-- Navy Skirt Gradient -->
+    <linearGradient id="skknSkirt" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#17243C"/>
+      <stop offset="60%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#090D18"/>
+    </linearGradient>
+
+    <!-- Lanyard -->
+    <linearGradient id="skknLanyard" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#1D4ED8"/>
+    </linearGradient>
+
+    <!-- Gold Emblem -->
+    <linearGradient id="skknGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDE047"/>
+      <stop offset="50%" stop-color="#EAB308"/>
+      <stop offset="100%" stop-color="#A16207"/>
+    </linearGradient>
+
+    <!-- Tablet Gradient -->
+    <linearGradient id="skknTablet" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E2E8F0"/>
+      <stop offset="50%" stop-color="#94A3B8"/>
+      <stop offset="100%" stop-color="#475569"/>
+    </linearGradient>
+
+    <!-- Eyes Iris -->
+    <radialGradient id="skknIris" cx="42%" cy="36%" r="56%">
+      <stop offset="0%" stop-color="#9A6042"/>
+      <stop offset="40%" stop-color="#5F341E"/>
+      <stop offset="78%" stop-color="#2E180D"/>
+      <stop offset="100%" stop-color="#0C0402"/>
+    </radialGradient>
+  </defs>
+
+  <!-- ========================================================================= -->
+  <!-- 1. PONYTAIL HAIR (BEHIND HEAD)                                            -->
+  <!-- ========================================================================= -->
+  <path d="M178 52 C204 26 230 42 225 102 C220 152 195 204 186 226 C194 184 210 124 195 82 Z" fill="url(#skknHair)"/>
+  <path d="M185 58 C208 40 220 62 214 108 C208 144 194 184 188 206" stroke="url(#skknHairSheen)" stroke-width="3" fill="none"/>
+  <ellipse cx="176" cy="52" rx="10" ry="7" fill="#1E293B" transform="rotate(25 176 52)"/>
+
+  <!-- ========================================================================= -->
+  <!-- 2. LOWER BODY: SKIRT & LEGS (Y = 240 TO 370) - FULLY CONTINUOUS           -->
+  <!-- ========================================================================= -->
+  <!-- Legs / Tights -->
+  <rect x="126" y="325" width="16" height="50" rx="8" fill="#1E293B"/>
+  <rect x="158" y="325" width="16" height="50" rx="8" fill="#1E293B"/>
+
+  <!-- A-line Professional Skirt (Waist overlaps with blazer by 25px) -->
+  <path d="M106 245 C122 248 178 248 194 245 C208 275 214 315 218 335 C176 342 124 342 82 335 C86 315 92 275 106 245 Z" fill="url(#skknSkirt)"/>
+  <!-- Subtle Skirt Pleats -->
+  <path d="M132 250 L128 338" stroke="#334155" stroke-width="1.2" opacity="0.4"/>
+  <path d="M168 250 L172 338" stroke="#334155" stroke-width="1.2" opacity="0.4"/>
+
+  <!-- ========================================================================= -->
+  <!-- 3. TORSO & BLAZER (Y = 145 TO 265) - OVERLAPS SKIRT FIRMLY                -->
+  <!-- ========================================================================= -->
+  <!-- White Silk Blouse -->
+  <path d="M132 150 L168 150 L162 210 L138 210 Z" fill="#FFFFFF"/>
+  <polygon points="132,150 150,172 150,150" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="0.8"/>
+  <polygon points="168,150 150,172 150,150" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="0.8"/>
+
+  <!-- Tailored Navy Blazer (Starts at shoulders y=150 down to y=260 over skirt) -->
+  <path d="M82 330 C86 250 94 168 116 160 C130 155 142 152 150 152 C158 152 170 155 184 160 C206 168 214 250 218 330 C194 336 106 336 82 330 Z" fill="url(#skknBlazer)"/>
+
+  <!-- Lapels -->
+  <path d="M118 160 L144 240 L150 240 L128 156 Z" fill="#1E2E48"/>
+  <path d="M182 160 L156 240 L150 240 L172 156 Z" fill="#1E2E48"/>
+
+  <!-- Golden Lapel Pin -->
+  <g transform="translate(176, 175)">
+    <path d="M0 2 Q5 0 10 2 L10 10 Q5 7 0 10 Z" fill="url(#skknGold)"/>
+    <line x1="5" y1="1" x2="5" y2="9" stroke="#854D0E" stroke-width="0.7"/>
+  </g>
+
+  <!-- Blue Lanyard & ID Card -->
+  <path d="M142 150 L149 220 L151 220 L158 150" stroke="url(#skknLanyard)" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <g transform="translate(141, 215)">
+    <rect x="0" y="0" width="18" height="25" rx="2.5" fill="#FFFFFF" stroke="#93C5FD" stroke-width="0.8"/>
+    <rect x="0" y="0" width="18" height="6" fill="#2563EB"/>
+    <circle cx="9" cy="3" r="1.3" fill="#FFFFFF"/>
+    <path d="M5.5 11 Q9 9.5 12.5 11 L12.5 16 Q9 14.5 5.5 16 Z" fill="#2563EB"/>
+    <line x1="9" y1="10.5" x2="9" y2="15.5" stroke="#FFFFFF" stroke-width="0.6"/>
+    <text x="9" y="21.5" font-size="2.6" font-weight="bold" fill="#1E3A8A" text-anchor="middle" font-family="sans-serif">SKKN</text>
+  </g>
+
+  <!-- Blazer Golden Buttons -->
+  <circle cx="150" cy="254" r="3.2" fill="url(#skknGold)"/>
+  <circle cx="150" cy="282" r="3.2" fill="url(#skknGold)"/>
+
+  <!-- ========================================================================= -->
+  <!-- 4. ARMS & TABLET                                                          -->
+  <!-- ========================================================================= -->
+  <!-- Left Arm holding Tablet -->
+  <g transform="translate(8, -8)">
+    <rect x="156" y="196" width="80" height="106" rx="9" fill="url(#skknTablet)" stroke="#475569" stroke-width="1.2"/>
+    <rect x="162" y="202" width="68" height="94" rx="6" fill="#0F172A"/>
+    <!-- Tablet Screen Graphic: Document & Checkmark -->
+    <rect x="170" y="214" width="34" height="6" rx="3" fill="#38BDF8"/>
+    <rect x="170" y="226" width="52" height="3" rx="1.5" fill="#64748B"/>
+    <rect x="170" y="234" width="46" height="3" rx="1.5" fill="#64748B"/>
+    <rect x="170" y="242" width="38" height="3" rx="1.5" fill="#64748B"/>
+    <!-- Glowing cyan evaluation mark -->
+    <circle cx="196" cy="268" r="14" fill="#0369A1" opacity="0.6"/>
+    <path d="M190 268 L194 272 L202 264" stroke="#38BDF8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Left Hand Holding Bezel -->
+    <ellipse cx="174" cy="265" rx="7" ry="10" fill="#FCE5D8" transform="rotate(-15 174 265)"/>
+    <ellipse cx="228" cy="254" rx="6" ry="9" fill="#FCE5D8"/>
+  </g>
+
+  <!-- Right Arm: Raised hand pointing upward gently -->
+  <g>
+    <path d="M106 195 Q92 225 84 250" stroke="#17243C" stroke-width="17" stroke-linecap="round"/>
+    <circle cx="84" cy="245" r="7" fill="#FCE5D8"/>
+    <rect x="80" y="212" width="5" height="20" rx="2.5" fill="#FCE5D8" transform="rotate(-12 80 212)"/>
+    <!-- Stylus Pen -->
+    <polygon points="76,204 82,192 86,204" fill="#334155"/>
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- 5. NECK (Y = 118 TO 160) - OVERLAPS HEAD AND TORSO SEAMLESSLY             -->
+  <!-- ========================================================================= -->
+  <path d="M140 120 L160 120 L164 158 L136 158 Z" fill="url(#skknSkin)"/>
+  <path d="M140 120 L160 120 L158 130 L142 130 Z" fill="#D59582" opacity="0.55"/>
+
+  <!-- ========================================================================= -->
+  <!-- 6. HEAD & EXPRESSIVE FACE (Y = 50 TO 135) - NO DETACHMENT                -->
+  <!-- ========================================================================= -->
+  <!-- Soft Ears -->
+  <ellipse cx="114" cy="98" rx="6" ry="10" fill="#F5CBB6" transform="rotate(-6 114 98)"/>
+  <ellipse cx="186" cy="98" rx="6" ry="10" fill="#F5CBB6" transform="rotate(6 186 98)"/>
+
+  <!-- Face Contour -->
+  <path d="M117 84 C115 48 185 48 183 84 C183 118 168 132 150 132 C132 132 117 118 117 84 Z" fill="url(#skknSkin)"/>
+
+  <!-- Rosy Blush -->
+  <ellipse cx="130" cy="106" rx="9" ry="6" fill="#F43F5E" opacity="0.2"/>
+  <ellipse cx="170" cy="106" rx="9" ry="6" fill="#F43F5E" opacity="0.2"/>
+
+  <!-- Eyebrows -->
+  <path d="M125 80 Q135 75 144 79" stroke="#3E2318" stroke-width="2" stroke-linecap="round" fill="none"/>
+  <path d="M156 79 Q165 75 175 80" stroke="#3E2318" stroke-width="2" stroke-linecap="round" fill="none"/>
+
+  <!-- Left Eye -->
+  <g>
+    <path d="M125 91 Q135 84 144 91 Q135 99 125 91 Z" fill="#FFFFFF"/>
+    <ellipse cx="135" cy="91" rx="5.2" ry="5.5" fill="url(#skknIris)"/>
+    <circle cx="135" cy="91" r="2.5" fill="#0A0402"/>
+    <circle cx="133.2" cy="88.8" r="1.5" fill="#FFFFFF"/>
+    <circle cx="136.8" cy="92.8" r="0.9" fill="#BAE6FD"/>
+    <path d="M124 90 Q135 83 145 89.5" stroke="#1C1917" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+    <line x1="144" y1="89" x2="147" y2="86.5" stroke="#1C1917" stroke-width="1.4" stroke-linecap="round"/>
+  </g>
+
+  <!-- Right Eye -->
+  <g>
+    <path d="M156 91 Q165 84 175 91 Q165 99 156 91 Z" fill="#FFFFFF"/>
+    <ellipse cx="165" cy="91" rx="5.2" ry="5.5" fill="url(#skknIris)"/>
+    <circle cx="165" cy="91" r="2.5" fill="#0A0402"/>
+    <circle cx="163.2" cy="88.8" r="1.5" fill="#FFFFFF"/>
+    <circle cx="166.8" cy="92.8" r="0.9" fill="#BAE6FD"/>
+    <path d="M155 89.5 Q165 83 176 90" stroke="#1C1917" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+    <line x1="175" y1="90" x2="178" y2="87.5" stroke="#1C1917" stroke-width="1.4" stroke-linecap="round"/>
+  </g>
+
+  <!-- Small Nose -->
+  <path d="M150 88 L149.5 99 Q150 101 152 100" stroke="#CB8A77" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+
+  <!-- Sweet Smile -->
+  <path d="M142 112 Q150 122 158 112 Z" fill="#BE123C"/>
+  <path d="M143.5 112.5 Q150 116 156.5 112.5" fill="#FFFFFF"/>
+  <path d="M142 112 Q150 111 158 112" stroke="#9F1239" stroke-width="1.3" fill="none"/>
+
+  <!-- Front Styled Hair & Bangs -->
+  <g>
+    <path d="M116 80 C111 44 189 44 184 80 C178 60 168 50 150 50 C132 50 122 60 116 80 Z" fill="url(#skknHair)"/>
+    <path d="M128 54 Q150 47 172 54" stroke="url(#skknHairSheen)" stroke-width="3.5" fill="none"/>
+    <!-- Side Strands -->
+    <path d="M116 78 C114 100 116 120 121 134 C122 135 123 128 122 112 C121 96 120 85 116 78 Z" fill="url(#skknHair)"/>
+    <path d="M184 78 C186 100 184 120 179 134 C178 135 177 128 178 112 C179 96 180 85 184 78 Z" fill="url(#skknHair)"/>
+    <!-- Cute Bangs -->
+    <path d="M122 58 Q140 62 152 82 Q142 70 130 66 Z" fill="url(#skknHair)"/>
+  </g>
+</svg>

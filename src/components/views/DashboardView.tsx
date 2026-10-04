@@ -86,10 +86,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const maxScore = hasRubricCriteria ? rubricCriteria.reduce((sum, c) => sum + (c.maxScore || 0), 0) : 100;
   const canShowScore = hasRubricCriteria && maxScore > 0 && totalScore > 0;
 
+  const isDoneCard = (c: RedTeamCard) => c.status === 'Đã xử lý' || c.status === 'resolved';
   const seriousCount = redTeamCards.filter(c => c.impactLevel === 'Cao').length;
   const warningCount = redTeamCards.filter(c => c.impactLevel === 'Trung bình').length;
   const missingEvidenceCount = evidenceChain.filter(e => e.status === 'chua_tim_thay_minh_chung').length;
-  const resolvedCount = redTeamCards.filter(c => c.status === 'Đã xử lý').length;
+  const resolvedCount = redTeamCards.filter(c => isDoneCard(c)).length;
   const totalIssuesCount = redTeamCards.length;
   const isAllResolved = totalIssuesCount > 0 && resolvedCount === totalIssuesCount;
 
@@ -104,14 +105,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   };
 
   const sortedCards = [...redTeamCards].sort((a, b) => {
-    if (a.status === 'Đã xử lý' && b.status !== 'Đã xử lý') return 1;
-    if (a.status !== 'Đã xử lý' && b.status === 'Đã xử lý') return -1;
+    if (isDoneCard(a) && !isDoneCard(b)) return 1;
+    if (!isDoneCard(a) && isDoneCard(b)) return -1;
     const orderA = severityOrder[a.impactLevel] || 2;
     const orderB = severityOrder[b.impactLevel] || 2;
     return orderA - orderB;
   });
 
-  const unresolvedCards = sortedCards.filter(c => c.status !== 'Đã xử lý');
+  const unresolvedCards = sortedCards.filter(c => !isDoneCard(c));
   const firstUnresolved = unresolvedCards[0] || sortedCards[0];
 
   const handleOpenDrawer = (card: RedTeamCard) => {
@@ -214,6 +215,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           onViewDemo={onEnterDemo}
           analysisError={analysisError}
           onClearError={onClearError}
+          issuesCount={totalIssuesCount - resolvedCount}
+          isAllResolved={isAllResolved}
         />
       )}
 
@@ -301,7 +304,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {/* Dòng tóm tắt vấn đề */}
               <div className="text-xs text-slate-600 sm:text-right">
                 <span className="font-semibold text-slate-800 block mb-1">
-                  Có {totalIssuesCount} vấn đề cần xem trước khi nộp
+                  Tổng cộng: {totalIssuesCount} vấn đề · Đã xử lý: {resolvedCount} · Còn: {totalIssuesCount - resolvedCount}
                 </span>
                 <div className="flex items-center gap-3 text-[11px] text-slate-500 flex-wrap sm:justify-end">
                   <span className="flex items-center gap-1">
@@ -363,7 +366,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* List items - Sắp xếp: PHẢI SỬA → NÊN SỬA → TỐI ƯU THÊM (Mục 17, 18) */}
         <div className="divide-y divide-slate-100">
           {sortedCards.map((card) => {
-            const isDone = card.status === 'Đã xử lý';
+            const isDone = isDoneCard(card);
             const isHigh = card.impactLevel === 'Cao';
             const isMed = card.impactLevel === 'Trung bình';
             const severityLabel = isHigh ? 'PHẢI SỬA' : isMed ? 'NÊN SỬA' : 'TỐI ƯU THÊM';
