@@ -148,11 +148,11 @@ export const sampleInitiative1: SKKNAnalysisResult = {
       criticismBasis: "Tính mới của sáng kiến giáo dục cấp quận/thành phố phải so sánh với mặt bằng phương pháp dạy học chung, không thể lấy việc 'trường mình chưa làm' để định danh là tính mới khoa học.",
       affectedCriterion: "Tính mới & Sáng tạo",
       impactLevel: "Cao",
-      whyItMatters: "Hội đồng cấp quận/thành phố sẽ ngay lập tức bác bỏ tính mới nếu tác giả nhầm lẫn giữa 'lần đầu trường áp dụng' với 'giải pháp mới mang tính sáng kiến'.",
-      resolutionGuidance: "Định vị lại tính mới: Không nhấn mạnh vào việc sử dụng công cụ Canva, mà tập trung vào: 'Bộ cấu trúc khung tư duy theo 3 giai đoạn nhân - quả lịch sử' được thiết kế sẵn cho học sinh.",
-      requiredEvidence: "Bảng phân tích sự khác nhau giữa việc dùng Canva vẽ tự do với việc áp dụng Khung tư duy 3 bước của tác giả.",
+      whyItMatters: "Tuyên bố này có nguy cơ bị đánh giá chưa thuyết phục về tính mới vì đang đồng nhất 'lần đầu áp dụng tại trường' với 'giải pháp có tính mới'.",
+      resolutionGuidance: "Cần tác giả xác nhận điểm mới thực sự. Có thể làm rõ tính mới theo các hướng: quy trình tổ chức, cách học sinh sử dụng công cụ, vai trò của giáo viên, sản phẩm học tập hoặc cách đánh giá (không khẳng định thay khi tác giả chưa xác nhận).",
+      requiredEvidence: "Minh chứng đối sánh cụ thể giữa giải pháp mới với phương pháp đã áp dụng trước đây.",
       insertLocation: "Trang 14, sau đoạn mô tả phần mềm Canva.",
-      likelyCouncilQuestion: "Thầy/cô cho biết việc học sinh vẽ sơ đồ trên Canva khác gì so với việc các em vẽ sơ đồ trên giấy A4 hoặc sử dụng các mẫu mindmap có sẵn trên mạng?",
+      likelyCouncilQuestion: "Điểm khác biệt cốt lõi của cách tổ chức này so với phương pháp Thầy/Cô đã sử dụng trước đây là gì?",
       status: "Chưa xử lý"
     },
     {
@@ -163,11 +163,11 @@ export const sampleInitiative1: SKKNAnalysisResult = {
       criticismBasis: "Quy tắc kiểm tra nhất quán số liệu nghiên cứu khoa học: tổng mẫu khảo sát ở bảng biểu và lời văn phân tích phải trùng khớp tuyệt đối.",
       affectedCriterion: "Tính hiệu quả & Tính khoa học",
       impactLevel: "Cao",
-      whyItMatters: "Đây là lỗi chí mạng khiến giám khảo nghi ngờ tính trung thực hoặc độ cẩn trọng của toàn bộ dữ liệu thực nghiệm.",
-      resolutionGuidance: "Kiểm tra lại số phiếu thực tế thu về. Nếu có 3 phiếu không hợp lệ (bị loại), phải ghi rõ: 'Tổng phát ra 85 phiếu, thu về 85 phiếu, có 82 phiếu hợp lệ được đưa vào xử lý số liệu (loại 3 phiếu do để trống nhiều mục)'.",
+      whyItMatters: "Dữ liệu chưa nhất quán giữa bảng biểu và lời văn, có nguy cơ bị đánh giá chưa cẩn trọng trong xử lý số liệu nghiên cứu.",
+      resolutionGuidance: "Cần Thầy/Cô xác nhận cỡ mẫu thực tế: 85 là đúng, 82 là đúng, hay cả hai con số đều đúng nhưng khác phạm vi (tuyệt đối không tự suy đoán nguyên nhân chênh lệch khi hồ sơ chưa cung cấp căn cứ).",
       requiredEvidence: "Biên bản tổng hợp kiểm phiếu hoặc bảng dữ liệu thô (Raw data) đính kèm phụ lục.",
       insertLocation: "Trang 24, ngay dưới chân Bảng 2.",
-      likelyCouncilQuestion: "Tại sao trong thuyết minh tác giả ghi khảo sát 85 học sinh nhưng trong bảng số liệu 2 tổng cộng chỉ có 82 em? 3 học sinh còn lại đi đâu?",
+      likelyCouncilQuestion: "Nguyên nhân nào dẫn đến chênh lệch giữa cỡ mẫu 85 học sinh được nêu trong thuyết minh và tổng số liệu chi tiết 82 học sinh ở Bảng số liệu 2?",
       status: "Chưa xử lý"
     },
     {
@@ -318,37 +318,37 @@ export const sampleInitiative1: SKKNAnalysisResult = {
       type: "Mâu thuẫn cỡ mẫu",
       location: "Trang 24, Bảng 2 so với đoạn văn dẫn nhập mục 3.2",
       originalText: "Lời văn: 'Tiến hành lấy ý kiến của 85 em học sinh...' nhưng Bảng 2: Lớp 8A1 = 42 em, Lớp 8A2 = 40 em -> Tổng = 82 em.",
-      analysis: "Chênh lệch 3 học sinh chưa rõ nguyên nhân. Có thể là 3 học sinh vắng mặt hoặc 3 phiếu không hợp lệ nhưng tác giả không giải thích.",
+      analysis: "Hồ sơ nêu cỡ mẫu 85 học sinh, nhưng các nhóm chi tiết cộng lại bằng 82. Có chênh lệch 3 trường hợp. Chưa đủ căn cứ xác định nguyên nhân của chênh lệch này.",
       riskSeverity: "Cao",
-      actionNeeded: "Thống nhất sĩ số N=82 hoặc thêm chú thích giải thích: 'Phát 85 phiếu, thu về 82 phiếu hợp lệ do 3 học sinh vắng học'."
+      actionNeeded: "Cần Thầy/Cô xác nhận cỡ mẫu chính xác (85, 82 hay số khác) và nguyên nhân chênh lệch để chuẩn hóa số liệu."
     },
     {
       id: "dat-2",
       type: "Phần trăm vs Điểm phần trăm",
       location: "Trang 25, Mục 4.1",
       originalText: "Tỷ lệ học sinh đạt loại Giỏi tăng 25% (từ 60% lên 75%).",
-      analysis: "Nhầm lẫn toán học thống kê: từ 60% lên 75% là tăng 15 điểm phần trăm (+15 percentage points). Nếu tính tốc độ tăng trưởng tương đối là (75-60)/60 = 25%. Viết như tác giả dễ gây hiểu lầm là tỷ lệ tăng thêm 25% (tức từ 60% thành 85%).",
+      analysis: "Phép tính suy ra trực tiếp: từ 60% lên 75% là tăng 15 điểm phần trăm (+15 percentage points). Tốc độ tăng trưởng tương đối là (75-60)/60 = 25%. Không đồng nhất giữa phần trăm (%) và điểm phần trăm.",
       riskSeverity: "Trung bình",
-      actionNeeded: "Sửa thành: 'Tăng 15 điểm phần trăm (tỷ lệ tăng trưởng 25% so với đầu năm)'."
+      actionNeeded: "Sửa thành: 'Tăng 15 điểm phần trăm (tương ứng mức tăng trưởng tương đối là 25% so với đầu năm)'."
     },
     {
       id: "dat-3",
       type: "Dữ liệu không rõ nguồn",
       location: "Trang 10, Biểu đồ 1",
       originalText: "Biểu đồ so sánh tỷ lệ học sinh ghi nhớ sự kiện lịch sử của trường năm học 2023-2024.",
-      analysis: "Biểu đồ không có chú thích nguồn số liệu, không ghi rõ do tác giả tự khảo sát hay lấy từ báo cáo tổng kết của nhà trường.",
+      analysis: "Cần xác minh nguồn: Biểu đồ hiện chưa cho biết dữ liệu được lấy từ đâu (chưa rõ là tác giả tự khảo sát hay lấy từ nguồn thống kê khác).",
       riskSeverity: "Thấp",
-      actionNeeded: "Bổ sung nguồn trích: '(Nguồn: Báo cáo chuyên môn tổ Sử - Địa năm học 2023-2024)'."
+      actionNeeded: "Cần xác minh nguồn: Thầy/Cô vui lòng cung cấp nguồn gốc dữ liệu thực tế cho Biểu đồ 1."
     }
   ],
   logicGaps: [
     {
       id: "log-1",
       stepName: "Nguyên nhân -> Giải pháp",
-      gapDescription: "Nguyên nhân nêu ra là 'học sinh gặp khó khăn trong việc hiểu bản chất mâu thuẫn giai cấp thời phong kiến', nhưng giải pháp đưa ra lại là 'cho học sinh chơi trò chơi trắc nghiệm Quizizz'.",
+      gapDescription: "Nguyên nhân nêu ra là 'học sinh gặp khó khăn trong việc hiểu bản chất mâu thuẫn giai cấp thời phong kiến', nhưng giải pháp chỉ nêu 'cho học sinh chơi trò chơi trắc nghiệm Quizizz'.",
       location: "Trang 11 đối chiếu Trang 16",
-      missingLinkAnalysis: "Trò chơi trắc nghiệm Quizizz chỉ giúp củng cố ghi nhớ mốc thời gian và sự kiện (mức độ Biết - Hiểu), không giúp giải quyết bản chất mâu thuẫn xã hội (mức độ Vận dụng - Đánh giá).",
-      correctionGuidance: "Cần bổ sung một tiểu biện pháp: 'Hệ thống câu hỏi tình huống trên sơ đồ tư duy' trước khi tổ chức thi đấu Quizizz."
+      missingLinkAnalysis: "Giải pháp hiện tại chưa thể hiện rõ cơ chế tác động trực tiếp vào nguyên nhân đã xác định (Quizizz chủ yếu củng cố nhận biết dữ kiện, chưa rõ hoạt động nào khắc phục khó khăn về hiểu bản chất mâu thuẫn).",
+      correctionGuidance: "Trong giải pháp thực tế của Thầy/Cô, hoạt động nào trực tiếp giúp học sinh khắc phục khó khăn này? (Thầy/Cô cần làm rõ quy trình sư phạm thực tế, không tự thêm giải pháp mới nếu hồ sơ chưa có)."
     },
     {
       id: "log-2",
@@ -396,32 +396,32 @@ export const sampleInitiative1: SKKNAnalysisResult = {
       id: "sug-3",
       targetSection: "Trang 24, Bảng số liệu 2 - Khảo sát thái độ học tập",
       originalText: "Tổng số học sinh tham gia khảo sát là 85 em. Kết quả cụ thể: Rất thích: 42 em (51.2%); Thích: 28 em (34.1%); Bình thường: 12 em (14.6%).",
-      problem: "Mâu thuẫn cỡ mẫu: Bảng ghi 85 học sinh nhưng tổng số các cột chi tiết chỉ có 42 + 28 + 12 = 82 học sinh (thiếu 3 em).",
-      whyRevise: "Giám khảo kiểm tra tính liêm chính và độ tin cậy số liệu; lỗi này dễ bị nghi ngờ bịa số liệu khảo sát.",
-      basis: "Nguyên tắc Liêm chính nghiên cứu & Tiêu chí 2 (Tính khoa học): Tổng số liệu chi tiết phải khớp 100% với cỡ mẫu công bố, nếu có phiếu loại phải ghi chú giải trình rõ ràng.",
+      problem: "Mâu thuẫn cỡ mẫu: Hồ sơ nêu cỡ mẫu 85 học sinh, nhưng các nhóm chi tiết cộng lại bằng 42 + 28 + 12 = 82 em (chênh lệch 3 trường hợp chưa rõ nguyên nhân).",
+      whyRevise: "Dữ liệu chưa nhất quán và chưa đủ căn cứ xác minh nguyên nhân chênh lệch; cần Thầy/Cô xác nhận cỡ mẫu thực tế.",
+      basis: "Nguyên tắc Liêm chính nghiên cứu & Tiêu chí 2 (Tính khoa học): Cỡ mẫu công bố phải khớp 100% với dữ liệu chi tiết, không tự suy đoán lý do nếu hồ sơ không cung cấp.",
       category: "Số liệu & Thực nghiệm",
-      revisionGoal: "Thống nhất số liệu 82 phiếu hợp lệ hoặc chú thích giải trình lý do loại 3 phiếu không hợp lệ.",
-      howToRevise: "Quy chuẩn lại cỡ mẫu phân tích N=82 hoặc thêm ghi chú giải trình lý do 3 học sinh vắng trong buổi thu phiếu.",
-      lightRevision: "Tổng số học sinh được phát phiếu là 85 em, trong đó thu về 82 phiếu hợp lệ (3 học sinh vắng mặt). Kết quả cụ thể trên 82 học sinh: Rất thích: 42 em (51.2%); Thích: 28 em (34.1%); Bình thường: 12 em (14.6%).",
-      academicRevision: "Khảo sát được triển khai trên tổng số 85 học sinh khối 8. Sau khi sàng lọc, có 82 phiếu hợp lệ đủ điều kiện phân tích (3 phiếu bị khuyết thông tin do học sinh nghỉ học có phép). Kết quả định lượng ghi nhận: 42/82 em (51.2%) đánh giá 'Rất tích cực'; 28/82 em (34.1%) đánh giá 'Tích cực'; 12/82 em (14.6%) ở mức 'Bình thường'.",
-      deepRevision: "Quy trình xử lý số liệu khảo sát thái độ học sinh được tiến hành theo các bước chuẩn hóa:\n- **Cỡ mẫu phát ra:** 85 phiếu tại 02 lớp 8A1 và 8A2.\n- **Cỡ mẫu hợp lệ (N):** 82 phiếu (đạt tỷ lệ phản hồi 96.5%; loại 03 phiếu không hoàn thành do học sinh vắng [CẦN BỔ SUNG GHI CHÚ MÃ PHIẾU]).\n- **Phân bố kết quả:** Nhóm đánh giá tích cực chiếm 85.3% (trong đó 51.2% Rất thích và 34.1% Thích); nhóm Bình thường chiếm 14.6%; không có phản hồi tiêu cực.\n*Biên bản tổng hợp phiếu gốc được lưu trữ tại Phụ lục 2 để Hội đồng đối chiếu.*",
-      missingEvidenceAlert: "[CẦN BỔ SUNG BIÊN BẢN TỔNG HỢP PHIẾU KHẢO SÁT VÀO PHỤ LỤC 2]",
+      revisionGoal: "Xác minh cỡ mẫu thực tế (85 hay 82) từ tác giả để chuẩn hóa số liệu phân tích.",
+      howToRevise: "Thầy/Cô xác nhận cỡ mẫu thực tế: 85, 82 hay số khác để cập nhật số liệu chính xác.",
+      lightRevision: "[CẦN TÁC GIẢ XÁC NHẬN CỠ MẪU] Khảo sát được tiến hành với [CHỜ XÁC NHẬN: 85 hay 82] học sinh. Kết quả ghi nhận: 42 em Rất thích (51.2%), 28 em Thích (34.1%), 12 em Bình thường (14.6%).",
+      academicRevision: "[CẦN TÁC GIẢ XÁC NHẬN CỠ MẪU] Dữ liệu khảo sát thu được trên cỡ mẫu thực tế [CHỜ XÁC NHẬN: 85 hay 82 học sinh khối 8]. Cơ cấu phản hồi: 42/82 em (51.2%) đánh giá 'Rất tích cực'; 28/82 em (34.1%) đánh giá 'Tích cực'; 12/82 em (14.6%) ở mức 'Bình thường'. Tác giả cần thống nhất cỡ mẫu hoặc đính kèm biên bản kiểm phiếu để làm rõ chênh lệch 3 trường hợp.",
+      deepRevision: "[CẦN TÁC GIẢ XÁC NHẬN CỠ MẪU] Quy trình thu thập và xử lý số liệu khảo sát thái độ học sinh:\n- **Cỡ mẫu công bố:** [CẦN XÁC NHẬN CHÍNH XÁC: 85 hay 82 em]\n- **Số liệu các nhóm:** 42 em Rất thích (51.2%), 28 em Thích (34.1%), 12 em Bình thường (14.6%) (tổng = 82 em)\n- **Xác minh chênh lệch:** Cần giáo viên xác nhận nguyên nhân chênh lệch 3 trường hợp và đính kèm biên bản tổng hợp phiếu gốc tại Phụ lục để làm rõ.",
+      missingEvidenceAlert: "[CẦN TÁC GIẢ XÁC NHẬN CỠ MẪU VÀ BỔ SUNG BIÊN BẢN KIỂM PHIẾU GỐC]",
       insertPosition: "Trang 24, thay thế phần diễn giải dưới Bảng số liệu 2."
     },
     {
       id: "sug-4",
       targetSection: "Trang 26, Mục 4.2 - Đánh giá sự chuyển biến về năng lực học sinh",
       originalText: "Học sinh trở nên tích cực, chủ động hơn nhiều, không còn thụ động ghi chép như trước.",
-      problem: "Tuyên bố định tính mang tính cảm nhận cá nhân của giáo viên, không có công cụ đo lường và minh chứng đối chứng.",
-      whyRevise: "Hội đồng xếp vào trạng thái 'nhận định chưa đủ căn cứ kết luận', bị trừ điểm ở tiêu chí Hiệu quả và Minh chứng.",
-      basis: "Tiêu chí 4 (Tính minh chứng thực nghiệm): Mọi kết luận về sự phát triển năng lực, phẩm chất phải dựa trên rubric đánh giá hành vi, sản phẩm học tập hoặc biên bản dự giờ.",
+      problem: "Tuyên bố định tính mang tính cảm nhận cá nhân của giáo viên, chưa có công cụ đo lường và minh chứng đối chứng.",
+      whyRevise: "Chưa đủ căn cứ xác nhận kết luận; cần công cụ đo lường hành vi hoặc dữ liệu quan sát thực nghiệm.",
+      basis: "Tiêu chí 4 (Tính minh chứng thực nghiệm): Mọi kết luận về sự phát triển năng lực, phẩm chất cần dựa trên rubric đánh giá hành vi, sản phẩm học tập hoặc biên bản dự giờ thực tế.",
       category: "Minh chứng & Khảo sát",
-      revisionGoal: "Thay thế nhận định cảm tính bằng các chỉ số hành vi quan sát được và trích xuất minh chứng cụ thể.",
-      howToRevise: "Bổ sung Rubric 3 tiêu chí quan sát thái độ lớp học và trích xuất số liệu đếm được qua các tiết dự giờ.",
-      lightRevision: "Học sinh có sự chuyển biến tích cực về thái độ học tập: các em chủ động chuẩn bị bài ở nhà hơn, sôi nổi thảo luận nhóm và tích cực tham gia phát biểu xây dựng bài trong giờ học.",
-      academicRevision: "Sự phát triển năng lực tự chủ và giao tiếp của học sinh được xác nhận qua công cụ quan sát sư phạm. Cụ thể, qua 4 tiết dự giờ có sự tham gia của tổ chuyên môn, tần suất học sinh xung phong tương tác với sơ đồ tư duy tăng từ trung bình 6.5 lượt/tiết lên 16.2 lượt/tiết; tỷ lệ nộp sản phẩm sơ đồ nhóm đúng hạn đạt [CẦN BỔ SUNG % SẢN PHẨM HOÀN THÀNH].",
-      deepRevision: "Đánh giá mức độ chuyển biến thái độ học tập dựa trên Bộ tiêu chuẩn quan sát hành vi (Rubric 3 mức độ tại Phụ lục 4):\n1. **Chỉ số tham gia bài giảng:** Tỷ lệ học sinh tự giác chuẩn bị dữ liệu trước tiết học đạt [CẦN BỔ SUNG SỐ LIỆU %], tăng [CẦN BỔ SUNG ĐIỂM %] so với giai đoạn đầu năm.\n2. **Tương tác nhóm:** Biên bản dự giờ ngày [NGÀY DỰ GIỜ] ghi nhận 100% các nhóm hoàn thành nhiệm vụ kết nối nhân vật lịch sử trong vòng 10 phút.\n3. **Mức độ tự tin thuyết trình:** [CẦN BỔ SUNG SỐ LƯỢNG] học sinh tiến bộ rõ rệt từ rụt rè sang tự tin đứng trước lớp giải thích sơ đồ.\n*(Minh chứng: Kèm 04 biên bản dự giờ của Tổ chuyên môn và ảnh chụp sản phẩm học sinh tại Phụ lục 4)*",
-      missingEvidenceAlert: "[CẦN BỔ SUNG BIÊN BẢN DỰ GIỜ CỦA TỔ CHUYÊN MÔN VÀ BẢNG RUBRIC HÀNH VI]",
+      revisionGoal: "Thay thế nhận định cảm tính bằng các chỉ số hành vi quan sát được và dữ liệu thực tế do giáo viên cung cấp.",
+      howToRevise: "Bổ sung Rubric quan sát thái độ lớp học và trích xuất số liệu quan sát thực tế (nếu thực tế có dữ liệu).",
+      lightRevision: "Học sinh có sự chuyển biến tích cực về thái độ học tập: các em chủ động hơn trong thảo luận nhóm và tích cực tham gia phát biểu xây dựng bài trong giờ học [CẦN BỔ SUNG MINH CHỨNG NẾU CÓ].",
+      academicRevision: "Nhận định về sự chuyển biến năng lực tự chủ và giao tiếp cần được củng cố bằng công cụ quan sát sư phạm (Rubric đánh giá hành vi hoặc biên bản dự giờ thực tế [CẦN BỔ SUNG SỐ TIẾT DỰ GIỜ THỰC TẾ]). Các chỉ số cần làm rõ: mức độ tương tác bài học, tỷ lệ hoàn thành sản phẩm nhóm [CẦN BỔ SUNG SỐ LIỆU ĐO LƯỜNG THỰC TẾ].",
+      deepRevision: "Đánh giá mức độ chuyển biến thái độ học tập dựa trên Bộ tiêu chuẩn quan sát hành vi (Rubric quan sát đề xuất tại Phụ lục 4):\n1. **Chỉ số tham gia bài giảng:** Tỷ lệ học sinh tự giác chuẩn bị bài trước tiết học đạt [CẦN BỔ SUNG SỐ LIỆU THỰC TẾ %].\n2. **Tương tác nhóm:** Tỷ lệ nhóm hoàn thành nhiệm vụ đúng thời gian quy định đạt [CẦN BỔ SUNG SỐ LIỆU %].\n3. **Mức độ tự tin thuyết trình:** Số lượng học sinh tự tin trình bày trước lớp đạt [CẦN BỔ SUNG SỐ LƯỢNG THỰC TẾ].\n*(Lưu ý: Thầy/Cô chỉ điền số liệu nếu thực tế có triển khai quan sát, kiểm đếm)*",
+      missingEvidenceAlert: "[CẦN BỔ SUNG DỮ LIỆU QUAN SÁT THỰC TẾ HOẶC BIÊN BẢN DỰ GIỜ NẾU CÓ]",
       insertPosition: "Trang 26, thay thế đoạn 1 mục 4.2."
     },
     {
@@ -551,11 +551,11 @@ export const sampleInitiative1: SKKNAnalysisResult = {
     {
       id: "cq-2",
       difficulty: "🔴 Câu hỏi khó",
-      question: "Tại Bảng số liệu 2, tác giả ghi khảo sát 85 học sinh nhưng tổng cột chi tiết chỉ có 82 em. 3 em học sinh còn lại tại sao không xuất hiện? Liệu số liệu này có phản ánh đúng thực tế thu thập?",
-      whyCouncilAsks: "Giám khảo kiểm tra tính liêm chính học thuật và độ chính xác của số liệu thực nghiệm.",
+      question: "Nguyên nhân nào dẫn đến chênh lệch giữa cỡ mẫu 85 học sinh được nêu trong thuyết minh và tổng số liệu chi tiết 82 học sinh ở Bảng số liệu 2?",
+      whyCouncilAsks: "Hội đồng kiểm tra tính liêm chính học thuật và độ chính xác của số liệu thực nghiệm.",
       relatedLocation: "Trang 24, Bảng số liệu 2",
-      requiredEvidenceToBring: "Biên bản kiểm phiếu khảo sát gốc có xác nhận của giáo viên chủ nhiệm hoặc tổ bộ môn.",
-      suggestedAnswerStrategy: "Nhận khuyết điểm diễn đạt chưa rõ ràng: 'Báo cáo có 85 học sinh được phát phiếu, tuy nhiên 3 học sinh vắng trong buổi thu phiếu nên số phiếu hợp lệ đưa vào phân tích là 82. Tôi xin nghiêm túc tiếp thu và bổ sung chú thích này vào bảng số liệu'."
+      requiredEvidenceToBring: "Biên bản kiểm phiếu khảo sát gốc hoặc bảng dữ liệu thô (Raw data) đính kèm phụ lục.",
+      suggestedAnswerStrategy: "Trình bày căn cứ xác nhận thực tế: Nêu rõ nguyên nhân chênh lệch đã được đối chiếu (do cỡ mẫu thực tế là 82 và đã đính chính con số 85 trong thuyết minh, hoặc giải trình rõ sự khác nhau về phạm vi giữa hai con số dựa trên biên bản kiểm phiếu gốc, không tự suy đoán nguyên nhân)."
     },
     {
       id: "cq-3",
@@ -583,7 +583,7 @@ export const sampleInitiative1: SKKNAnalysisResult = {
       title: "Sửa lỗi mâu thuẫn cỡ mẫu khảo sát (85 vs 82 em) tại Bảng 2",
       affectedAspect: "Số liệu & Tính liêm chính khoa học",
       location: "Trang 24, Bảng số liệu 2",
-      actionSummary: "Đồng nhất con số 82 học sinh xuyên suốt hoặc thêm chú thích giải trình lý do loại 3 phiếu không hợp lệ.",
+      actionSummary: "Xác minh cỡ mẫu thực tế (85 hay 82) và đồng nhất số liệu giữa thuyết minh và Bảng 2 theo dữ liệu do tác giả xác nhận.",
       rubricImpact: "Bảo vệ 2.0 điểm ở tiêu chí Tính hiệu quả & phương pháp."
     },
     {
@@ -878,7 +878,7 @@ export const sampleInitiative2: SKKNAnalysisResult = {
       criticismBasis: "Trong điều kiện tự học tại nhà không có giám sát, học sinh dễ dàng mở ngay thẻ gợi ý hoặc chép lời giải từ bạn bè hoặc các app quét bài tập (Photomath, QANDA).",
       affectedCriterion: "Tính thực tiễn & Độ tin cậy",
       impactLevel: "Trung bình",
-      whyItMatters: "Hội đồng sẽ đặt nghi vấn về việc học sinh tiến bộ là do thực sự tự học hay do có sẵn thẻ gợi ý tương tự bài kiểm tra.",
+      whyItMatters: "Có nguy cơ bị đánh giá chưa làm rõ việc học sinh tiến bộ là do năng lực tự học thực chất hay do có sẵn thẻ gợi ý tương tự bài kiểm tra.",
       resolutionGuidance: "Bổ sung kỹ thuật 'Vấn đáp giải thích': Mỗi tuần giáo viên chọn ngẫu nhiên 3 học sinh lên bảng giải thích tại sao lại chọn hướng đi trong thẻ gợi ý.",
       requiredEvidence: "Sổ nhật ký phỏng vấn nhanh học sinh trên lớp.",
       insertLocation: "Trang 19, sau đoạn mô tả quy định tự học.",

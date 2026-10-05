@@ -259,38 +259,38 @@ export const Sidebar: React.FC<SidebarProps> = ({
         />
       )}
 
-      <aside className={`w-[240px] bg-slate-900 text-slate-100 flex flex-col h-full border-r border-slate-800 shrink-0 select-none transition-transform duration-200 z-50 ${
+      <aside className={`w-[272px] bg-slate-900 text-slate-100 flex flex-col h-full border-r border-slate-800 shrink-0 select-none transition-transform duration-200 z-50 ${
         isMobileOpen
           ? 'fixed inset-y-0 left-0 translate-x-0 shadow-2xl'
           : 'hidden lg:flex static'
       }`}>
         {/* App Branding */}
-        <div className="px-3.5 py-3 border-b border-slate-800 bg-slate-950/80">
+        <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 flex items-center justify-center font-black text-white shadow-md text-xs shrink-0 tracking-wider">
               PRO
             </div>
             <div className="min-w-0 flex flex-col justify-center">
               <div className="flex items-center gap-1.5 leading-none">
-                <span className="font-extrabold text-[13px] tracking-tight text-white truncate">
+                <span className="font-extrabold text-[14px] tracking-tight text-white truncate">
                   SKKN REVIEW
                 </span>
-                <span className="text-[9px] px-1 py-0.5 rounded bg-blue-500/25 text-blue-400 font-bold border border-blue-400/30 leading-none shrink-0">
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/25 text-blue-400 font-bold border border-blue-400/30 leading-none shrink-0">
                   PRO
                 </span>
               </div>
-              <div className="text-[11.5px] font-semibold text-white/90 tracking-tight leading-tight mt-1 truncate">
+              <div className="text-[12px] font-semibold text-white/90 tracking-tight leading-tight mt-1 truncate">
                 GV.Hồ Nguyễn Đa Thiện
               </div>
-              <div className="text-[10.5px] font-normal text-slate-400 tracking-tight leading-tight mt-0.5 truncate">
+              <div className="text-[11px] font-normal text-slate-400 tracking-tight leading-tight mt-0.5 truncate">
                 Trợ lý Chấm & Phản biện
               </div>
             </div>
           </div>
         </div>
 
-        {/* Sidebar Chỉ Dùng Để ĐIỀU HƯỚNG */}
-        <nav className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-thin scrollbar-thumb-slate-700">
+        {/* Sidebar Chỉ Dùng Để ĐIỀU HƯỚNG (Scrollable độc lập, không cuộn nội dung chính) */}
+        <nav className="flex-1 overflow-y-auto px-2 py-2 space-y-1 scrollbar-thin scrollbar-thumb-slate-700">
           
           {/* Mục HỒ SƠ - Mở Drawer Hồ sơ */}
           {onOpenProfileDrawer && (
@@ -301,22 +301,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 if (onCloseMobile) onCloseMobile();
               }}
               title="Xem thông tin hồ sơ SKKN, phiếu chấm và chọn tài liệu"
-              className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
+              className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-[15px] font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                <BookOpen className="w-4 h-4 text-slate-400 shrink-0" />
-                <span className="truncate">HỒ SƠ</span>
+                <BookOpen className="w-[18px] h-[18px] text-slate-400 shrink-0" />
+                <span className="leading-[1.35]">HỒ SƠ</span>
               </div>
-              <span className="text-[10px] text-slate-400 font-normal">
+              <span className="text-[12px] text-slate-400 font-normal shrink-0">
                 Xem ▾
               </span>
             </button>
           )}
 
           {/* Divider nhẹ */}
-          <div className="my-1.5 border-t border-slate-800/80" />
+          <div className="my-1 border-t border-slate-800/80" />
 
-          {/* Danh sách Menu Items */}
+          {/* Danh sách Menu Items (Font 15px, Active 700, hiển thị đầy đủ không bị cắt tên) */}
           {currentNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -330,30 +330,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   if (onCloseMobile) onCloseMobile();
                 }}
                 title={item.desc}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-[15px] leading-[1.35] transition-all cursor-pointer text-left ${
                   isActive
                     ? 'bg-blue-600 text-white font-bold shadow-xs'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white font-semibold'
                 }`}
               >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                  <span className="truncate">{item.label}</span>
+                <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-1">
+                  <Icon className={`w-[18px] h-[18px] shrink-0 mt-0.5 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  <span className="leading-[1.35] whitespace-normal break-words">{item.label}</span>
                 </div>
 
-                {/* Compact Right Badge (Chỉ hiện khi cần) */}
+                {/* Badge số (Font 12.5-13px, font-bold 700, min-w đủ dễ đọc) */}
                 {item.badge !== undefined && (
                   <span
-                    className={`ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 ${
+                    className={`ml-1.5 px-2 py-0.5 rounded-full text-[12.5px] font-bold min-w-[24px] text-center shrink-0 ${
                       isActive
-                        ? 'bg-blue-700/80 text-white'
+                        ? 'bg-blue-700/90 text-white'
                         : item.badgeType === 'danger'
-                        ? 'bg-rose-500/20 text-rose-300'
+                        ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
                         : item.badgeType === 'warning'
-                        ? 'bg-amber-500/20 text-amber-300'
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                         : item.badgeType === 'success'
-                        ? 'bg-emerald-500/20 text-emerald-300'
-                        : 'bg-slate-800 text-slate-400'
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                        : 'bg-slate-800 text-slate-300 border border-slate-700'
                     }`}
                   >
                     {item.badge}
@@ -362,40 +362,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </button>
             );
           })}
-
-          {/* Nút chuyển đổi nhanh chế độ */}
-          <div className="pt-2">
-            <div className="border-t border-slate-800/80 pt-2">
-              {appMode === 'easy' ? (
-                <button
-                  type="button"
-                  onClick={() => setAppMode('advanced')}
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-blue-300 hover:bg-slate-800/60 transition-colors cursor-pointer group"
-                >
-                  <span>Chuyên sâu</span>
-                  <ArrowRight className="w-3.5 h-3.5 text-slate-500 group-hover:translate-x-0.5 transition-transform" />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setAppMode('easy')}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-blue-300 hover:bg-slate-800/60 transition-colors cursor-pointer group"
-                >
-                  <ArrowLeft className="w-3.5 h-3.5 text-slate-500 group-hover:-translate-x-0.5 transition-transform" />
-                  <span>Dễ dùng</span>
-                </button>
-              )}
-            </div>
-          </div>
         </nav>
 
-        {/* Sidebar Footer: Switch nhỏ [Dễ dùng] [Chuyên sâu] */}
-        <div className="p-3 border-t border-slate-800 bg-slate-950/60">
-          <div className="bg-slate-900 p-0.5 rounded-lg border border-slate-800 flex items-center text-[11px] font-medium">
+        {/* Sidebar Footer: Switch [Dễ dùng] [Chuyên sâu] - Cố định ở đáy */}
+        <div className="p-3 border-t border-slate-800 bg-slate-950/90 shrink-0">
+          <div className="bg-slate-900 p-1 rounded-xl border border-slate-800 flex items-center text-[13px] font-semibold gap-1">
             <button
               type="button"
               onClick={() => setAppMode('easy')}
-              className={`flex-1 py-1 px-2 rounded-md text-center transition-all cursor-pointer ${
+              className={`flex-1 py-1.5 px-2 rounded-lg text-center transition-all cursor-pointer ${
                 appMode === 'easy'
                   ? 'bg-blue-600 text-white font-bold shadow-xs'
                   : 'text-slate-400 hover:text-slate-200'
@@ -406,7 +381,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               type="button"
               onClick={() => setAppMode('advanced')}
-              className={`flex-1 py-1 px-2 rounded-md text-center transition-all cursor-pointer ${
+              className={`flex-1 py-1.5 px-2 rounded-lg text-center transition-all cursor-pointer ${
                 appMode === 'advanced'
                   ? 'bg-blue-600 text-white font-bold shadow-xs'
                   : 'text-slate-400 hover:text-slate-200'

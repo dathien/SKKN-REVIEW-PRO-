@@ -498,12 +498,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         onClose={handleCloseDrawer}
         card={selectedCardForDrawer}
         cards={sortedCards}
-        onSelectCard={(c) => setSelectedCardForDrawer(c)}
+        onSelectCard={(c: RedTeamCard) => setSelectedCardForDrawer(c)}
         onUpdateStatus={onUpdateCardStatus}
-        onOpenInspector={(c) => {
+        onOpenInspector={(c: RedTeamCard) => {
           if (onOpenInspector) onOpenInspector('basis', c);
         }}
-        onGoToSuggestion={(c) => {
+        onGoToSuggestion={(c: RedTeamCard) => {
           onNavigateTab('suggestions');
         }}
         onNextIssue={handleNextIssue}

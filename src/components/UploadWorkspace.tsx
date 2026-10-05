@@ -310,10 +310,10 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
           {/* Header gọn 2 dòng */}
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-sm sm:text-base font-black text-slate-900 tracking-tight uppercase">
+              <h2 className="text-[20px] font-[750] text-slate-900 tracking-tight uppercase leading-[1.3]">
                 TẠO HỒ SƠ ĐÁNH GIÁ
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5 font-medium">
+              <p className="text-[15px] leading-[1.55] text-slate-600 mt-1 font-normal">
                 Thêm SKKN cần chấm và phản biện.
               </p>
             </div>
@@ -322,7 +322,7 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
               <button
                 type="button"
                 onClick={onViewDemo}
-                className="text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 cursor-pointer transition-colors"
+                className="text-[14px] font-semibold text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 cursor-pointer transition-colors"
               >
                 <span>Xem kết quả mẫu</span>
                 <span>→</span>
@@ -340,7 +340,7 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                className={`h-[130px] p-3.5 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center text-center space-y-1.5 ${
+                className={`min-h-[146px] p-4 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center text-center space-y-2 ${
                   isDragOver
                     ? 'border-blue-500 bg-blue-50 scale-[1.01]'
                     : activeMode === 'file'
@@ -348,57 +348,57 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
                     : 'border-slate-200 hover:border-blue-400 bg-slate-50/40 hover:bg-blue-50/20'
                 }`}
               >
-                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <UploadCloud className="w-4 h-4" />
+                <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                  <UploadCloud className="w-5 h-5" />
                 </div>
 
-                <div className="space-y-0.5">
-                  <h3 className="text-xs font-bold text-slate-900 uppercase tracking-tight">
+                <div className="space-y-1">
+                  <h3 className="text-[16px] font-bold text-slate-900 uppercase tracking-tight leading-[1.35]">
                     TẢI FILE SKKN
                   </h3>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-[14px] leading-[1.5] text-slate-600 font-normal">
                     Kéo thả hoặc chọn file
                   </p>
                 </div>
 
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono text-slate-500 bg-white border border-slate-200">
+                <span className="px-2.5 py-0.5 rounded text-[13px] font-medium text-slate-600 bg-white border border-slate-200">
                   PDF · DOC · DOCX
                 </span>
               </div>
             ) : (
               // CARD 1 SAU KHI CÓ FILE: HIỂN THỊ TÊN FILE + TRẠNG THÁI ĐÃ NHẬN
-              <div className="h-[130px] p-3.5 rounded-xl border-2 border-emerald-500/70 bg-emerald-50/25 flex flex-col justify-between">
+              <div className="min-h-[146px] p-4 rounded-xl border-2 border-emerald-500/70 bg-emerald-50/25 flex flex-col justify-between">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-emerald-700 flex items-center gap-1 uppercase tracking-wider">
-                    <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
+                  <span className="text-[13px] font-bold text-emerald-700 flex items-center gap-1.5 uppercase tracking-wide">
+                    <Check className="w-4 h-4 text-emerald-600 stroke-[3]" />
                     ĐÃ NHẬN FILE SKKN
                   </span>
-                  <span className="text-[10px] font-mono text-slate-500">
+                  <span className="text-[13px] font-mono text-slate-500">
                     {formatSize(skknFile.size)}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-2.5 min-w-0 my-auto">
-                  <div className="w-7 h-7 rounded bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-                    <FileText className="w-4 h-4" />
+                  <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                    <FileText className="w-4.5 h-4.5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-slate-800 truncate" title={skknFile.name}>
+                    <p className="text-[15px] font-bold text-slate-800 truncate" title={skknFile.name}>
                       {skknFile.name}
                     </p>
                     {isParsingDocx && (
-                      <p className="text-[10px] text-blue-600 animate-pulse font-medium">
+                      <p className="text-[13px] text-blue-600 animate-pulse font-medium">
                         Đang đọc nội dung...
                       </p>
                     )}
                   </div>
                 </div>
 
-                <div className="flex items-center justify-end gap-2 text-xs pt-1 border-t border-emerald-100">
+                <div className="flex items-center justify-end gap-3 text-[13px] pt-1.5 border-t border-emerald-100">
                   <button
                     type="button"
                     onClick={() => skknInputRef.current?.click()}
-                    className="text-xs text-blue-600 hover:text-blue-800 font-semibold cursor-pointer"
+                    className="text-[13px] text-blue-600 hover:text-blue-800 font-semibold cursor-pointer"
                   >
                     Thay file
                   </button>
@@ -408,7 +408,7 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
                       setSkknFile(null);
                       setActiveMode('none');
                     }}
-                    className="text-xs text-slate-400 hover:text-rose-600 font-semibold cursor-pointer ml-1"
+                    className="text-[13px] text-slate-400 hover:text-rose-600 font-semibold cursor-pointer ml-1"
                   >
                     Xóa
                   </button>
@@ -419,26 +419,26 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
             {/* CARD 2: DÁN NỘI DUNG */}
             <div
               onClick={handlePasteClick}
-              className={`h-[130px] p-3.5 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center text-center space-y-1.5 ${
+              className={`min-h-[146px] p-4 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center text-center space-y-2 ${
                 isPasteExpanded || activeMode === 'paste'
                   ? 'border-blue-500 bg-blue-50/40 shadow-xs'
                   : 'border-slate-200 hover:border-blue-400 bg-slate-50/40 hover:bg-blue-50/20'
               }`}
             >
-              <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                <FileCode className="w-4 h-4" />
+              <div className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                <FileCode className="w-5 h-5" />
               </div>
 
-              <div className="space-y-0.5">
-                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-tight">
+              <div className="space-y-1">
+                <h3 className="text-[16px] font-bold text-slate-900 uppercase tracking-tight leading-[1.35]">
                   DÁN NỘI DUNG
                 </h3>
-                <p className="text-[11px] text-slate-500">
+                <p className="text-[14px] leading-[1.5] text-slate-600 font-normal">
                   Dán trực tiếp văn bản SKKN
                 </p>
               </div>
 
-              <span className="px-2 py-0.5 rounded text-[10px] text-slate-500 bg-white border border-slate-200">
+              <span className="px-2.5 py-0.5 rounded text-[13px] font-medium text-slate-600 bg-white border border-slate-200">
                 Dùng khi không có file
               </span>
             </div>
@@ -447,14 +447,14 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
 
           {/* KHUNG SOẠN THẢO DÁN NỘI DUNG (EXPAND NGAY TRONG CỘT TRÁI) */}
           {isPasteExpanded && (
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2.5 animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+                  <span className="text-[14px] font-bold text-slate-900 uppercase tracking-wide">
                     NỘI DUNG SKKN
                   </span>
                   {wordCount > 0 && (
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
+                    <span className="text-[12px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
                       Đã nhận {wordCount.toLocaleString('vi-VN')} từ
                     </span>
                   )}
@@ -469,7 +469,7 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
                   className="p-1 text-slate-400 hover:text-slate-700 rounded-md hover:bg-slate-200 transition-colors cursor-pointer"
                   title="Đóng khung soạn thảo"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-4.5 h-4.5" />
                 </button>
               </div>
 
@@ -477,11 +477,11 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
                 value={pastedText}
                 onChange={(e) => setPastedText(e.target.value)}
                 placeholder="Dán toàn bộ nội dung SKKN vào đây..."
-                className="w-full h-[220px] p-3 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 leading-relaxed font-sans placeholder:text-slate-400 resize-y"
+                className="w-full h-[220px] p-3 text-[14px] leading-relaxed bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-sans placeholder:text-slate-400 resize-y"
               />
 
-              <div className="flex items-center justify-between text-xs pt-1">
-                <span className="text-[11px] text-slate-400">
+              <div className="flex items-center justify-between text-[13px] pt-1">
+                <span className="text-[13px] text-slate-500">
                   {wordCount > 0
                     ? `Đã nhận nội dung (${wordCount.toLocaleString('vi-VN')} từ)`
                     : 'Chưa có văn bản dán'}
@@ -490,7 +490,7 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
                   <button
                     type="button"
                     onClick={() => setPastedText('')}
-                    className="text-xs text-rose-600 hover:text-rose-800 font-semibold cursor-pointer"
+                    className="text-[13px] text-rose-600 hover:text-rose-800 font-semibold cursor-pointer"
                   >
                     Xóa nội dung
                   </button>
@@ -500,22 +500,22 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
           )}
 
           {/* TÀI LIỆU BỔ SUNG: [ + Phiếu chấm ]   [ + Minh chứng ] */}
-          <div className="pt-2 border-t border-slate-100 space-y-2">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 text-xs">
-              <span className="font-bold text-slate-700 uppercase tracking-wide text-[11px]">
+          <div className="pt-3 border-t border-slate-100 space-y-2.5">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <span className="text-[15px] font-bold text-slate-800 uppercase tracking-wide">
                 TÀI LIỆU BỔ SUNG
               </span>
 
               <div className="flex items-center gap-2 flex-wrap">
                 {/* Nút Phiếu chấm */}
                 {rubricFile ? (
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-medium">
-                    <Check className="w-3 h-3 text-emerald-600" />
-                    <span className="truncate max-w-[140px] font-bold">Phiếu: {rubricFile.name}</span>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-[14px] font-medium">
+                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="truncate max-w-[160px] font-bold">Phiếu: {rubricFile.name}</span>
                     <button
                       type="button"
                       onClick={() => rubricInputRef.current?.click()}
-                      className="text-[10px] text-blue-600 hover:underline ml-1 cursor-pointer"
+                      className="text-[13px] text-blue-600 hover:underline ml-1 cursor-pointer font-semibold"
                     >
                       Thay
                     </button>
@@ -524,21 +524,21 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
                   <button
                     type="button"
                     onClick={() => rubricInputRef.current?.click()}
-                    className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-semibold transition-colors cursor-pointer inline-flex items-center gap-1"
+                    className="px-3.5 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-[14px] font-semibold transition-colors cursor-pointer inline-flex items-center gap-1.5"
                   >
-                    <Award className="w-3.5 h-3.5 text-emerald-600" />
+                    <Award className="w-4 h-4 text-emerald-600 shrink-0" />
                     <span>+ Phiếu chấm</span>
                   </button>
                 )}
 
                 {/* Nút Minh chứng */}
                 {evidenceFiles.length > 0 ? (
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 text-[11px] font-medium">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 text-[14px] font-medium">
                     <span className="font-bold">✓ {evidenceFiles.length} minh chứng</span>
                     <button
                       type="button"
                       onClick={() => evidenceInputRef.current?.click()}
-                      className="text-[10px] text-blue-600 hover:underline ml-1 cursor-pointer"
+                      className="text-[13px] text-blue-600 hover:underline ml-1 cursor-pointer font-semibold"
                     >
                       + Thêm
                     </button>
@@ -547,16 +547,16 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
                   <button
                     type="button"
                     onClick={() => evidenceInputRef.current?.click()}
-                    className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-semibold transition-colors cursor-pointer inline-flex items-center gap-1"
+                    className="px-3.5 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-[14px] font-semibold transition-colors cursor-pointer inline-flex items-center gap-1.5"
                   >
-                    <Paperclip className="w-3.5 h-3.5 text-blue-600" />
+                    <Paperclip className="w-4 h-4 text-blue-600 shrink-0" />
                     <span>+ Minh chứng</span>
                   </button>
                 )}
               </div>
             </div>
 
-            <p className="text-[10px] text-slate-400">
+            <p className="text-[14px] leading-[1.55] text-slate-600 font-normal">
               Không bắt buộc nếu dùng Rubric chuẩn của Bộ/Sở. Minh chứng có thể tải bổ sung.
             </p>
           </div>
@@ -566,7 +566,7 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
             <div className="p-3.5 rounded-xl border border-amber-200 bg-amber-50/60 text-slate-800 space-y-2 animate-in fade-in duration-200">
               <div className="flex items-start gap-2.5">
                 <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <div className="text-xs">
+                <div className="text-[14px]">
                   <p className="font-bold text-slate-900">
                     Phân tích chưa hoàn tất. Nội dung của Thầy/Cô vẫn được giữ lại.
                   </p>
@@ -579,12 +579,12 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
           )}
 
           {/* CTA LỚN: ✨ CHẤM & PHẢN BIỆN → */}
-          <div className="pt-2">
+          <div className="pt-3">
             <button
               type="button"
               disabled={!hasSkknContent || isLoading || Boolean(retryState)}
               onClick={handleStartAnalysis}
-              className={`w-full py-3.5 px-5 rounded-xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center gap-2 shadow-md transition-all ${
+              className={`w-full py-3.5 px-5 rounded-xl text-[17px] font-bold uppercase tracking-wide flex items-center justify-center gap-2 shadow-md transition-all ${
                 hasSkknContent && !isLoading
                   ? 'bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white shadow-blue-600/30 cursor-pointer'
                   : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed shadow-none'
@@ -592,19 +592,19 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
             >
               {isLoading ? (
                 <>
-                  <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                  <RefreshCw className="w-5 h-5 animate-spin text-white" />
                   <span>ĐANG PHÂN TÍCH HỒ SƠ...</span>
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4 text-cyan-300" />
+                  <Sparkles className="w-5 h-5 text-cyan-300" />
                   <span>✨ CHẤM & PHẢN BIỆN →</span>
                 </>
               )}
             </button>
 
             {!hasSkknContent && !isLoading && (
-              <p className="text-center text-[11px] text-slate-400 mt-2">
+              <p className="text-center text-[14px] leading-[1.5] text-slate-500 mt-2.5 font-normal">
                 Hãy thêm SKKN ở trên để kích hoạt chấm & phản biện.
               </p>
             )}
@@ -617,12 +617,12 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
         {/* ======================================================================= */}
         <div className="w-full lg:w-[32%] flex flex-col items-center justify-start bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 lg:p-5 relative">
           
-          <div className="w-full flex items-center justify-between pb-2 border-b border-slate-200/80 mb-3 shrink-0">
-            <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-blue-600 inline-block" />
+          <div className="w-full flex items-center justify-between pb-2.5 border-b border-slate-200/80 mb-3.5 shrink-0">
+            <span className="text-[15px] font-bold text-slate-800 uppercase tracking-wide flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block" />
               <span>TRỢ LÝ SKKN</span>
             </span>
-            <span className="text-[10px] text-slate-400 font-medium">
+            <span className="text-[13.5px] text-slate-500 font-medium">
               Đồng hành chấm & sửa
             </span>
           </div>

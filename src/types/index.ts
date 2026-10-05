@@ -18,6 +18,21 @@ export interface UploadedFileItem {
 
 export type PriorityLevel = 'Cao' | 'Trung bình' | 'Thấp';
 
+export type InformationReliabilityLevel =
+  | 'SOURCE_DOCUMENT'      // 1. Dữ kiện có trong SKKN
+  | 'USER_CONFIRMED'        // 2. Dữ kiện giáo viên xác nhận
+  | 'VERIFIED_SOURCE'       // 3. Dữ kiện có nguồn kiểm chứng
+  | 'DERIVED_CALCULATION'   // 4. Phép tính suy ra trực tiếp từ dữ kiện
+  | 'AI_INFERENCE'          // 5. Suy luận của AI (cần gắn nhãn, không biến thành sự thật)
+  | 'UNKNOWN';              // 6. Thông tin chưa biết / Chưa có căn cứ
+
+export type FactSafetyIssueCategory =
+  | 'READY_TO_EDIT'             // Có thể tạo bản đề xuất sửa trực tiếp (chính tả, văn phong, diễn đạt)
+  | 'REQUIRES_VERIFICATION'     // Cần thầy/cô xác nhận (số liệu, nguyên nhân, sự thật)
+  | 'REQUIRES_EVIDENCE'         // Cần bổ sung minh chứng (kết quả, quan sát, thực nghiệm)
+  | 'REQUIRES_EXTERNAL_CHECK'   // Cần kiểm chứng nguồn ngoài (tài liệu tham khảo, trích dẫn)
+  | 'RESOLVED';                 // Đã khắc phục / giải quyết xong
+
 export type FindingStatus = 
   | 'Chưa xử lý' 
   | 'Đang xử lý' 

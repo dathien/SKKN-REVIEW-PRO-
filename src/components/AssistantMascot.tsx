@@ -453,7 +453,7 @@ export const AssistantMascot: React.FC<AssistantMascotProps> = ({
       {/* ======================================================================= */}
       {/* 1. BUBBLE: assistant-bubble (Giữ nguyên phong cách, cách búi tóc 4–8px)  */}
       {/* ======================================================================= */}
-      <div className="assistant-bubble w-full max-w-[285px] z-20 shrink-0 mb-0">
+      <div className="assistant-bubble w-full max-w-[320px] z-20 shrink-0 mb-0">
         <div
           className={`bubble-float-wrapper transition-transform duration-300 ease-out ${
             reducedMotion ? '' : 'animate-[bubbleFloatMotion_4.5s_ease-in-out_infinite]'
@@ -462,13 +462,13 @@ export const AssistantMascot: React.FC<AssistantMascotProps> = ({
             transform: isHovered ? 'translateY(-2px)' : undefined
           }}
         >
-          <div className="relative bg-white/95 backdrop-blur-md border border-slate-200/95 rounded-2xl p-3 shadow-xs">
+          <div className="relative bg-white/95 backdrop-blur-md border border-slate-200/95 rounded-2xl p-3.5 shadow-xs">
             
             {/* Header: TRỢ LÝ AI + dot trạng thái */}
-            <div className="flex items-center justify-between gap-1.5 mb-1">
-              <div className="flex items-center gap-1.5">
+            <div className="flex items-center justify-between gap-1.5 mb-1.5">
+              <div className="flex items-center gap-2">
                 <span
-                  className={`w-2 h-2 rounded-full ${
+                  className={`w-2.5 h-2.5 rounded-full ${
                     isAnalyzing
                       ? 'bg-cyan-500 animate-pulse'
                       : state === 'error'
@@ -478,14 +478,14 @@ export const AssistantMascot: React.FC<AssistantMascotProps> = ({
                       : 'bg-blue-600'
                   }`}
                 />
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
+                <span className="text-[14px] font-bold uppercase tracking-wide text-slate-800">
                   {bubble.badge}
                 </span>
               </div>
 
               {/* Tag số điểm cần kiểm tra (Dữ liệu thật remainingIssues) */}
               {state === 'analysis_done' && remainingIssues > 0 && !isAllResolved && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[12px] font-bold">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                   <span>{remainingIssues} điểm cần xem</span>
                 </span>
@@ -493,14 +493,14 @@ export const AssistantMascot: React.FC<AssistantMascotProps> = ({
             </div>
 
             {/* Bubble Text */}
-            <p className="text-xs text-slate-700 font-medium leading-relaxed">
+            <p className="text-[15px] text-slate-700 font-medium leading-[1.55]">
               {bubble.text}
             </p>
 
             {/* Analyzing dots indicator */}
             {isAnalyzing && (
-              <div className="flex items-center gap-1.5 mt-2 pt-1.5 border-t border-slate-100">
-                <span className="text-[10px] font-semibold text-slate-400">Tiến trình:</span>
+              <div className="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-slate-100">
+                <span className="text-[12px] font-semibold text-slate-400">Tiến trình:</span>
                 <div className="flex items-center gap-1">
                   <span
                     className="w-1.5 h-1.5 rounded-full bg-teal-600 inline-block animate-pulse"

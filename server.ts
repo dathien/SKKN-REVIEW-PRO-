@@ -511,7 +511,7 @@ Hãy phân tích kỹ lưỡng và trả về đúng JSON theo cấu trúc sau:
           newScore: calculatedNewScore,
           scoreDifference: calculatedNewScore - oldTotalScore,
           fixedIssues: [
-            'Đồng nhất cỡ mẫu khảo sát N=82 xuyên suốt văn bản, giải trình lý do loại 3 phiếu không hợp lệ',
+            'Đồng nhất cỡ mẫu khảo sát N=82 xuyên suốt văn bản theo xác nhận của tác giả',
             'Định vị lại tính mới vào quy trình sư phạm 3 bước thay vì đồng nhất với tên phần mềm công nghệ',
             'Đính chính thuật ngữ thống kê: phân biệt rõ % và điểm phần trăm'
           ],

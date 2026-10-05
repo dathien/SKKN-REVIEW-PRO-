@@ -628,7 +628,7 @@ export default function App() {
                     cards={currentAnalysis.redTeamCards}
                     onUpdateCardStatus={handleUpdateCardStatus}
                     onOpenInspector={handleOpenInspector}
-                    onGoToSuggestionForCard={(card) => {
+                    onGoToSuggestionForCard={(card: RedTeamCard) => {
                       setActiveTab('suggestions');
                     }}
                   />

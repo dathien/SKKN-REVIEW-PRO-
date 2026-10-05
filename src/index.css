@@ -1,6 +1,15 @@
 @import "tailwindcss";
 
 @layer base {
+  :root {
+    --fs-page-title: 20px;
+    --fs-card-title: 16px;
+    --fs-body: 15px;
+    --fs-secondary: 14px;
+    --fs-meta: 13px;
+    --fs-primary-action: 17px;
+  }
+
   html {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "Segoe UI", Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;

@@ -126,9 +126,9 @@ export const DocumentProfileDrawer: React.FC<DocumentProfileDrawerProps> = ({
               <button
                 type="button"
                 onClick={handleStartNew}
-                className="mt-1 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                className="mt-1 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-[13px] shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-4 h-4" />
                 <span>+ TẠO HỒ SƠ ĐÁNH GIÁ</span>
               </button>
             </div>
