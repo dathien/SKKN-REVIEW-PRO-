@@ -485,7 +485,7 @@ export const AssistantMascot: React.FC<AssistantMascotProps> = ({
 
               {/* Tag số điểm cần kiểm tra (Dữ liệu thật remainingIssues) */}
               {state === 'analysis_done' && remainingIssues > 0 && !isAllResolved && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[12px] font-bold">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[13px] font-bold">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                   <span>{remainingIssues} điểm cần xem</span>
                 </span>
@@ -500,7 +500,7 @@ export const AssistantMascot: React.FC<AssistantMascotProps> = ({
             {/* Analyzing dots indicator */}
             {isAnalyzing && (
               <div className="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-slate-100">
-                <span className="text-[12px] font-semibold text-slate-400">Tiến trình:</span>
+                <span className="text-[13px] font-semibold text-slate-400">Tiến trình:</span>
                 <div className="flex items-center gap-1">
                   <span
                     className="w-1.5 h-1.5 rounded-full bg-teal-600 inline-block animate-pulse"

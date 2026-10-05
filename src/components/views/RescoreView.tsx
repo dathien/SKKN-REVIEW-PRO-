@@ -92,43 +92,43 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
       {/* Banner */}
       <div className="bg-gradient-to-r from-teal-900 via-slate-900 to-slate-900 text-white rounded-2xl p-6 shadow-md border border-teal-950">
         <div className="space-y-2 max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 text-xs font-bold border border-teal-500/30">
-            <RefreshCw className="w-3.5 h-3.5" />
+          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 text-[13px] font-bold border border-teal-500/30">
+            <RefreshCw className="w-4 h-4" />
             <span>Thẩm định lại sau chỉnh sửa • Không phải nút tự tăng điểm</span>
           </div>
-          <h1 className="text-xl font-black tracking-tight text-white">
+          <h1 className="text-[22px] font-[750] tracking-tight text-white">
             CHẤM LẠI SAU CHỈNH SỬA
           </h1>
-          <p className="text-xs text-teal-100/80 leading-relaxed">
+          <p className="text-[14.5px] text-teal-100/90 leading-relaxed">
             Hệ thống đối chiếu thực chất: <strong>BẢN GỐC ↔ BẢN ĐÃ SỬA</strong>. Điểm số chỉ thay đổi khi NỘI DUNG / MINH CHỨNG / SỐ LIỆU / LOGIC thực sự thay đổi theo hướng đáp ứng Rubric. Tuyệt đối không tự động tăng điểm chỉ vì vấn đề đã được đánh dấu là "Đã xử lý".
           </p>
         </div>
       </div>
 
       {/* Progress & Verification Status Bar */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center font-black text-sm shrink-0">
+      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center font-black text-[15px] shrink-0">
             {resolvedCount}/{totalIssues}
           </div>
           <div>
-            <div className="text-xs font-bold text-slate-900 flex items-center gap-2">
+            <div className="text-[14px] font-bold text-slate-900 flex items-center gap-2">
               <span>Tiến độ xử lý phản biện:</span>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+              <span className={`px-2.5 py-0.5 rounded text-[12.5px] font-bold ${
                 remainingCount === 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
               }`}>
                 {remainingCount === 0 ? 'Đã xử lý tất cả ✓' : `Còn ${remainingCount} vấn đề`}
               </span>
             </div>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[13.5px] text-slate-600 mt-0.5">
               Đã đánh dấu xử lý: <strong>{resolvedCount}</strong> / {totalIssues} vấn đề phản biện
             </p>
           </div>
         </div>
 
-        <div className="text-xs text-slate-600 sm:text-right">
-          <span className="block text-[11px] text-slate-400">Điểm đánh giá trước đó:</span>
-          <span className="text-base font-black text-slate-900">
+        <div className="text-[14px] text-slate-600 sm:text-right">
+          <span className="block text-[13px] text-slate-500 font-medium">Điểm đánh giá trước đó:</span>
+          <span className="text-[18px] font-black text-slate-900">
             {currentScore.toFixed(1)} / 100đ
           </span>
         </div>
@@ -136,10 +136,10 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
 
       {/* Strict Integrity Warning: Resolved status is NOT content change */}
       {resolvedCount > 0 && !revisedText && (
-        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-start gap-2.5 shadow-2xs">
+        <div className="p-4.5 rounded-xl bg-amber-50 border border-amber-200 text-[14px] text-amber-900 flex items-start gap-3 shadow-2xs leading-[1.6]">
           <AlertTriangle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
           <div className="space-y-1">
-            <strong className="block font-bold text-amber-950">
+            <strong className="block font-bold text-amber-950 text-[15px]">
               CẢNH BÁO QUAN TRỌNG VỀ ĐỐI CHIẾU THỰC CHẤT:
             </strong>
             <p className="leading-relaxed">
@@ -153,18 +153,18 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
       <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
-            <FileCheck className="w-4 h-4 text-teal-600" />
-            <h3 className="text-sm font-bold text-slate-900">
+            <FileCheck className="w-5 h-5 text-teal-600" />
+            <h3 className="text-[16px] font-bold text-slate-900">
               Cung cấp phiên bản SKKN sau chỉnh sửa:
             </h3>
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="inline-flex p-1 bg-slate-100 rounded-xl gap-1 text-xs font-semibold">
+            <div className="inline-flex p-1 bg-slate-100 rounded-xl gap-1 text-[13.5px] font-semibold">
               <button
                 type="button"
                 onClick={() => setInputMode('paste')}
-                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
                   inputMode === 'paste' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -173,7 +173,7 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
               <button
                 type="button"
                 onClick={() => setInputMode('file')}
-                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
                   inputMode === 'file' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -184,7 +184,7 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
             <button
               type="button"
               onClick={loadSampleRevision}
-              className="text-xs font-bold text-teal-700 hover:text-teal-900 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg border border-teal-200 transition-colors cursor-pointer"
+              className="text-[13px] font-bold text-teal-700 hover:text-teal-900 bg-teal-50 hover:bg-teal-100 px-3.5 py-1.5 rounded-lg border border-teal-200 transition-colors cursor-pointer"
             >
               Dán mẫu giải trình
             </button>
@@ -196,10 +196,10 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
             <div className="p-6 border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 text-center space-y-3">
               <Upload className="w-8 h-8 text-teal-600 mx-auto" />
               <div>
-                <p className="text-xs font-bold text-slate-700">
+                <p className="text-[14px] font-bold text-slate-800">
                   {uploadedFileName ? `Đã chọn: ${uploadedFileName}` : 'Chọn file SKKN đã chỉnh sửa'}
                 </p>
-                <p className="text-[11px] text-slate-400 mt-0.5">
+                <p className="text-[13px] text-slate-500 mt-0.5">
                   Hỗ trợ định dạng .txt, .docx, .pdf hoặc bản thảo đã cập nhật
                 </p>
               </div>
@@ -213,7 +213,7 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl shadow-2xs cursor-pointer"
+                className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold text-[13.5px] rounded-xl shadow-2xs cursor-pointer"
               >
                 {uploadedFileName ? 'Chọn file khác' : 'Chọn tệp từ máy tính'}
               </button>
@@ -224,18 +224,18 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
               onChange={(e) => setRevisedText(e.target.value)}
               placeholder="Dán các đoạn văn đã sửa, bảng số liệu đã đính chính, hoặc văn bản giải trình chi tiết vào đây..."
               rows={8}
-              className="w-full p-3.5 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 font-mono leading-relaxed text-slate-800"
+              className="w-full p-3.5 text-[14.5px] bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 font-mono leading-relaxed text-slate-800"
             />
           )}
 
           <div className="flex items-center justify-between pt-1">
-            <span className="text-[11px] text-slate-500 italic">
+            <span className="text-[13px] text-slate-500 italic">
               * Điểm chỉ thay đổi khi nội dung thực sự đáp ứng các tiêu chí của phiếu chấm Rubric.
             </span>
             <button
               type="submit"
               disabled={isRescoring || !revisedText.trim()}
-              className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white font-bold text-xs rounded-xl shadow-md shadow-teal-500/20 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+              className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white font-bold text-[14px] rounded-xl shadow-md shadow-teal-500/20 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
             >
               {isRescoring ? (
                 <>
@@ -259,10 +259,10 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
           {/* Header & Overall Score Change */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-4">
             <div>
-              <span className="text-[11px] font-bold text-teal-700 uppercase tracking-wider block">
+              <span className="text-[13px] font-bold text-teal-700 uppercase tracking-wider block">
                 Kết quả đối chiếu thẩm định lại
               </span>
-              <h3 className="text-base font-bold text-slate-900">
+              <h3 className="text-[17px] font-bold text-slate-900">
                 So sánh bản trước ↔ bản sau & Chấm Rubric mới
               </h3>
             </div>
@@ -270,15 +270,15 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
             {/* Score Comparison Display */}
             <div className="flex items-center gap-4 bg-teal-50 p-3 rounded-xl border border-teal-200 self-start sm:self-auto">
               <div className="text-center">
-                <span className="text-[10px] text-slate-500 uppercase block font-semibold">Điểm trước</span>
+                <span className="text-[12px] text-slate-500 uppercase block font-semibold">Điểm trước</span>
                 <span className="text-lg font-bold text-slate-700">{history.previousScore.toFixed(1)}đ</span>
               </div>
               <ArrowRight className="w-4 h-4 text-teal-600" />
               <div className="text-center">
-                <span className="text-[10px] text-teal-700 uppercase block font-semibold">Điểm sau</span>
+                <span className="text-[12px] text-teal-700 uppercase block font-semibold">Điểm sau</span>
                 <span className="text-xl font-black text-teal-800">{history.newScore.toFixed(1)}đ</span>
               </div>
-              <div className={`px-2.5 py-1 rounded-md font-bold text-xs ${
+              <div className={`px-2.5 py-1 rounded-md font-bold text-[13px] ${
                 history.scoreDifference > 0
                   ? 'bg-emerald-600 text-white'
                   : history.scoreDifference < 0
@@ -291,8 +291,8 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
           </div>
 
           {/* Justification statement */}
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1">
-            <span className="font-bold text-slate-900 block">
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-[14px] space-y-1">
+            <span className="font-bold text-slate-900 block text-[15px]">
               Căn cứ khoa học giải trình việc thay đổi điểm số:
             </span>
             <p className="text-slate-700 leading-relaxed font-medium">
@@ -303,7 +303,7 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
           {/* SECTION VI & VII: Thẻ So Sánh Từng Vấn Đề (Original vs Revised) */}
           {history.issueComparisons && history.issueComparisons.length > 0 && (
             <div className="space-y-3 pt-2">
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+              <h4 className="text-[14px] font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
                 <span>VI. ĐỐI CHIẾU VỊ TRÍ LIÊN QUAN ISSUES (BẢN GỐC vs BẢN ĐÃ SỬA)</span>
               </h4>
               <div className="space-y-3">
@@ -320,37 +320,37 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
                       : 'bg-slate-100 text-slate-700 border-slate-300';
 
                   return (
-                    <div key={idx} className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3 text-xs">
+                    <div key={idx} className="p-4.5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3 text-[14px]">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-200/60 pb-2">
-                        <strong className="text-slate-900 text-xs font-bold">
+                        <strong className="text-slate-900 text-[15px] font-bold">
                           {idx + 1}. {item.issueTitle}
                         </strong>
-                        <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold border self-start sm:self-auto ${statusStyle}`}>
+                        <span className={`px-2.5 py-0.5 rounded text-[12.5px] font-bold border self-start sm:self-auto ${statusStyle}`}>
                           ● {item.status}
                         </span>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div className="p-3 bg-white rounded-lg border border-slate-200 space-y-1">
-                          <span className="text-[10px] font-bold text-slate-500 uppercase block">
+                        <div className="p-3.5 bg-white rounded-lg border border-slate-200 space-y-1">
+                          <span className="text-[12.5px] font-bold text-slate-500 uppercase block">
                             Bản gốc:
                           </span>
-                          <p className="font-mono text-slate-700 italic text-[11px] leading-relaxed">
+                          <p className="font-mono text-slate-700 italic text-[13.5px] leading-relaxed">
                             "{item.originalQuote}"
                           </p>
                         </div>
-                        <div className="p-3 bg-teal-50/60 rounded-lg border border-teal-200 space-y-1">
-                          <span className="text-[10px] font-bold text-teal-800 uppercase block">
+                        <div className="p-3.5 bg-teal-50/60 rounded-lg border border-teal-200 space-y-1">
+                          <span className="text-[12.5px] font-bold text-teal-800 uppercase block">
                             Bản mới đã sửa:
                           </span>
-                          <p className="font-mono text-teal-950 font-medium text-[11px] leading-relaxed">
+                          <p className="font-mono text-teal-950 font-medium text-[13.5px] leading-relaxed">
                             "{item.revisedQuote}"
                           </p>
                         </div>
                       </div>
 
                       {item.explanation && (
-                        <p className="text-[11px] text-slate-600 bg-white p-2.5 rounded-lg border border-slate-100">
+                        <p className="text-[13.5px] text-slate-700 bg-white p-3 rounded-lg border border-slate-100 leading-[1.6]">
                           <strong>Đánh giá thực chất:</strong> {item.explanation}
                         </p>
                       )}
@@ -364,21 +364,21 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
           {/* SECTION VIII & IX: Rubric Điểm Từng Tiêu Chí + 4 Câu Hỏi Giải Trình */}
           {history.updatedCriteria && history.updatedCriteria.length > 0 && (
             <div className="space-y-3 pt-2">
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+              <h4 className="text-[14px] font-bold text-slate-900 uppercase tracking-wider">
                 VIII. CHI TIẾT THAY ĐỔI ĐIỂM TỪNG TIÊU CHÍ RUBRIC
               </h4>
-              <div className="space-y-3 text-xs">
+              <div className="space-y-3 text-[14px]">
                 {history.updatedCriteria.map((c, idx) => (
-                  <div key={idx} className="p-4 rounded-xl border border-slate-200 bg-white space-y-2.5 shadow-2xs">
+                  <div key={idx} className="p-4.5 rounded-xl border border-slate-200 bg-white space-y-2.5 shadow-2xs">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-2">
-                      <span className="font-bold text-slate-900">
+                      <span className="font-bold text-slate-900 text-[15px]">
                         {idx + 1}. {c.criterionName}
                       </span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-slate-500 font-medium">{c.previousScore.toFixed(1)}đ</span>
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-slate-500 font-medium text-[14px]">{c.previousScore.toFixed(1)}đ</span>
                         <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
-                        <span className="font-bold text-teal-800">{c.newScore.toFixed(1)}đ</span>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        <span className="font-bold text-teal-800 text-[15px]">{c.newScore.toFixed(1)}đ</span>
+                        <span className={`px-2.5 py-0.5 rounded text-[12.5px] font-bold ${
                           c.changeDifference > 0
                             ? 'bg-emerald-100 text-emerald-800'
                             : c.changeDifference < 0
@@ -391,22 +391,22 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
                     </div>
 
                     {/* 4 Câu hỏi giải trình bắt buộc (Section IX) */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-[11px] pt-1">
-                      <div className="p-2.5 bg-slate-50 rounded-lg">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[13.5px] pt-1">
+                      <div className="p-3 bg-slate-50 rounded-lg">
                         <strong className="text-slate-800 block mb-0.5">1. Điều gì đã thay đổi?</strong>
-                        <span className="text-slate-600">{c.whatChanged || 'Đã đính chính số liệu và hoàn thiện lập luận'}</span>
+                        <span className="text-slate-600 leading-[1.5] block">{c.whatChanged || 'Đã đính chính số liệu và hoàn thiện lập luận'}</span>
                       </div>
-                      <div className="p-2.5 bg-slate-50 rounded-lg">
+                      <div className="p-3 bg-slate-50 rounded-lg">
                         <strong className="text-slate-800 block mb-0.5">2. Minh chứng nằm ở đâu?</strong>
-                        <span className="text-slate-600">{c.evidenceFoundAt || 'Tại các bảng biểu và phụ lục mới'}</span>
+                        <span className="text-slate-600 leading-[1.5] block">{c.evidenceFoundAt || 'Tại các bảng biểu và phụ lục mới'}</span>
                       </div>
-                      <div className="p-2.5 bg-slate-50 rounded-lg">
+                      <div className="p-3 bg-slate-50 rounded-lg">
                         <strong className="text-slate-800 block mb-0.5">3. Vì sao thay đổi này ảnh hưởng điểm?</strong>
-                        <span className="text-slate-600">{c.impactReason || 'Khắc phục điểm yếu phản biện và loại bỏ nguy cơ trừ điểm'}</span>
+                        <span className="text-slate-600 leading-[1.5] block">{c.impactReason || 'Khắc phục điểm yếu phản biện và loại bỏ nguy cơ trừ điểm'}</span>
                       </div>
-                      <div className="p-2.5 bg-slate-50 rounded-lg">
+                      <div className="p-3 bg-slate-50 rounded-lg">
                         <strong className="text-slate-800 block mb-0.5">4. Tiêu chí Rubric nào được đáp ứng tốt hơn?</strong>
-                        <span className="text-slate-600">{c.rubricMetReason || 'Đạt chuẩn yêu cầu của tiêu chuẩn chuyên môn'}</span>
+                        <span className="text-slate-600 leading-[1.5] block">{c.rubricMetReason || 'Đạt chuẩn yêu cầu của tiêu chuẩn chuyên môn'}</span>
                       </div>
                     </div>
                   </div>
@@ -416,15 +416,15 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
           )}
 
           {/* 2-Columns: Fixed vs Remaining Issues */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs pt-2">
-            <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-2">
-              <span className="font-bold text-emerald-900 flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[14px] pt-2">
+            <div className="p-4.5 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-2">
+              <span className="font-bold text-emerald-900 flex items-center gap-1.5 text-[14.5px]">
+                <CheckCircle2 className="w-4.5 h-4.5 text-emerald-600" />
                 Vấn đề đã khắc phục triệt để ({history.fixedIssues.length}):
               </span>
-              <ul className="space-y-1 text-slate-700">
+              <ul className="space-y-1.5 text-slate-700">
                 {history.fixedIssues.map((item, i) => (
-                  <li key={i} className="flex items-start gap-1.5">
+                  <li key={i} className="flex items-start gap-1.5 leading-[1.5]">
                     <span className="text-emerald-600 font-bold">✓</span>
                     <span>{item}</span>
                   </li>
@@ -432,14 +432,14 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
               </ul>
             </div>
 
-            <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200 space-y-2">
-              <span className="font-bold text-amber-900 flex items-center gap-1.5">
-                <AlertTriangle className="w-4 h-4 text-amber-600" />
+            <div className="p-4.5 rounded-xl bg-amber-50/70 border border-amber-200 space-y-2">
+              <span className="font-bold text-amber-900 flex items-center gap-1.5 text-[14.5px]">
+                <AlertTriangle className="w-4.5 h-4.5 text-amber-600" />
                 Vấn đề còn tồn tại cần lưu ý ({history.remainingIssues.length}):
               </span>
-              <ul className="space-y-1 text-slate-700">
+              <ul className="space-y-1.5 text-slate-700">
                 {history.remainingIssues.map((item, i) => (
-                  <li key={i} className="flex items-start gap-1.5">
+                  <li key={i} className="flex items-start gap-1.5 leading-[1.5]">
                     <span className="text-amber-600 font-bold">•</span>
                     <span>{item}</span>
                   </li>
@@ -450,18 +450,18 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
 
           {/* New evidence and figures added */}
           {(history.newEvidenceAdded?.length > 0 || history.newFiguresAdded?.length > 0) && (
-            <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-200 text-xs space-y-2">
-              <span className="font-bold text-blue-900 block">
+            <div className="p-4.5 rounded-xl bg-blue-50/50 border border-blue-200 text-[14px] space-y-2">
+              <span className="font-bold text-blue-900 block text-[14.5px]">
                 Minh chứng & Số liệu mới được ghi nhận bổ sung:
               </span>
               <div className="flex flex-wrap gap-2">
                 {history.newEvidenceAdded?.map((ev, i) => (
-                  <span key={i} className="px-2.5 py-1 rounded bg-white border border-blue-200 text-blue-900 font-medium">
+                  <span key={i} className="px-3 py-1 rounded bg-white border border-blue-200 text-blue-900 font-medium text-[13.5px]">
                     📁 {ev}
                   </span>
                 ))}
                 {history.newFiguresAdded?.map((fig, i) => (
-                  <span key={i} className="px-2.5 py-1 rounded bg-white border border-blue-200 text-blue-900 font-medium">
+                  <span key={i} className="px-3 py-1 rounded bg-white border border-blue-200 text-blue-900 font-medium text-[13.5px]">
                     📊 {fig}
                   </span>
                 ))}
@@ -475,7 +475,7 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
               <button
                 type="button"
                 onClick={() => onNavigateTab('report')}
-                className="py-3 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-2 shadow-sm shadow-blue-500/20 transition-all cursor-pointer"
+                className="py-3 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-[14px] flex items-center gap-2 shadow-sm shadow-blue-500/20 transition-all cursor-pointer"
               >
                 <span>XEM & XUẤT BÁO CÁO TOÀN DIỆN (ĐÃ CẬP NHẬT KẾT QUẢ CHẤM LẠI) →</span>
                 <ArrowRight className="w-4 h-4" />

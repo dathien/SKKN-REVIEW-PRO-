@@ -263,36 +263,68 @@ app.post('/api/generate-suggestion', async (req, res) => {
     const { originalText, problem, context, targetSection } = req.body;
 
     const prompt = `
-Bạn là chuyên gia cố vấn viết và chỉnh sửa Sáng kiến Kinh nghiệm Giáo dục của "SKKN REVIEW PRO".
-YÊU CẦU CỐT LÕI:
-- KHÔNG tự tạo số liệu giả, KHÔNG tự tạo kết quả khảo sát, KHÔNG tự tạo minh chứng.
-- Nếu cần số liệu thực tế mà tài liệu chưa có, BẮT BUỘC sử dụng các placeholder đánh dấu:
-  [CẦN BỔ SUNG SỐ LIỆU THỰC TẾ] hoặc [CẦN BỔ SUNG MINH CHỨNG] hoặc [CẦN BỔ SUNG THỜI GIAN/ĐỐI TƯỢNG].
-- Cung cấp đủ 3 mức độ:
-  1. SỬA NHẸ: Giữ gần nguyên nội dung, sửa trau chuốt câu từ.
-  2. SỬA HỌC THUẬT: Cải thiện logic, khoa học, tính sư phạm và diễn đạt chuẩn mực.
-  3. SỬA SÂU: Đề xuất tổ chức lại đoạn/mục, chỉ rõ minh chứng cần bổ sung và đặt vị trí thích hợp.
+Bạn là chuyên gia cố vấn nghiên cứu và hoàn thiện Sáng kiến Kinh nghiệm (SKKN) của "SKKN REVIEW PRO".
+Nhiệm vụ: Tạo 3 phiên bản chỉnh sửa THỰC SỰ KHÁC NHAU dựa CHUNG trên một tập dữ kiện đã có, tuyệt đối tuân thủ FACT SAFETY.
 
-Thông tin đoạn văn cần sửa:
-Vị trí/Mục: ${targetSection || 'Chưa xác định rõ'}
-Đoạn gốc:
+NGUYÊN TẮC FACT SAFETY BẮT BUỘC:
+- KHÔNG tự tạo số liệu mới (số học sinh, số tiết, số phiếu, tỷ lệ %, điểm số).
+- KHÔNG tự tạo nguyên nhân mới (vắng, không tham gia, hỏng phiếu,...).
+- KHÔNG tự tạo tên trường, tên lớp, tên người, ngày tháng, công cụ đo lường mới.
+- KHÔNG tự tạo minh chứng, khảo sát, nguồn trích dẫn, DOI, URL giả mạo.
+- Nếu thiếu dữ liệu thực tế, BẮT BUỘC dùng placeholder: [CẦN BỔ SUNG SỐ LIỆU THỰC TẾ] hoặc [CẦN BỔ SUNG MINH CHỨNG].
+
+3 MỨC ĐỘ CHỈNH SỬA PHẢI THỰC SỰ KHÁC BIỆT:
+1. LIGHT (SỬA NHẸ):
+   - Giữ tối đa câu chữ, giọng văn và cấu trúc của tác giả.
+   - Chỉ sửa những gì thực sự cần thiết để khắc phục issue (chính tả, ngữ pháp, thuật ngữ, giảm khẳng định quá mức).
+   - Không tái cấu trúc toàn đoạn. Không thêm dữ kiện.
+
+2. ACADEMIC (SỬA HỌC THUẬT):
+   - Viết lại đoạn theo văn phong nghiên cứu giáo dục chặt chẽ, khách quan và logic hơn.
+   - Được tổ chức lại câu, làm rõ chủ thể, chuẩn hóa thuật ngữ khoa học sư phạm.
+   - Diễn đạt thận trọng, khiêm tốn khoa học. Không thay đổi bản chất nội dung và không thêm dữ kiện.
+
+3. DEEP (SỬA SÂU):
+   - Tái cấu trúc đoạn để giải quyết issue ở mức sâu nhất có thể.
+   - Có thể thay đổi cấu trúc lập luận theo chuỗi: đối tượng -> phương pháp -> dữ liệu -> phân tích -> kết luận.
+   - Đổi thứ tự câu, tách/gộp ý, chỉ rõ vị trí cần minh chứng thực nghiệm đối chứng tại Phụ lục.
+   - Tuyệt đối không thêm fact không có căn cứ.
+
+Thông tin đoạn văn:
+- Vị trí/Mục: ${targetSection || 'Văn bản SKKN'}
+- Đoạn gốc:
 """${originalText}"""
-
-Vấn đề phát hiện:
+- Vấn đề phản biện:
 ${problem}
+- Bối cảnh:
+${context || 'Sáng kiến kinh nghiệm'}
 
-Bối cảnh:
-${context || 'Nghiên cứu sáng kiến giáo dục'}
-
-Trả về định dạng JSON:
+Trả về ĐÚNG định dạng JSON sau:
 {
   "whyRevise": "Giải thích vì sao cần sửa và rủi ro nếu giữ nguyên",
   "basis": "Căn cứ quy chuẩn / tiêu chí rubric / nguyên tắc nghiên cứu sư phạm",
-  "revisionGoal": "Mục tiêu chỉnh sửa",
+  "revisionGoal": "Mục tiêu chỉnh sửa cụ thể",
   "howToRevise": "Cách sửa chi tiết từng bước",
-  "lightRevision": "Đoạn văn sửa nhẹ",
-  "academicRevision": "Đoạn văn sửa học thuật",
-  "deepRevision": "Đoạn văn sửa sâu",
+  "lightRevision": "Phiên bản sửa nhẹ (giữ tối đa bản gốc)",
+  "academicRevision": "Phiên bản sửa học thuật (chuẩn hóa văn phong nghiên cứu)",
+  "deepRevision": "Phiên bản sửa sâu (tái cấu trúc lập luận có hệ thống)",
+  "tierDetails": {
+    "light": {
+      "text": "Nội dung sửa nhẹ",
+      "changeScope": "Sửa chính tả, ngữ pháp, giảm khẳng định quá mức, giữ nguyên cấu trúc gốc",
+      "factsUsed": ["Dữ kiện gốc trong SKKN"]
+    },
+    "academic": {
+      "text": "Nội dung sửa học thuật",
+      "changeScope": "Chuẩn hóa văn phong nghiên cứu, tăng tính khách quan và liên kết logic",
+      "factsUsed": ["Dữ kiện gốc trong SKKN"]
+    },
+    "deep": {
+      "text": "Nội dung sửa sâu",
+      "changeScope": "Tái cấu trúc chuỗi lập luận đối tượng -> phương pháp -> dữ liệu -> kết luận",
+      "factsUsed": ["Dữ kiện gốc trong SKKN"]
+    }
+  },
   "missingEvidenceAlert": "Minh chứng cần bổ sung nếu có",
   "insertPosition": "Vị trí nên đặt trong văn bản"
 }
@@ -305,7 +337,7 @@ Trả về định dạng JSON:
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
-          temperature: 0.3,
+          temperature: 0.25,
         },
       });
     } catch (err: any) {
@@ -316,26 +348,83 @@ Trả về định dạng JSON:
           contents: prompt,
           config: {
             responseMimeType: 'application/json',
-            temperature: 0.3,
+            temperature: 0.25,
           },
         });
       } catch (fallbackErr) {
         console.warn('All models failed for generate-suggestion, returning pedagogical fallback.');
+        const loc = targetSection || 'đoạn văn';
         return res.json({
           whyRevise: `Vấn đề: ${problem || 'Cần điều chỉnh số liệu và diễn đạt cho chuẩn hóa'}. Việc chỉnh sửa giúp tăng độ tin cậy và bảo toàn điểm số theo Rubric.`,
-          basis: 'Căn cứ tiêu chí đánh giá sáng kiến kinh nghiệm, quy chuẩn phương pháp nghiên cứu sư phạm và quy tắc bảo toàn liêm chính khoa học.',
+          basis: 'Căn cứ tiêu chí đánh giá sáng kiến kinh nghiệm, quy chuẩn phương pháp nghiên cứu sư phạm và quy tắc liêm chính khoa học.',
           revisionGoal: 'Chuẩn hóa số liệu, củng cố tính khoa học và minh chứng sư phạm.',
           howToRevise: 'Rà soát văn bản gốc, thống nhất số liệu và đính kèm phụ lục minh chứng thực nghiệm.',
-          lightRevision: `Chỉnh sửa diễn đạt tại ${targetSection || 'đoạn văn'}: Rà soát câu từ, chuẩn hóa các số liệu cho thống nhất xuyên suốt bài viết. Nếu số liệu chưa kiểm chứng đầy đủ, ghi chú rõ: "[CẦN BỔ SUNG SỐ LIỆU THỰC TẾ]".`,
-          academicRevision: `Bổ sung cơ sở sư phạm và phương pháp luận tại ${targetSection || 'đoạn văn'}: Nêu rõ mục tiêu nghiên cứu, tiêu chí khảo sát và phạm vi đối tượng thực tế. Đối chiếu số liệu trước và sau tác động với bảng tổng hợp minh chứng gốc [CẦN BỔ SUNG MINH CHỨNG].`,
-          deepRevision: `Tái cấu trúc lại ${targetSection || 'đoạn văn'}: Tách biệt rõ thực trạng ban đầu và kết quả thực nghiệm. Bổ sung biểu mẫu khảo sát hoặc sản phẩm học tập tại Phụ lục để bảo vệ trọn vẹn điểm trước Hội đồng chấm sáng kiến.`,
+          lightRevision: `Chỉnh sửa diễn đạt tại ${loc}: Giữ nguyên câu chữ và cấu trúc của tác giả, rà soát lại câu từ và khắc phục trực tiếp lỗi phát hiện. Giữ nguyên số liệu gốc, ghi chú: "[CẦN BỔ SUNG SỐ LIỆU THỰC TẾ]" nếu chưa đủ căn cứ.`,
+          academicRevision: `Viết lại theo văn phong nghiên cứu sư phạm tại ${loc}: Làm rõ mục tiêu, đối tượng và mối quan hệ giữa các dữ kiện. Diễn đạt khách quan, thận trọng, không tự ý bổ sung dữ kiện chưa kiểm chứng.`,
+          deepRevision: `Tái cấu trúc lập luận tại ${loc}:\n1. Thực trạng & Vấn đề: Làm rõ bối cảnh cụ thể trước can thiệp.\n2. Phương pháp & Tiến trình: Trình bày mạch lạc chuỗi giải pháp.\n3. Minh chứng & Đối soát: Chỉ rõ vị trí cần đính kèm minh chứng thực nghiệm [CẦN BỔ SUNG MINH CHỨNG THỰC TẾ] tại Phụ lục để bảo vệ luận điểm.`,
+          tierDetails: {
+            light: {
+              text: `Chỉnh sửa diễn đạt tại ${loc}: Giữ nguyên câu chữ và cấu trúc của tác giả.`,
+              changeScope: 'Sửa chính tả, ngữ pháp, giảm khẳng định quá mức, giữ nguyên cấu trúc gốc',
+              factsUsed: ['Dữ kiện gốc trong SKKN']
+            },
+            academic: {
+              text: `Viết lại theo văn phong nghiên cứu sư phạm tại ${loc}: Chuẩn hóa thuật ngữ và liên kết logic.`,
+              changeScope: 'Chuẩn hóa văn phong nghiên cứu, tăng tính khách quan và liên kết logic',
+              factsUsed: ['Dữ kiện gốc trong SKKN']
+            },
+            deep: {
+              text: `Tái cấu trúc lập luận tại ${loc} theo chuỗi đối tượng -> phương pháp -> dữ liệu -> kết luận.`,
+              changeScope: 'Tái cấu trúc chuỗi lập luận đối tượng -> phương pháp -> dữ liệu -> kết luận',
+              factsUsed: ['Dữ kiện gốc trong SKKN']
+            }
+          },
           missingEvidenceAlert: 'Cần đính kèm phiếu khảo sát hoặc bảng số liệu đối chiếu tại Phụ lục.',
-          insertPosition: targetSection || 'Vị trí tương ứng trong bài'
+          insertPosition: loc
         });
       }
     }
 
     const parsed = JSON.parse(response?.text || '{}');
+    
+    // FACT SAFETY CHECK cho cả 3 phiên bản (Section A7)
+    // Đảm bảo không chứa enum kỹ thuật trên UI text
+    const cleanTechnicalText = (text: string) => {
+      if (!text) return '';
+      return text
+        .replace(/USER_CONFIRMED/g, 'Đã xác nhận')
+        .replace(/SOURCE_DOCUMENT/g, 'Theo tài liệu SKKN')
+        .replace(/VERIFIED_SOURCE/g, 'Nguồn đã kiểm chứng')
+        .replace(/DERIVED_CALCULATION/g, 'Tính toán từ số liệu có sẵn')
+        .replace(/REQUIRES_VERIFICATION/g, 'Cần xác nhận')
+        .replace(/REQUIRES_EVIDENCE/g, 'Cần bổ sung minh chứng');
+    };
+
+    if (parsed.lightRevision) parsed.lightRevision = cleanTechnicalText(parsed.lightRevision);
+    if (parsed.academicRevision) parsed.academicRevision = cleanTechnicalText(parsed.academicRevision);
+    if (parsed.deepRevision) parsed.deepRevision = cleanTechnicalText(parsed.deepRevision);
+
+    // Đồng bộ tierDetails nếu model chưa trả về đủ
+    if (!parsed.tierDetails) {
+      parsed.tierDetails = {
+        light: {
+          text: parsed.lightRevision,
+          changeScope: 'Giữ tối đa bản gốc của tác giả, sửa tối thiểu',
+          factsUsed: ['Dữ kiện gốc trong SKKN']
+        },
+        academic: {
+          text: parsed.academicRevision,
+          changeScope: 'Chuẩn hóa văn phong nghiên cứu giáo dục',
+          factsUsed: ['Dữ kiện gốc trong SKKN']
+        },
+        deep: {
+          text: parsed.deepRevision,
+          changeScope: 'Tái cấu trúc lập luận và chuỗi logic',
+          factsUsed: ['Dữ kiện gốc trong SKKN']
+        }
+      };
+    }
+
     return res.json(parsed);
   } catch (error: any) {
     console.error('Error generating suggestion:', error);

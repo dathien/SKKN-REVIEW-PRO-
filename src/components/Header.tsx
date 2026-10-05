@@ -47,7 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
         )}
 
         <h1
-          className="text-sm sm:text-base font-bold text-slate-900 truncate tracking-tight"
+          className="text-[15px] sm:text-[17px] font-bold text-slate-900 truncate tracking-tight"
           title={displayTitle}
         >
           {displayTitle}
@@ -57,7 +57,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={onOpenProfileDrawer}
-            className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100 transition-colors shrink-0 cursor-pointer"
+            className="text-[13px] font-bold px-2.5 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100 transition-colors shrink-0 cursor-pointer"
             title="Nhấp để xem chi tiết hồ sơ hoặc đổi hồ sơ"
           >
             HỒ SƠ MẪU
@@ -70,7 +70,7 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           type="button"
           onClick={onOpenProfileDrawer}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-300 rounded-lg shadow-2xs transition-all cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[14px] font-semibold text-slate-700 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-300 rounded-lg shadow-2xs transition-all cursor-pointer"
         >
           <BookOpen className="w-3.5 h-3.5 text-blue-600" />
           <span>Hồ sơ</span>

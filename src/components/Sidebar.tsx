@@ -259,30 +259,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
         />
       )}
 
-      <aside className={`w-[272px] bg-slate-900 text-slate-100 flex flex-col h-full border-r border-slate-800 shrink-0 select-none transition-transform duration-200 z-50 ${
+      <aside className={`w-[280px] bg-slate-900 text-slate-100 flex flex-col h-full border-r border-slate-800 shrink-0 select-none transition-transform duration-200 z-50 ${
         isMobileOpen
           ? 'fixed inset-y-0 left-0 translate-x-0 shadow-2xl'
           : 'hidden lg:flex static'
       }`}>
         {/* App Branding */}
-        <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 shrink-0">
+        <div className="px-4 py-3.5 border-b border-slate-800 bg-slate-950/80 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 flex items-center justify-center font-black text-white shadow-md text-xs shrink-0 tracking-wider">
+            <div className="w-8.5 h-8.5 rounded-lg bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 flex items-center justify-center font-black text-white shadow-md text-[13px] shrink-0 tracking-wider">
               PRO
             </div>
             <div className="min-w-0 flex flex-col justify-center">
               <div className="flex items-center gap-1.5 leading-none">
-                <span className="font-extrabold text-[14px] tracking-tight text-white truncate">
+                <span className="font-[750] text-[16px] tracking-tight text-white">
                   SKKN REVIEW
                 </span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/25 text-blue-400 font-bold border border-blue-400/30 leading-none shrink-0">
+                <span className="text-[11.5px] px-1.5 py-0.5 rounded bg-blue-500/25 text-blue-400 font-[700] border border-blue-400/30 leading-none shrink-0">
                   PRO
                 </span>
               </div>
-              <div className="text-[12px] font-semibold text-white/90 tracking-tight leading-tight mt-1 truncate">
+              <div className="text-[14px] font-[650] text-white/95 tracking-tight leading-tight mt-1.5">
                 GV.Hồ Nguyễn Đa Thiện
               </div>
-              <div className="text-[11px] font-normal text-slate-400 tracking-tight leading-tight mt-0.5 truncate">
+              <div className="text-[13px] font-[500] text-slate-400 tracking-tight leading-tight mt-0.5">
                 Trợ lý Chấm & Phản biện
               </div>
             </div>
@@ -290,7 +290,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Sidebar Chỉ Dùng Để ĐIỀU HƯỚNG (Scrollable độc lập, không cuộn nội dung chính) */}
-        <nav className="flex-1 overflow-y-auto px-2 py-2 space-y-1 scrollbar-thin scrollbar-thumb-slate-700">
+        <nav className="flex-1 overflow-y-auto px-2.5 py-2.5 space-y-1 scrollbar-thin scrollbar-thumb-slate-700">
           
           {/* Mục HỒ SƠ - Mở Drawer Hồ sơ */}
           {onOpenProfileDrawer && (
@@ -301,20 +301,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 if (onCloseMobile) onCloseMobile();
               }}
               title="Xem thông tin hồ sơ SKKN, phiếu chấm và chọn tài liệu"
-              className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-[15px] font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[15px] font-[600] leading-[1.4] text-slate-300 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 <BookOpen className="w-[18px] h-[18px] text-slate-400 shrink-0" />
-                <span className="leading-[1.35]">HỒ SƠ</span>
+                <span className="leading-[1.4]">HỒ SƠ</span>
               </div>
-              <span className="text-[12px] text-slate-400 font-normal shrink-0">
+              <span className="text-[13px] text-slate-400 font-normal shrink-0">
                 Xem ▾
               </span>
             </button>
           )}
 
           {/* Divider nhẹ */}
-          <div className="my-1 border-t border-slate-800/80" />
+          <div className="my-1.5 border-t border-slate-800/80" />
 
           {/* Danh sách Menu Items (Font 15px, Active 700, hiển thị đầy đủ không bị cắt tên) */}
           {currentNavItems.map((item) => {
@@ -330,21 +330,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   if (onCloseMobile) onCloseMobile();
                 }}
                 title={item.desc}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-[15px] leading-[1.35] transition-all cursor-pointer text-left ${
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[15px] leading-[1.4] transition-all cursor-pointer text-left ${
                   isActive
-                    ? 'bg-blue-600 text-white font-bold shadow-xs'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white font-semibold'
+                    ? 'bg-blue-600 text-white font-[700] shadow-xs'
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white font-[600]'
                 }`}
               >
                 <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-1">
                   <Icon className={`w-[18px] h-[18px] shrink-0 mt-0.5 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                  <span className="leading-[1.35] whitespace-normal break-words">{item.label}</span>
+                  <span className="leading-[1.4] whitespace-normal break-words">{item.label}</span>
                 </div>
 
-                {/* Badge số (Font 12.5-13px, font-bold 700, min-w đủ dễ đọc) */}
+                {/* Badge số (Font 13px, font-bold 700, min-w đủ dễ đọc) */}
                 {item.badge !== undefined && (
                   <span
-                    className={`ml-1.5 px-2 py-0.5 rounded-full text-[12.5px] font-bold min-w-[24px] text-center shrink-0 ${
+                    className={`ml-1.5 px-2.5 py-0.5 rounded-full text-[13px] font-[700] min-w-[24px] text-center shrink-0 ${
                       isActive
                         ? 'bg-blue-700/90 text-white'
                         : item.badgeType === 'danger'
@@ -366,7 +366,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Sidebar Footer: Switch [Dễ dùng] [Chuyên sâu] - Cố định ở đáy */}
         <div className="p-3 border-t border-slate-800 bg-slate-950/90 shrink-0">
-          <div className="bg-slate-900 p-1 rounded-xl border border-slate-800 flex items-center text-[13px] font-semibold gap-1">
+          <div className="bg-slate-900 p-1 rounded-xl border border-slate-800 flex items-center text-[13.5px] font-semibold gap-1">
             <button
               type="button"
               onClick={() => setAppMode('easy')}

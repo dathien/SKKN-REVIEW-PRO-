@@ -221,7 +221,7 @@ export const IssueResolutionModal: React.FC<IssueResolutionModalProps> = ({
     if (sampleOption === 'undetermined') {
       setSampleLifecycle('pending');
       setConfirmedFactRecord(null);
-      setToastMessage('Đã lưu trạng thái: REQUIRES_VERIFICATION. Hệ thống không tạo bản sửa khi chưa có xác nhận từ tác giả.');
+      setToastMessage('Đã lưu trạng thái: Cần xác nhận. Hệ thống không tạo bản sửa khi chưa có xác nhận từ Thầy/Cô.');
       return;
     }
     if (sampleOption === 'both_different_scope') {
@@ -257,7 +257,8 @@ export const IssueResolutionModal: React.FC<IssueResolutionModalProps> = ({
     setConfirmedFactRecord(fact);
     setSampleLifecycle('confirmed');
     setShowSuggestionPanel(true);
-    setToastMessage('✓ Đã lưu FACT xác nhận (USER_CONFIRMED). Bản đề xuất đã sẵn sàng.');
+    const displayVal = valueStr === '85 & 82' ? '85 và 82' : valueStr;
+    setToastMessage(`✓ Đã xác nhận: ${displayVal}. Bản đề xuất đã sẵn sàng.`);
   };
 
   const handleApplySuggestionToDraft = () => {
@@ -349,22 +350,82 @@ export const IssueResolutionModal: React.FC<IssueResolutionModalProps> = ({
       }
       if (sampleOption === '82_is_correct') {
         if (suggestionTab === 'light') {
-          return `Sửa con số cỡ mẫu tại Thuyết minh Mục 3.2 từ 85 thành 82 cho khớp với Bảng số liệu 2: "Khảo sát được tiến hành trên 82 học sinh. Kết quả ghi nhận: 42 em Rất thích (51.2%), 28 em Thích (34.1%), 12 em Bình thường (14.6%)." (Dữ liệu do tác giả xác nhận theo chuẩn USER_CONFIRMED).`;
+          return `Khảo sát được thực hiện trên 82 học sinh. Kết quả ghi nhận: 42 em Rất thích (51.2%), 28 em Thích (34.1%), 12 em Bình thường (14.6%). (Đã chuẩn hóa 85 thành 82 theo xác nhận cỡ mẫu thực tế).`;
         }
         if (suggestionTab === 'academic') {
-          return `Điều chỉnh cỡ mẫu tại Thuyết minh Mục 3.2 từ 85 thành 82 học sinh: "Khảo sát thực nghiệm được tiến hành trên cỡ mẫu thực tế 82 học sinh (Bảng số liệu 2). Cơ cấu phản hồi: 42/82 em (51.2%) Rất thích; 28/82 em (34.1%) Thích; 12/82 em (14.6%) Bình thường." (Số liệu đã được tác giả xác nhận theo chuẩn USER_CONFIRMED, loại bỏ hoàn toàn mâu thuẫn cỡ mẫu).`;
+          return `Khảo sát được triển khai trên cỡ mẫu thực tế N=82 học sinh thuộc đối tượng nghiên cứu (Bảng số liệu 2). Cơ cấu phản hồi: 42/82 em (51.2%) đánh giá Rất thích; 28/82 em (34.1%) Thích; 12/82 em (14.6%) Bình thường. Số liệu đã được tác giả xác nhận, thống nhất xuyên suốt các mục.`;
         }
-        return `Quy chuẩn hóa toàn bộ dữ liệu khảo sát theo cỡ mẫu thực tế 82 học sinh:\n- Thuyết minh Mục 3.2: Khảo sát trên 82 học sinh thuộc 2 lớp 8A1 và 8A2.\n- Bảng số liệu 2: Tổng số phản hồi hợp lệ N=82 (42 Rất thích, 28 Thích, 12 Bình thường).\n- Phụ lục: Đính kèm Biên bản tổng hợp 82 phiếu khảo sát gốc để Hội đồng đối chiếu.`;
+        return `Quy chuẩn hóa cấu trúc báo cáo khảo sát theo cỡ mẫu thực tế 82 học sinh:\n1. Thuyết minh Mục 3.2: Khảo sát được tiến hành trên 82 học sinh thuộc phạm vi nghiên cứu.\n2. Bảng số liệu 2: Phân bố kết quả trên N=82 phiếu (42 Rất thích, 28 Thích, 12 Bình thường).\n3. Đính kèm biên bản kiểm phiếu gốc 82 học sinh tại Phụ lục để bảo đảm tính truy vết khoa học.`;
       }
       if (sampleOption === '85_is_correct') {
-        return `Giữ nguyên cỡ mẫu 85 học sinh tại Thuyết minh. Bổ sung ghi chú dưới Bảng số liệu 2: "Các số liệu thành phần hiện cộng lại bằng 82. Tác giả cần kiểm tra lại các nhóm số liệu để xác định 3 trường hợp còn thiếu thuộc nhóm nào trước khi nộp." (Hệ thống không tự phân bổ 3 trường hợp theo nguyên tắc FACT SAFETY).`;
+        if (suggestionTab === 'light') {
+          return `Khảo sát được thực hiện trên 85 học sinh. Trong đó, 82 phiếu đã được tổng hợp chi tiết tại Bảng số liệu 2 (cần rà soát bổ sung 3 trường hợp thành phần trước khi nộp chính thức).`;
+        }
+        if (suggestionTab === 'academic') {
+          return `Khảo sát được triển khai trên tổng số 85 học sinh thuộc đối tượng nghiên cứu. Tại Bảng số liệu 2, dữ liệu chi tiết hiện ghi nhận 82 phản hồi; tác giả cần kiểm tra lại các nhóm số liệu thành phần để xác định 3 trường hợp còn thiếu thuộc nhóm nào.`;
+        }
+        return `Tái cấu trúc báo cáo số liệu khảo sát:\n1. Đối tượng khảo sát tổng thể: 85 học sinh.\n2. Dữ liệu thành phần hiện có: 82 phản hồi (42 Rất thích, 28 Thích, 12 Bình thường).\n3. Yêu cầu hoàn thiện: Rà soát sổ điểm/phiếu khảo sát để đồng nhất 85 trường hợp, không tự phân bổ nếu chưa đối chiếu phiếu gốc.`;
       }
       if (sampleOption === 'both_different_scope') {
-        return `Bổ sung thuyết minh làm rõ phạm vi giữa hai con số tại Mục 3.2: "Khảo sát tiến hành với 85 học sinh toàn diện, trong đó số liệu phân tích chuyên sâu tại Bảng số liệu 2 là 82 học sinh do ${sampleScopeNote.trim()}." (Nội dung do tác giả trực tiếp xác nhận, không dùng suy luận của AI).`;
+        const note = sampleScopeNote.trim() || 'sự khác biệt về phạm vi thu thập';
+        if (suggestionTab === 'light') {
+          return `Khảo sát được thực hiện trên 85 học sinh. Trong đó, 82 phiếu hợp lệ được sử dụng để phân tích kết quả (do ${note}).`;
+        }
+        if (suggestionTab === 'academic') {
+          return `Khảo sát được triển khai trên tổng số 85 học sinh thuộc đối tượng nghiên cứu. Trong quá trình xử lý dữ liệu, 82 phiếu hợp lệ được sử dụng cho bước phân tích kết quả do ${note}.`;
+        }
+        return `Đối tượng khảo sát gồm 85 học sinh.\nDữ liệu sử dụng cho phân tích gồm 82 phiếu hợp lệ.\nKhi trình bày kết quả tại Mục 3.2 và Bảng số liệu 2, phân biệt rõ giữa tổng số học sinh thuộc đối tượng khảo sát (85 em) và số phiếu hợp lệ đưa vào phân tích chi tiết (82 em do ${note}).`;
       }
       if (sampleOption === 'other_number') {
-        return `Điều chỉnh cỡ mẫu thực tế thành ${customSampleNum.trim()} học sinh tại Thuyết minh và Bảng số liệu 2. Tác giả cần kiểm tra lại các số liệu thành phần để đảm bảo khớp hoàn toàn với cỡ mẫu mới.`;
+        const num = customSampleNum.trim() || '...';
+        if (suggestionTab === 'light') {
+          return `Điều chỉnh cỡ mẫu tại Thuyết minh Mục 3.2 và Bảng số liệu 2 thành ${num} học sinh theo số liệu thực tế đã xác nhận.`;
+        }
+        if (suggestionTab === 'academic') {
+          return `Khảo sát thực nghiệm được tiến hành trên cỡ mẫu thực tế ${num} học sinh. Tác giả cần cập nhật lại số lượng và tỷ lệ % ở từng mức đánh giá để đảm bảo khớp 100% với cỡ mẫu ${num} em.`;
+        }
+        return `Chuẩn hóa toàn diện dữ liệu khảo sát theo cỡ mẫu ${num} học sinh:\n1. Cập nhật Thuyết minh Mục 3.2: Khảo sát trên ${num} học sinh.\n2. Tính toán lại Bảng số liệu 2 khớp tổng ${num} em.\n3. Đính kèm biên bản kiểm phiếu gốc tại Phụ lục.`;
       }
+    }
+
+    if (card.id === 'PB-001') {
+      if (suggestionTab === 'light') {
+        return `Sáng kiến đã chủ động đưa các công cụ số trực quan như Canva và Quizizz vào đổi mới cách vẽ sơ đồ tư duy trong môn Lịch sử 8 tại trường THCS, góp phần tạo hứng thú cho học sinh trong các tiết học vốn nặng về lý thuyết.`;
+      }
+      if (suggestionTab === 'academic') {
+        return `Tính mới của sáng kiến thể hiện ở việc thiết kế quy trình tích hợp các công cụ trực quan số (Canva, Quizizz) vào tiến trình tổ chức hoạt động học Lịch sử 8. Khác với cách vẽ sơ đồ tĩnh truyền thống, sáng kiến xây dựng sơ đồ tương tác động theo tiến trình bài học, giúp học sinh chủ động tái hiện và liên kết các sự kiện lịch sử.`;
+      }
+      return `Tái cấu trúc lập luận về tính mới theo chuỗi giá trị sư phạm:\n1. Bối cảnh & Vấn đề: Hoạt động học Lịch sử 8 còn nặng về ghi nhớ máy móc các mốc dữ kiện.\n2. Điểm cải tiến cốt lõi: Quy trình 3 bước trực quan hóa dữ kiện bằng công cụ số (Trích xuất từ khóa biến cố -> Tái cấu trúc mối quan hệ nhân quả trên sơ đồ -> Tương tác tự đánh giá qua câu hỏi nhận thức).\n3. Giá trị thực tiễn: Giúp học sinh chuyển từ ghi chép thụ động sang chủ động tái hiện và kết nối dòng thời gian lịch sử.`;
+    }
+
+    if (card.id === 'PB-003') {
+      if (suggestionTab === 'light') {
+        return `Sau thời gian áp dụng đề tài, chất lượng học tập của học sinh có sự chuyển biến rõ rệt. Tỷ lệ học sinh đạt điểm Giỏi tăng thêm 15 điểm phần trăm (từ 60% lên 75%), đại đa số học sinh đều hào hứng hơn trong các giờ học Lịch sử.`;
+      }
+      if (suggestionTab === 'academic') {
+        return `Kết quả thực nghiệm sư phạm cho thấy sự tiến bộ có ý nghĩa của học sinh lớp thực nghiệm. Cụ thể, tỷ lệ học sinh đạt loại Giỏi tăng 15 điểm phần trăm (tương ứng mức cải thiện tương đối 25% so với giai đoạn trước thực nghiệm). Nhận định thận trọng rằng kết quả phản ánh sự kết hợp giữa giải pháp sư phạm và sự nỗ lực học tập của học sinh.`;
+      }
+      return `Tái cấu trúc phân tích số liệu đối sánh theo chuẩn thống kê giáo dục:\n1. Mức tăng tuyệt đối: 75% - 60% = 15 điểm phần trăm (percentage points).\n2. Mức tăng tương đối: (75 - 60) / 60 = 25% so với giá trị ban đầu.\n3. Đối soát khoa học: Phân biệt rõ sự cải thiện năng lực với các yếu tố ngoại cảnh (độ khó đề thi, thời lượng ôn tập) và bổ sung bảng đối chiếu điểm tại Phụ lục.`;
+    }
+
+    if (card.id === 'PB-004') {
+      if (suggestionTab === 'light') {
+        return `Học sinh có sự chuyển biến tích cực về thái độ học tập: các em chủ động hơn trong thảo luận nhóm và tích cực tham gia phát biểu xây dựng bài trong giờ học [CẦN BỔ SUNG MINH CHỨNG NẾU CÓ].`;
+      }
+      if (suggestionTab === 'academic') {
+        return `Quan sát sư phạm ghi nhận thái độ học tập tích cực hơn của học sinh trong giờ học Lịch sử. Nhận định này cần được củng cố bằng công cụ đo lường hành vi (Rubric đánh giá hoặc biên bản dự giờ thực tế [CẦN BỔ SUNG MINH CHỨNG THỰC TẾ NẾU CÓ]).`;
+      }
+      return `Tái cấu trúc báo cáo sự chuyển biến năng lực theo chuỗi quan sát hành vi:\n1. Chỉ số tham gia: Mức độ chuẩn bị bài và tham gia xây dựng bài [CẦN BỔ SUNG SỐ LIỆU ĐO LƯỜNG NẾU CÓ].\n2. Chỉ số tương tác: Tỷ lệ nhóm hoàn thành nhiệm vụ đúng thời gian quy định [CẦN BỔ SUNG NẾU CÓ].\n3. Đề xuất công cụ: Đính kèm [MẪU RUBRIC QUAN SÁT THÁI ĐỘ – MẪU ĐỀ XUẤT, CHƯA PHẢI MINH CHỨNG ĐÃ THU THẬP] tại Phụ lục để Hội đồng đối chiếu quy trình đo lường.`;
+    }
+
+    if (card.id === 'PB-005') {
+      if (suggestionTab === 'light') {
+        return `Danh mục tài liệu tham khảo:\n1. Bộ Giáo dục và Đào tạo (2018), Chương trình Giáo dục phổ thông môn Lịch sử và Địa lí.\n2. Sách giáo khoa Lịch sử và Địa lí 8 (Bộ sách Kết nối tri thức với cuộc sống), NXB Giáo dục Việt Nam.\n*(Canva và Quizizz được sử dụng làm phương tiện công nghệ hỗ trợ giảng dạy tại Mục Phương tiện dạy học)*`;
+      }
+      if (suggestionTab === 'academic') {
+        return `TÀI LIỆU THAM KHẢO (Chuẩn trích dẫn quy phạm):\n1. Bộ Giáo dục và Đào tạo (2018). Chương trình Giáo dục phổ thông - Chương trình môn Lịch sử và Địa lí (Ban hành kèm theo Thông tư số 32/2018/TT-BGDĐT).\n2. Nguyễn Minh Thuyết (Tổng Chủ biên), Lịch sử và Địa lí 8, NXB Giáo dục Việt Nam, 2023.\n*(Lưu ý học thuật: Wikipedia là nguồn mở chưa kiểm chứng, không sử dụng làm tài liệu tham khảo chính thức; công cụ Canva được phân loại tại Mục I.3: Phương tiện dạy học)*`;
+      }
+      return `CHUẨN HÓA DANH MỤC TÀI LIỆU THAM KHẢO THEO CHUẨN TCVN / APA:\n\nA. Văn bản chỉ đạo và Chương trình:\n1. Bộ Giáo dục và Đào tạo (2018), Thông tư 32/2018/TT-BGDĐT ban hành Chương trình GDPT mới.\n\nB. Tài liệu chuyên môn sư phạm:\n2. Sách giáo khoa Lịch sử và Địa lí 8, NXB Giáo dục Việt Nam, 2023.\n\nC. Phân định công cụ kỹ thuật số (đưa về Mục Phương tiện & Thiết bị dạy học):\n- Hệ thống trực quan Canva Pro phục vụ thiết kế sơ đồ.\n*(Loại bỏ Wikipedia; cần kiểm chứng nguồn trước khi bổ sung)*`;
     }
 
     if (generatedSuggestions) {
@@ -375,12 +436,12 @@ export const IssueResolutionModal: React.FC<IssueResolutionModalProps> = ({
 
     const loc = card.location || 'đoạn văn bản';
     if (suggestionTab === 'light') {
-      return `Chỉnh sửa diễn đạt tại ${loc}: Rà soát câu từ, chuẩn hóa các số liệu cho thống nhất xuyên suốt bài viết. Nếu số liệu chưa kiểm chứng đầy đủ, ghi chú rõ: "[Xác minh lại cỡ mẫu/số liệu thực tế]".`;
+      return `Chỉnh sửa diễn đạt tại ${loc}: Giữ nguyên câu chữ và cấu trúc của tác giả, rà soát lại câu từ và khắc phục trực tiếp lỗi phát hiện. Giữ nguyên số liệu gốc, ghi chú: "[CẦN BỔ SUNG SỐ LIỆU THỰC TẾ]" nếu chưa đủ căn cứ.`;
     }
     if (suggestionTab === 'academic') {
-      return `Bổ sung cơ sở sư phạm và phương pháp luận tại ${loc}: Nêu rõ mục tiêu nghiên cứu, tiêu chí khảo sát và phạm vi đối tượng thực tế. Đối chiếu số liệu trước và sau tác động với bảng tổng hợp minh chứng gốc.`;
+      return `Viết lại theo văn phong nghiên cứu sư phạm tại ${loc}: Làm rõ mục tiêu, đối tượng và mối quan hệ giữa các dữ kiện. Diễn đạt khách quan, thận trọng, không tự ý bổ sung dữ kiện chưa kiểm chứng.`;
     }
-    return `Tái cấu trúc lại ${loc}: Tách biệt rõ thực trạng ban đầu và kết quả thực nghiệm. Bổ sung biểu mẫu khảo sát hoặc sản phẩm học tập tại Phụ lục để bảo vệ trọn vẹn điểm trước Hội đồng chấm sáng kiến.`;
+    return `Tái cấu trúc lập luận tại ${loc}:\n1. Thực trạng & Vấn đề: Làm rõ bối cảnh cụ thể trước can thiệp.\n2. Phương pháp & Tiến trình: Trình bày mạch lạc chuỗi giải pháp.\n3. Minh chứng & Đối soát: Chỉ rõ vị trí cần đính kèm minh chứng thực nghiệm [CẦN BỔ SUNG MINH CHỨNG THỰC TẾ] tại Phụ lục để bảo vệ luận điểm.`;
   };
 
   const handleCopySuggestion = () => {
@@ -454,7 +515,7 @@ export const IssueResolutionModal: React.FC<IssueResolutionModalProps> = ({
                 {sampleLifecycle === 'resolved' && '✓ ĐÃ XỬ LÝ'}
               </span>
             ) : isDone ? (
-              <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shrink-0">
+              <span className="px-2.5 py-0.5 rounded text-[13px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shrink-0">
                 ✓ ĐÃ XỬ LÝ
               </span>
             ) : null}
@@ -487,7 +548,7 @@ export const IssueResolutionModal: React.FC<IssueResolutionModalProps> = ({
                 <CheckCircle className="w-4 h-4 text-emerald-600" />
                 <span>{toastMessage}</span>
               </span>
-              <span className="text-[12px] text-emerald-600 font-normal">
+              <span className="text-[13px] text-emerald-600 font-normal">
                 {currentIndex < totalCount - 1 ? 'Đang chuyển vấn đề tiếp...' : ''}
               </span>
             </div>
@@ -546,7 +607,7 @@ export const IssueResolutionModal: React.FC<IssueResolutionModalProps> = ({
                       “{renderHighlightedText(evidencePieces[0].text)}”
                     </p>
                   </div>
-                  <div className="pt-2 border-t border-slate-100 text-[12px] text-slate-500 font-semibold uppercase">
+                  <div className="pt-2 border-t border-slate-100 text-[13px] text-slate-500 font-semibold uppercase">
                     Căn cứ phát biểu ban đầu
                   </div>
                 </div>
@@ -562,7 +623,7 @@ export const IssueResolutionModal: React.FC<IssueResolutionModalProps> = ({
                       “{renderHighlightedText(evidencePieces[1].text)}”
                     </p>
                   </div>
-                  <div className="pt-2 border-t border-slate-100 text-[12px] text-slate-500 font-semibold uppercase">
+                  <div className="pt-2 border-t border-slate-100 text-[13px] text-slate-500 font-semibold uppercase">
                     Căn cứ số liệu đối chiếu
                   </div>
                 </div>
@@ -601,7 +662,7 @@ export const IssueResolutionModal: React.FC<IssueResolutionModalProps> = ({
             <div className="space-y-2 pt-0.5">
               {recommendationSteps.map((step, idx) => (
                 <div key={idx} className="flex items-start gap-3 text-[15px] text-slate-800 leading-[1.65]">
-                  <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-[12px] flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                  <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-[13px] flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
                     {idx + 1}
                   </span>
                   <span className="font-normal">{step}</span>
@@ -777,7 +838,7 @@ export const IssueResolutionModal: React.FC<IssueResolutionModalProps> = ({
                 </label>
                 {sampleOption === 'undetermined' && (
                   <div className="ml-7 p-3.5 bg-rose-50 rounded-xl border border-rose-300 text-[14.5px] text-rose-950 leading-[1.6] animate-in fade-in duration-150">
-                    Vấn đề được giữ ở trạng thái CẦN XÁC MINH (REQUIRES_VERIFICATION). Hệ thống không tạo bản sửa và chưa thể đánh dấu đã xử lý khi chưa có xác nhận từ tác giả.
+                    Vấn đề được giữ ở trạng thái Cần xác nhận. Hệ thống không tạo bản sửa và chưa thể đánh dấu đã xử lý khi chưa có xác nhận từ tác giả.
                   </div>
                 )}
 
@@ -793,7 +854,7 @@ export const IssueResolutionModal: React.FC<IssueResolutionModalProps> = ({
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t border-amber-200">
                 <span className="text-[13px] text-amber-900 font-medium">
                   {confirmedFactRecord
-                    ? `✓ Đã lưu: ${confirmedFactRecord.value} (${confirmedFactRecord.reliabilityLevel})`
+                    ? `✓ Đã xác nhận: ${confirmedFactRecord.value === '85 & 82' ? '85 và 82' : confirmedFactRecord.value}`
                     : '* Chưa chọn phương án xác nhận nào.'}
                 </span>
 
@@ -803,7 +864,7 @@ export const IssueResolutionModal: React.FC<IssueResolutionModalProps> = ({
                   onClick={handleConfirmSampleFact}
                   className="px-4.5 py-2.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold text-[14px] rounded-xl shadow-xs transition-colors cursor-pointer self-end sm:self-auto"
                 >
-                  LƯU XÁC NHẬN SỰ THẬT (USER_CONFIRMED)
+                  LƯU XÁC NHẬN
                 </button>
               </div>
 
@@ -814,8 +875,8 @@ export const IssueResolutionModal: React.FC<IssueResolutionModalProps> = ({
                     <span className="text-[13.5px] font-bold text-blue-900 uppercase">
                       ● ĐÃ XÁC NHẬN · CHỜ ÁP DỤNG
                     </span>
-                    <span className="text-[12px] bg-blue-200/80 text-blue-800 font-bold px-2 py-0.5 rounded">
-                      USER_CONFIRMED
+                    <span className="text-[13px] bg-blue-200/80 text-blue-800 font-bold px-2.5 py-0.5 rounded">
+                      ĐÃ XÁC NHẬN
                     </span>
                   </div>
                   <p className="text-[14.5px] text-blue-950 leading-[1.6]">
@@ -839,7 +900,7 @@ export const IssueResolutionModal: React.FC<IssueResolutionModalProps> = ({
                     <span className="text-[13.5px] font-bold text-indigo-900 uppercase">
                       ● ĐÃ ÁP DỤNG · CHỜ KIỂM TRA
                     </span>
-                    <span className="text-[12px] bg-indigo-200/80 text-indigo-800 font-bold px-2 py-0.5 rounded">
+                    <span className="text-[13px] bg-indigo-200/80 text-indigo-800 font-bold px-2.5 py-0.5 rounded">
                       ĐỐI SOÁT DỮ LIỆU
                     </span>
                   </div>
@@ -863,7 +924,7 @@ export const IssueResolutionModal: React.FC<IssueResolutionModalProps> = ({
                 <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-xl flex items-center justify-between animate-in fade-in duration-200">
                   <div className="flex items-center gap-2 text-emerald-950 font-bold text-[14.5px]">
                     <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
-                    <span>✓ ĐÃ XỬ LÝ: Mâu thuẫn cỡ mẫu đã được chuẩn hóa theo dữ liệu USER_CONFIRMED.</span>
+                    <span>✓ ĐÃ XỬ LÝ: Mâu thuẫn cỡ mẫu đã được chuẩn hóa theo dữ liệu đã xác nhận.</span>
                   </div>
                   <button
                     type="button"
@@ -893,34 +954,46 @@ export const IssueResolutionModal: React.FC<IssueResolutionModalProps> = ({
                 </div>
 
                 {/* 3 Tabs */}
-                <div className="flex items-center gap-1 bg-slate-800 p-1 rounded-xl">
-                  <button
-                    type="button"
-                    onClick={() => setSuggestionTab('light')}
-                    className={`px-3 py-1.5 rounded-lg text-[13px] font-bold transition-all cursor-pointer ${
-                      suggestionTab === 'light' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    Sửa nhẹ
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSuggestionTab('academic')}
-                    className={`px-3 py-1.5 rounded-lg text-[13px] font-bold transition-all cursor-pointer ${
-                      suggestionTab === 'academic' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    Sửa học thuật
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSuggestionTab('deep')}
-                    className={`px-3 py-1.5 rounded-lg text-[13px] font-bold transition-all cursor-pointer ${
-                      suggestionTab === 'deep' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    Sửa sâu
-                  </button>
+                <div className="flex flex-col items-start sm:items-end gap-1">
+                  <div className="flex items-center gap-1 bg-slate-800 p-1 rounded-xl">
+                    <button
+                      type="button"
+                      title="Giữ tối đa bản gốc của tác giả, sửa tối thiểu"
+                      onClick={() => setSuggestionTab('light')}
+                      className={`px-3 py-1.5 rounded-lg text-[13.5px] font-bold transition-all cursor-pointer ${
+                        suggestionTab === 'light' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Sửa nhẹ
+                    </button>
+                    <button
+                      type="button"
+                      title="Chuẩn hóa cách viết học thuật, khách quan và chặt chẽ hơn"
+                      onClick={() => setSuggestionTab('academic')}
+                      className={`px-3 py-1.5 rounded-lg text-[13.5px] font-bold transition-all cursor-pointer ${
+                        suggestionTab === 'academic' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Sửa học thuật
+                    </button>
+                    <button
+                      type="button"
+                      title="Tái cấu trúc lập luận nhưng tuyệt đối không thêm dữ kiện"
+                      onClick={() => setSuggestionTab('deep')}
+                      className={`px-3 py-1.5 rounded-lg text-[13.5px] font-bold transition-all cursor-pointer ${
+                        suggestionTab === 'deep' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Sửa sâu
+                    </button>
+                  </div>
+                  <span className="text-[13px] text-slate-300 font-medium">
+                    {suggestionTab === 'light'
+                      ? '• Mức độ: Sửa nhẹ — Giữ tối đa bản gốc của tác giả'
+                      : suggestionTab === 'academic'
+                      ? '• Mức độ: Sửa học thuật — Chuẩn hóa văn phong nghiên cứu giáo dục'
+                      : '• Mức độ: Sửa sâu — Tái cấu trúc lập luận, không tự tạo dữ kiện'}
+                  </span>
                 </div>
               </div>
 

@@ -370,9 +370,26 @@ export const sampleInitiative1: SKKNAnalysisResult = {
       category: "Tính mới & Phương pháp",
       revisionGoal: "Chuyển trọng tâm tính mới từ 'tên phần mềm' sang 'quy trình sư phạm và kỹ thuật trực quan hóa dữ kiện'.",
       howToRevise: "Khẳng định tính cải tiến trong quy trình 3 giai đoạn và kỹ thuật tích hợp sơ đồ tư duy theo trục thời gian.",
-      lightRevision: "Sáng kiến đã chủ động đưa các công cụ số trực quan như Canva và Quizizz vào đổi mới cách vẽ sơ đồ tư duy trong môn Lịch sử 8 tại trường THCS, mang lại luồng gió mới cho các tiết học vốn nặng về lý thuyết.",
+      lightRevision: "Sáng kiến đã chủ động đưa các công cụ số trực quan như Canva và Quizizz vào đổi mới cách vẽ sơ đồ tư duy trong môn Lịch sử 8 tại trường THCS, góp phần tạo hứng thú cho học sinh trong các tiết học vốn nặng về lý thuyết.",
       academicRevision: "Tính mới của sáng kiến thể hiện ở việc thiết kế quy trình tích hợp các công cụ trực quan số (Canva, Quizizz) vào tiến trình tổ chức hoạt động học Lịch sử 8. Khác với cách vẽ sơ đồ tĩnh truyền thống, sáng kiến xây dựng sơ đồ tương tác động theo tiến trình bài học, giúp học sinh chủ động tái hiện và liên kết các sự kiện lịch sử.",
-      deepRevision: "Điểm cải tiến trọng tâm của sáng kiến không nằm ở bản thân công cụ số mà nằm ở **Quy trình 3 bước chuyển hóa dữ kiện lịch sử thành sơ đồ tư duy tương tác**:\n1. *Giai đoạn 1 (Thu nhận dữ kiện):* Học sinh trích xuất từ khóa biến cố từ sách giáo khoa.\n2. *Giai đoạn 2 (Tái cấu trúc tư duy):* Sử dụng khung mẫu [CẦN BỔ SUNG MÃ KHUNG MẪU TẠI PHỤ LỤC] trên nền tảng trực quan để thiết lập mối quan hệ nhân - quả.\n3. *Giai đoạn 3 (Phản hồi & Đánh giá):* Tương tác kiểm tra nhanh qua câu hỏi nhận thức [CẦN BỔ SUNG SỐ LIỆU TỶ LỆ ĐÁP ỨNG].\nCách tiếp cận này giải quyết trực tiếp rào cản ghi nhớ máy móc của học sinh.",
+      deepRevision: "Tái cấu trúc lập luận về tính mới theo chuỗi giá trị sư phạm:\n1. Bối cảnh & Vấn đề: Hoạt động học Lịch sử 8 còn nặng về ghi nhớ máy móc các mốc dữ kiện.\n2. Điểm cải tiến cốt lõi: Quy trình 3 bước trực quan hóa dữ kiện bằng công cụ số (Trích xuất từ khóa biến cố -> Tái cấu trúc mối quan hệ nhân quả trên sơ đồ -> Tương tác tự đánh giá qua câu hỏi nhận thức).\n3. Giá trị thực tiễn: Giúp học sinh chuyển từ ghi chép thụ động sang chủ động tái hiện và kết nối dòng thời gian lịch sử [ĐÍNH KÈM KHUNG MẪU SƠ ĐỒ 3 BƯỚC TẠI PHỤ LỤC].",
+      tierDetails: {
+        light: {
+          text: "Sáng kiến đã chủ động đưa các công cụ số trực quan như Canva và Quizizz vào đổi mới cách vẽ sơ đồ tư duy trong môn Lịch sử 8 tại trường THCS, góp phần tạo hứng thú cho học sinh trong các tiết học vốn nặng về lý thuyết.",
+          changeScope: "Sửa chính tả, câu từ; giảm khẳng định quá mức ('hoàn toàn mới mẻ chưa từng có'), giữ nguyên cấu trúc gốc",
+          factsUsed: ["Canva, Quizizz", "Sơ đồ tư duy Lịch sử 8"]
+        },
+        academic: {
+          text: "Tính mới của sáng kiến thể hiện ở việc thiết kế quy trình tích hợp các công cụ trực quan số (Canva, Quizizz) vào tiến trình tổ chức hoạt động học Lịch sử 8. Khác với cách vẽ sơ đồ tĩnh truyền thống, sáng kiến xây dựng sơ đồ tương tác động theo tiến trình bài học, giúp học sinh chủ động tái hiện và liên kết các sự kiện lịch sử.",
+          changeScope: "Chuẩn hóa văn phong nghiên cứu giáo dục, chuyển trọng tâm từ tên công cụ sang quy trình sư phạm",
+          factsUsed: ["Canva, Quizizz", "Quy trình tích hợp sơ đồ tư duy"]
+        },
+        deep: {
+          text: "Tái cấu trúc lập luận về tính mới theo chuỗi giá trị sư phạm:\n1. Bối cảnh & Vấn đề: Hoạt động học Lịch sử 8 còn nặng về ghi nhớ máy móc các mốc dữ kiện.\n2. Điểm cải tiến cốt lõi: Quy trình 3 bước trực quan hóa dữ kiện bằng công cụ số (Trích xuất từ khóa biến cố -> Tái cấu trúc mối quan hệ nhân quả trên sơ đồ -> Tương tác tự đánh giá qua câu hỏi nhận thức).\n3. Giá trị thực tiễn: Giúp học sinh chuyển từ ghi chép thụ động sang chủ động tái hiện và kết nối dòng thời gian lịch sử [ĐÍNH KÈM KHUNG MẪU SƠ ĐỒ 3 BƯỚC TẠI PHỤ LỤC].",
+          changeScope: "Tái cấu trúc toàn diện chuỗi lập luận: Bối cảnh -> Điểm cải tiến cốt lõi 3 bước -> Giá trị thực tiễn và vị trí phụ lục",
+          factsUsed: ["Dữ liệu nội dung SKKN", "Quy trình sơ đồ 3 bước"]
+        }
+      },
       missingEvidenceAlert: "[CẦN BỔ SUNG KHUNG MẪU SƠ ĐỒ 3 BƯỚC VÀO PHỤ LỤC]",
       insertPosition: "Trang 13, thay thế hoàn toàn đoạn 2 mục 3.1."
     },
@@ -387,9 +404,26 @@ export const sampleInitiative1: SKKNAnalysisResult = {
       revisionGoal: "Trình bày số liệu đối sánh chính xác, trung thực và diễn đạt theo văn phong nghiên cứu khoa học.",
       howToRevise: "Sửa số liệu thành điểm phần trăm, thay thế từ ngữ tuyệt đối bằng tỷ lệ khảo sát thực tế thu được.",
       lightRevision: "Sau thời gian áp dụng đề tài, chất lượng học tập của học sinh có sự chuyển biến rõ rệt. Tỷ lệ học sinh đạt điểm Giỏi tăng thêm 15 điểm phần trăm (từ 60% lên 75%), đại đa số học sinh đều hào hứng hơn trong các giờ học Lịch sử.",
-      academicRevision: "Kết quả thực nghiệm sư phạm cho thấy sự tiến bộ có ý nghĩa của học sinh lớp thực nghiệm. Cụ thể, tỷ lệ học sinh đạt loại Giỏi tăng 15 điểm phần trăm (tương ứng mức cải thiện 25% so với giai đoạn trước thực nghiệm). Kết quả khảo sát thái độ cũng ghi nhận [CẦN BỔ SUNG TỶ LỆ % ĐỒNG Ý CỤ THỂ] học sinh đánh giá giờ học sinh động và dễ ghi nhớ hơn.",
-      deepRevision: "Dữ liệu thực nghiệm sư phạm đối chứng giữa lớp 8A1 (thực nghiệm, N=42) và lớp 8A2 (đối chứng, N=40) phản ánh tác động tích cực của biện pháp:\n- **Về kết quả học tập:** Tỷ lệ học sinh đạt điểm Giỏi ở lớp thực nghiệm tăng 15 điểm phần trăm (từ 60.0% lên 75.0%), trong khi lớp đối chứng duy trì ở mức [CẦN BỔ SUNG SỐ LIỆU ĐỐI CHỨNG].\n- **Về thái độ học tập:** Qua khảo sát ẩn danh [CẦN BỔ SUNG MÃ PHIẾU KHẢO SÁT], có [CẦN BỔ SUNG SỐ HỌC SINH/TỔNG MẪU] học sinh phản hồi cảm thấy tự tin hơn khi trình bày diễn biến các chiến dịch lịch sử.\n*Lưu ý khoa học:* Sự tiến bộ này là kết quả cộng hưởng giữa giải pháp trực quan hóa và sự nỗ lực đồng hành của giáo viên bộ môn.",
-      missingEvidenceAlert: "[CẦN BỔ SUNG SỐ LIỆU LỚP ĐỐI CHỨNG VÀ TỶ LỆ KHẢO SÁT THỰC TẾ]",
+      academicRevision: "Kết quả thực nghiệm sư phạm cho thấy sự tiến bộ có ý nghĩa của học sinh lớp thực nghiệm. Cụ thể, tỷ lệ học sinh đạt loại Giỏi tăng 15 điểm phần trăm (tương ứng mức cải thiện tương đối 25% so với giai đoạn trước thực nghiệm). Nhận định thận trọng rằng kết quả phản ánh sự kết hợp giữa giải pháp sư phạm và sự nỗ lực học tập của học sinh.",
+      deepRevision: "Tái cấu trúc phân tích số liệu đối sánh theo chuẩn thống kê giáo dục:\n1. Mức tăng tuyệt đối: 75% - 60% = 15 điểm phần trăm (percentage points).\n2. Mức tăng tương đối: (75 - 60) / 60 = 25% so với giá trị ban đầu.\n3. Đối soát khoa học: Phân biệt rõ sự cải thiện năng lực với các yếu tố ngoại cảnh (độ khó đề thi, thời lượng ôn tập) và bổ sung bảng đối chiếu điểm tại Phụ lục.",
+      tierDetails: {
+        light: {
+          text: "Sau thời gian áp dụng đề tài, chất lượng học tập của học sinh có sự chuyển biến rõ rệt. Tỷ lệ học sinh đạt điểm Giỏi tăng thêm 15 điểm phần trăm (từ 60% lên 75%), đại đa số học sinh đều hào hứng hơn trong các giờ học Lịch sử.",
+          changeScope: "Sửa điểm phần trăm, bỏ phát biểu phóng đại 'thành công tuyệt đối', giữ tối đa câu gốc",
+          factsUsed: ["Tỷ lệ Giỏi 60% -> 75% (tăng 15 điểm phần trăm)"]
+        },
+        academic: {
+          text: "Kết quả thực nghiệm sư phạm cho thấy sự tiến bộ có ý nghĩa của học sinh lớp thực nghiệm. Cụ thể, tỷ lệ học sinh đạt loại Giỏi tăng 15 điểm phần trăm (tương ứng mức cải thiện tương đối 25% so với giai đoạn trước thực nghiệm). Nhận định thận trọng rằng kết quả phản ánh sự kết hợp giữa giải pháp sư phạm và sự nỗ lực học tập của học sinh.",
+          changeScope: "Phân biệt rõ mức tăng tuyệt đối (15 điểm phần trăm) và mức tăng tương đối (25%); diễn đạt khiêm tốn khoa học",
+          factsUsed: ["Dữ liệu điểm số trước và sau thực nghiệm trong SKKN"]
+        },
+        deep: {
+          text: "Tái cấu trúc phân tích số liệu đối sánh theo chuẩn thống kê giáo dục:\n1. Mức tăng tuyệt đối: 75% - 60% = 15 điểm phần trăm (percentage points).\n2. Mức tăng tương đối: (75 - 60) / 60 = 25% so với giá trị ban đầu.\n3. Đối soát khoa học: Phân biệt rõ sự cải thiện năng lực với các yếu tố ngoại cảnh (độ khó đề thi, thời lượng ôn tập) và bổ sung bảng đối chiếu điểm tại Phụ lục.",
+          changeScope: "Tái cấu trúc báo cáo số liệu thành chuỗi: Tuyệt đối -> Tương đối -> Phân tích đối soát yếu tố ngoại cảnh",
+          factsUsed: ["Số liệu điểm số 60% và 75% trong SKKN"]
+        }
+      },
+      missingEvidenceAlert: "[CẦN BỔ SUNG BẢNG ĐỐI CHIẾU ĐIỂM CHI TIẾT TẠI PHỤ LỤC]",
       insertPosition: "Trang 25, thay thế đoạn 3 mục 4.1."
     },
     {
@@ -402,10 +436,27 @@ export const sampleInitiative1: SKKNAnalysisResult = {
       category: "Số liệu & Thực nghiệm",
       revisionGoal: "Xác minh cỡ mẫu thực tế (85 hay 82) từ tác giả để chuẩn hóa số liệu phân tích.",
       howToRevise: "Thầy/Cô xác nhận cỡ mẫu thực tế: 85, 82 hay số khác để cập nhật số liệu chính xác.",
-      lightRevision: "[CẦN TÁC GIẢ XÁC NHẬN CỠ MẪU] Khảo sát được tiến hành với [CHỜ XÁC NHẬN: 85 hay 82] học sinh. Kết quả ghi nhận: 42 em Rất thích (51.2%), 28 em Thích (34.1%), 12 em Bình thường (14.6%).",
-      academicRevision: "[CẦN TÁC GIẢ XÁC NHẬN CỠ MẪU] Dữ liệu khảo sát thu được trên cỡ mẫu thực tế [CHỜ XÁC NHẬN: 85 hay 82 học sinh khối 8]. Cơ cấu phản hồi: 42/82 em (51.2%) đánh giá 'Rất tích cực'; 28/82 em (34.1%) đánh giá 'Tích cực'; 12/82 em (14.6%) ở mức 'Bình thường'. Tác giả cần thống nhất cỡ mẫu hoặc đính kèm biên bản kiểm phiếu để làm rõ chênh lệch 3 trường hợp.",
-      deepRevision: "[CẦN TÁC GIẢ XÁC NHẬN CỠ MẪU] Quy trình thu thập và xử lý số liệu khảo sát thái độ học sinh:\n- **Cỡ mẫu công bố:** [CẦN XÁC NHẬN CHÍNH XÁC: 85 hay 82 em]\n- **Số liệu các nhóm:** 42 em Rất thích (51.2%), 28 em Thích (34.1%), 12 em Bình thường (14.6%) (tổng = 82 em)\n- **Xác minh chênh lệch:** Cần giáo viên xác nhận nguyên nhân chênh lệch 3 trường hợp và đính kèm biên bản tổng hợp phiếu gốc tại Phụ lục để làm rõ.",
-      missingEvidenceAlert: "[CẦN TÁC GIẢ XÁC NHẬN CỠ MẪU VÀ BỔ SUNG BIÊN BẢN KIỂM PHIẾU GỐC]",
+      lightRevision: "[CẦN THẦY/CÔ XÁC NHẬN CỠ MẪU] Khảo sát được thực hiện trên [CHỜ XÁC NHẬN: 85 hay 82] học sinh. Kết quả ghi nhận: 42 em Rất thích (51.2%), 28 em Thích (34.1%), 12 em Bình thường (14.6%).",
+      academicRevision: "[CẦN THẦY/CÔ XÁC NHẬN CỠ MẪU] Dữ liệu khảo sát thu được trên cỡ mẫu thực tế [CHỜ XÁC NHẬN: 85 hay 82 học sinh khối 8]. Cơ cấu phản hồi: 42/82 em (51.2%) đánh giá Rất thích; 28/82 em (34.1%) Thích; 12/82 em (14.6%) Bình thường. Số liệu cần được đồng nhất giữa Thuyết minh và Bảng 2 sau khi Thầy/Cô xác nhận cỡ mẫu thực tế.",
+      deepRevision: "[CẦN THẦY/CÔ XÁC NHẬN CỠ MẪU] Quy trình chuẩn hóa dữ liệu khảo sát thái độ học sinh:\n1. Cỡ mẫu nghiên cứu thực tế: [CHỜ XÁC NHẬN: 85 hay 82 em].\n2. Cơ cấu dữ liệu thành phần hiện có: 42 em Rất thích (51.2%), 28 em Thích (34.1%), 12 em Bình thường (14.6%) (tổng hiện tại: 82 em).\n3. Yêu cầu hoàn thiện: Đính kèm biên bản kiểm phiếu gốc tại Phụ lục để bảo đảm tính truy vết và liêm chính dữ liệu.",
+      tierDetails: {
+        light: {
+          text: "[CẦN THẦY/CÔ XÁC NHẬN CỠ MẪU] Khảo sát được thực hiện trên [CHỜ XÁC NHẬN: 85 hay 82] học sinh. Kết quả ghi nhận: 42 em Rất thích (51.2%), 28 em Thích (34.1%), 12 em Bình thường (14.6%).",
+          changeScope: "Giữ tối đa bản gốc, chỉ thêm đánh dấu vị trí cần xác nhận cỡ mẫu",
+          factsUsed: ["Dữ liệu 85 vs 82 trong SKKN"]
+        },
+        academic: {
+          text: "[CẦN THẦY/CÔ XÁC NHẬN CỠ MẪU] Dữ liệu khảo sát thu được trên cỡ mẫu thực tế [CHỜ XÁC NHẬN: 85 hay 82 học sinh khối 8]. Cơ cấu phản hồi: 42/82 em (51.2%) đánh giá Rất thích; 28/82 em (34.1%) Thích; 12/82 em (14.6%) Bình thường. Số liệu cần được đồng nhất giữa Thuyết minh và Bảng 2 sau khi Thầy/Cô xác nhận cỡ mẫu thực tế.",
+          changeScope: "Chuẩn hóa thuật ngữ nghiên cứu (cơ cấu phản hồi, đối tượng nghiên cứu) và chỉ rõ vị trí cần đồng nhất",
+          factsUsed: ["Số liệu Bảng 2 trong SKKN"]
+        },
+        deep: {
+          text: "[CẦN THẦY/CÔ XÁC NHẬN CỠ MẪU] Quy trình chuẩn hóa dữ liệu khảo sát thái độ học sinh:\n1. Cỡ mẫu nghiên cứu thực tế: [CHỜ XÁC NHẬN: 85 hay 82 em].\n2. Cơ cấu dữ liệu thành phần hiện có: 42 em Rất thích (51.2%), 28 em Thích (34.1%), 12 em Bình thường (14.6%) (tổng hiện tại: 82 em).\n3. Yêu cầu hoàn thiện: Đính kèm biên bản kiểm phiếu gốc tại Phụ lục để bảo đảm tính truy vết và liêm chính dữ liệu.",
+          changeScope: "Tái cấu trúc thành quy trình 3 bước xử lý dữ liệu và yêu cầu biên bản kiểm phiếu",
+          factsUsed: ["Số liệu 85 và 82 trong SKKN"]
+        }
+      },
+      missingEvidenceAlert: "[CẦN THẦY/CÔ XÁC NHẬN CỠ MẪU VÀ BỔ SUNG BIÊN BẢN KIỂM PHIẾU GỐC]",
       insertPosition: "Trang 24, thay thế phần diễn giải dưới Bảng số liệu 2."
     },
     {
@@ -419,8 +470,25 @@ export const sampleInitiative1: SKKNAnalysisResult = {
       revisionGoal: "Thay thế nhận định cảm tính bằng các chỉ số hành vi quan sát được và dữ liệu thực tế do giáo viên cung cấp.",
       howToRevise: "Bổ sung Rubric quan sát thái độ lớp học và trích xuất số liệu quan sát thực tế (nếu thực tế có dữ liệu).",
       lightRevision: "Học sinh có sự chuyển biến tích cực về thái độ học tập: các em chủ động hơn trong thảo luận nhóm và tích cực tham gia phát biểu xây dựng bài trong giờ học [CẦN BỔ SUNG MINH CHỨNG NẾU CÓ].",
-      academicRevision: "Nhận định về sự chuyển biến năng lực tự chủ và giao tiếp cần được củng cố bằng công cụ quan sát sư phạm (Rubric đánh giá hành vi hoặc biên bản dự giờ thực tế [CẦN BỔ SUNG SỐ TIẾT DỰ GIỜ THỰC TẾ]). Các chỉ số cần làm rõ: mức độ tương tác bài học, tỷ lệ hoàn thành sản phẩm nhóm [CẦN BỔ SUNG SỐ LIỆU ĐO LƯỜNG THỰC TẾ].",
-      deepRevision: "Đánh giá mức độ chuyển biến thái độ học tập dựa trên Bộ tiêu chuẩn quan sát hành vi (Rubric quan sát đề xuất tại Phụ lục 4):\n1. **Chỉ số tham gia bài giảng:** Tỷ lệ học sinh tự giác chuẩn bị bài trước tiết học đạt [CẦN BỔ SUNG SỐ LIỆU THỰC TẾ %].\n2. **Tương tác nhóm:** Tỷ lệ nhóm hoàn thành nhiệm vụ đúng thời gian quy định đạt [CẦN BỔ SUNG SỐ LIỆU %].\n3. **Mức độ tự tin thuyết trình:** Số lượng học sinh tự tin trình bày trước lớp đạt [CẦN BỔ SUNG SỐ LƯỢNG THỰC TẾ].\n*(Lưu ý: Thầy/Cô chỉ điền số liệu nếu thực tế có triển khai quan sát, kiểm đếm)*",
+      academicRevision: "Quan sát sư phạm ghi nhận thái độ học tập tích cực hơn của học sinh trong giờ học Lịch sử. Nhận định này cần được củng cố bằng công cụ đo lường hành vi (Rubric đánh giá hoặc biên bản dự giờ thực tế [CẦN BỔ SUNG MINH CHỨNG THỰC TẾ NẾU CÓ]).",
+      deepRevision: "Tái cấu trúc báo cáo sự chuyển biến năng lực theo chuỗi quan sát hành vi:\n1. Chỉ số tham gia: Mức độ chuẩn bị bài và tham gia xây dựng bài [CẦN BỔ SUNG SỐ LIỆU ĐO LƯỜNG NẾU CÓ].\n2. Chỉ số tương tác: Tỷ lệ nhóm hoàn thành nhiệm vụ đúng thời gian quy định [CẦN BỔ SUNG NẾU CÓ].\n3. Đề xuất công cụ: Đính kèm [MẪU RUBRIC QUAN SÁT THÁI ĐỘ – MẪU ĐỀ XUẤT, CHƯA PHẢI MINH CHỨNG ĐÃ THU THẬP] tại Phụ lục để Hội đồng đối chiếu quy trình đo lường.",
+      tierDetails: {
+        light: {
+          text: "Học sinh có sự chuyển biến tích cực về thái độ học tập: các em chủ động hơn trong thảo luận nhóm và tích cực tham gia phát biểu xây dựng bài trong giờ học [CẦN BỔ SUNG MINH CHỨNG NẾU CÓ].",
+          changeScope: "Sửa nhẹ câu từ, giữ cách diễn đạt của tác giả, thêm placeholder minh chứng",
+          factsUsed: ["Dữ liệu gốc trong SKKN"]
+        },
+        academic: {
+          text: "Quan sát sư phạm ghi nhận thái độ học tập tích cực hơn của học sinh trong giờ học Lịch sử. Nhận định này cần được củng cố bằng công cụ đo lường hành vi (Rubric đánh giá hoặc biên bản dự giờ thực tế [CẦN BỔ SUNG MINH CHỨNG THỰC TẾ NẾU CÓ]).",
+          changeScope: "Chuẩn hóa góc nhìn quan sát sư phạm, chỉ rõ công cụ đo lường cần có",
+          factsUsed: ["Nội dung quan sát thái độ học tập"]
+        },
+        deep: {
+          text: "Tái cấu trúc báo cáo sự chuyển biến năng lực theo chuỗi quan sát hành vi:\n1. Chỉ số tham gia: Mức độ chuẩn bị bài và tham gia xây dựng bài [CẦN BỔ SUNG SỐ LIỆU ĐO LƯỜNG NẾU CÓ].\n2. Chỉ số tương tác: Tỷ lệ nhóm hoàn thành nhiệm vụ đúng thời gian quy định [CẦN BỔ SUNG NẾU CÓ].\n3. Đề xuất công cụ: Đính kèm [MẪU RUBRIC QUAN SÁT THÁI ĐỘ – MẪU ĐỀ XUẤT, CHƯA PHẢI MINH CHỨNG ĐÃ THU THẬP] tại Phụ lục để Hội đồng đối chiếu quy trình đo lường.",
+          changeScope: "Tái cấu trúc thành 3 chỉ số hành vi cụ thể và tách biệt rõ mẫu đề xuất với minh chứng thật",
+          factsUsed: ["Dữ liệu gốc trong SKKN"]
+        }
+      },
       missingEvidenceAlert: "[CẦN BỔ SUNG DỮ LIỆU QUAN SÁT THỰC TẾ HOẶC BIÊN BẢN DỰ GIỜ NẾU CÓ]",
       insertPosition: "Trang 26, thay thế đoạn 1 mục 4.2."
     },
@@ -434,9 +502,26 @@ export const sampleInitiative1: SKKNAnalysisResult = {
       category: "Chuẩn mực trình bày & Trích dẫn",
       revisionGoal: "Chuẩn hóa danh mục tài liệu theo TCVN, chuyển công cụ phần mềm sang đúng vị trí.",
       howToRevise: "Chuyển Canva sang mục Thiết bị dạy học ở phần Mở đầu; thay Wikipedia bằng SGK Lịch sử 8 và tài liệu bồi dưỡng giáo viên của Bộ GD&ĐT.",
-      lightRevision: "Danh mục tài liệu tham khảo:\n1. Bộ Giáo dục và Đào tạo (2018), Chương trình Giáo dục phổ thông môn Lịch sử và Địa lí.\n2. Sách giáo khoa Lịch sử và Địa lí 8 (Bộ sách Kết nối tri thức với cuộc sống), NXB Giáo dục Việt Nam.\n*(Canva và Quizizz được sử dụng làm phương tiện công nghệ hỗ trợ giảng dạy)*",
-      academicRevision: "TÀI LIỆU THAM KHẢO:\n1. Bộ Giáo dục và Đào tạo (2018). Chương trình Giáo dục phổ thông - Chương trình môn Lịch sử và Địa lí (Ban hành kèm theo Thông tư số 32/2018/TT-BGDĐT).\n2. Nguyễn Minh Thuyết (Tổng Chủ biên), Lịch sử và Địa lí 8, NXB Giáo dục Việt Nam, 2023.\n3. Viện Khoa học Giáo dục Việt Nam (2021). Kỷ yếu hội thảo đổi mới phương pháp dạy học lịch sử theo định hướng phát triển năng lực học sinh THCS.\n*(Lưu ý: Các ứng dụng Canva, Quizizz được phân loại tại Mục I.3: Phương tiện và học liệu dạy học)*",
-      deepRevision: "CHUẨN HÓA DANH MỤC TÀI LIỆU THAM KHẢO THEO CHUẨN TCVN / APA:\n\n**A. Văn bản chỉ đạo và Chương trình:**\n1. Bộ Giáo dục và Đào tạo (2018), Thông tư 32/2018/TT-BGDĐT ban hành Chương trình Giáo dục phổ thông mới.\n2. Bộ Giáo dục và Đào tạo (2020), Công văn 5512/BGDĐT-GDTrH về xây dựng và tổ chức thực hiện kế hoạch giáo dục của nhà trường.\n\n**B. Tài liệu chuyên môn sư phạm:**\n3. Đỗ Thanh Bình (Chủ biên), Phương pháp dạy học Lịch sử ở trường phổ thông, NXB Đại học Sư phạm, 2022.\n4. Sách giáo khoa Lịch sử và Địa lí 8, NXB Giáo dục Việt Nam, 2023.\n\n**C. Phân định công cụ kỹ thuật số (đưa về Mục 1.3 - Học liệu & Thiết bị):**\n- Hệ thống trực quan Canva Pro (Giấy phép giáo dục Edu).\n- Nền tảng đánh giá nhanh Quizizz School Platform.",
+      lightRevision: "Danh mục tài liệu tham khảo:\n1. Bộ Giáo dục và Đào tạo (2018), Chương trình Giáo dục phổ thông môn Lịch sử và Địa lí.\n2. Sách giáo khoa Lịch sử và Địa lí 8 (Bộ sách Kết nối tri thức với cuộc sống), NXB Giáo dục Việt Nam.\n*(Canva và Quizizz được sử dụng làm phương tiện công nghệ hỗ trợ giảng dạy tại Mục Phương tiện dạy học)*",
+      academicRevision: "TÀI LIỆU THAM KHẢO (Chuẩn trích dẫn quy phạm):\n1. Bộ Giáo dục và Đào tạo (2018). Chương trình Giáo dục phổ thông - Chương trình môn Lịch sử và Địa lí (Ban hành kèm theo Thông tư số 32/2018/TT-BGDĐT).\n2. Nguyễn Minh Thuyết (Tổng Chủ biên), Lịch sử và Địa lí 8, NXB Giáo dục Việt Nam, 2023.\n*(Lưu ý học thuật: Wikipedia là nguồn mở chưa kiểm chứng, không sử dụng làm tài liệu tham khảo chính thức; công cụ Canva được phân loại tại Mục I.3: Phương tiện dạy học)*",
+      deepRevision: "CHUẨN HÓA DANH MỤC TÀI LIỆU THAM KHẢO THEO CHUẨN TCVN / APA:\n\nA. Văn bản chỉ đạo và Chương trình:\n1. Bộ Giáo dục và Đào tạo (2018), Thông tư 32/2018/TT-BGDĐT ban hành Chương trình GDPT mới.\n\nB. Tài liệu chuyên môn sư phạm:\n2. Sách giáo khoa Lịch sử và Địa lí 8, NXB Giáo dục Việt Nam, 2023.\n\nC. Phân định công cụ kỹ thuật số (đưa về Mục Phương tiện & Thiết bị dạy học):\n- Hệ thống trực quan Canva Pro phục vụ thiết kế sơ đồ.\n*(Loại bỏ Wikipedia; cần kiểm chứng nguồn trước khi bổ sung)*",
+      tierDetails: {
+        light: {
+          text: "Danh mục tài liệu tham khảo:\n1. Bộ Giáo dục và Đào tạo (2018), Chương trình Giáo dục phổ thông môn Lịch sử và Địa lí.\n2. Sách giáo khoa Lịch sử và Địa lí 8 (Bộ sách Kết nối tri thức với cuộc sống), NXB Giáo dục Việt Nam.\n*(Canva và Quizizz được sử dụng làm phương tiện công nghệ hỗ trợ giảng dạy tại Mục Phương tiện dạy học)*",
+          changeScope: "Thay thế Wikipedia bằng SGK Lịch sử 8, chuyển Canva thành ghi chú phương tiện",
+          factsUsed: ["SGK Lịch sử 8", "Chương trình GDPT 2018"]
+        },
+        academic: {
+          text: "TÀI LIỆU THAM KHẢO (Chuẩn trích dẫn quy phạm):\n1. Bộ Giáo dục và Đào tạo (2018). Chương trình Giáo dục phổ thông - Chương trình môn Lịch sử và Địa lí (Ban hành kèm theo Thông tư số 32/2018/TT-BGDĐT).\n2. Nguyễn Minh Thuyết (Tổng Chủ biên), Lịch sử và Địa lí 8, NXB Giáo dục Việt Nam, 2023.\n*(Lưu ý học thuật: Wikipedia là nguồn mở chưa kiểm chứng, không sử dụng làm tài liệu tham khảo chính thức; công cụ Canva được phân loại tại Mục I.3: Phương tiện dạy học)*",
+          changeScope: "Chuẩn hóa theo format trích dẫn quy chuẩn văn bản pháp quy và sách giáo khoa",
+          factsUsed: ["Thông tư 32/2018/TT-BGDĐT", "SGK Lịch sử 8"]
+        },
+        deep: {
+          text: "CHUẨN HÓA DANH MỤC TÀI LIỆU THAM KHẢO THEO CHUẨN TCVN / APA:\n\nA. Văn bản chỉ đạo và Chương trình:\n1. Bộ Giáo dục và Đào tạo (2018), Thông tư 32/2018/TT-BGDĐT ban hành Chương trình GDPT mới.\n\nB. Tài liệu chuyên môn sư phạm:\n2. Sách giáo khoa Lịch sử và Địa lí 8, NXB Giáo dục Việt Nam, 2023.\n\nC. Phân định công cụ kỹ thuật số (đưa về Mục Phương tiện & Thiết bị dạy học):\n- Hệ thống trực quan Canva Pro phục vụ thiết kế sơ đồ.\n*(Loại bỏ Wikipedia; cần kiểm chứng nguồn trước khi bổ sung)*",
+          changeScope: "Tái cấu trúc danh mục theo 3 nhóm rõ rệt: Văn bản chỉ đạo, Tài liệu chuyên môn, và Phân định công cụ số",
+          factsUsed: ["Thông tư 32/2018", "SGK Lịch sử 8", "Canva Pro"]
+        }
+      },
       missingEvidenceAlert: "",
       insertPosition: "Trang 31, thay thế toàn bộ Danh mục Tài liệu tham khảo."
     }

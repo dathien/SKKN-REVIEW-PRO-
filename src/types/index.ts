@@ -240,6 +240,12 @@ export interface LogicGapItem {
   correctionGuidance: string;
 }
 
+export interface RevisionDetail {
+  text: string;
+  changeScope: string;
+  factsUsed: string[];
+}
+
 export interface SuggestionRewrite {
   id: string;
   targetSection: string;
@@ -253,6 +259,11 @@ export interface SuggestionRewrite {
   lightRevision: string;     // SỬA NHẸ: Giữ gần nguyên nội dung
   academicRevision: string;  // SỬA HỌC THUẬT: Cải thiện logic, khoa học và diễn đạt
   deepRevision: string;      // SỬA SÂU: Tổ chức lại đoạn/mục, chỉ rõ minh chứng cần bổ sung
+  tierDetails?: {
+    light: RevisionDetail;
+    academic: RevisionDetail;
+    deep: RevisionDetail;
+  };
   missingEvidenceAlert: string;
   insertPosition: string;
 }
@@ -363,7 +374,8 @@ export interface ChangeSetItem {
   status: ChangeStatus;
   reason: string;
   rubricCriterion?: string;
-  decidedBy: DecisionMaker;
+  selectedRevisionLevel?: 'light' | 'academic' | 'deep';
+  decidedBy: DecisionMaker | string;
   appliedAt?: string;
 }
 

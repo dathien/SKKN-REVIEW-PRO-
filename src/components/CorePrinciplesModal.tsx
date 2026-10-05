@@ -27,16 +27,16 @@ export const CorePrinciplesModal: React.FC<CorePrinciplesModalProps> = ({ isOpen
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200">
-        <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-blue-100 text-blue-700">
+        <div className="px-6 py-4.5 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-lg bg-blue-100 text-blue-700">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900">
+              <h3 className="text-[17px] font-bold text-slate-900 tracking-tight">
                 12 NGUYÊN TẮC CỐT LÕI CỦA SKKN REVIEW PRO
               </h3>
-              <p className="text-xs text-slate-500">
+              <p className="text-[14px] text-slate-500 mt-0.5">
                 “Chấm có căn cứ – Phản biện có chiều sâu – Sửa đúng điểm yếu”
               </p>
             </div>
@@ -49,17 +49,17 @@ export const CorePrinciplesModal: React.FC<CorePrinciplesModalProps> = ({ isOpen
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto space-y-3 text-xs flex-1">
+        <div className="p-6 overflow-y-auto space-y-3.5 flex-1">
           {rules.map((item, idx) => (
-            <div key={idx} className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-start gap-3">
-              <span className="w-5 h-5 rounded-full bg-blue-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">
+            <div key={idx} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-start gap-3">
+              <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-[12px] flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
                 {idx + 1}
               </span>
-              <div>
-                <h4 className="font-bold text-slate-900 mb-0.5">
+              <div className="space-y-0.5">
+                <h4 className="font-bold text-[15px] text-slate-900">
                   {item.rule}
                 </h4>
-                <p className="text-slate-600 leading-relaxed">
+                <p className="text-[14px] text-slate-600 leading-relaxed">
                   {item.desc}
                 </p>
               </div>
@@ -67,10 +67,10 @@ export const CorePrinciplesModal: React.FC<CorePrinciplesModalProps> = ({ isOpen
           ))}
         </div>
 
-        <div className="px-6 py-3.5 border-t border-slate-200 bg-slate-50 flex items-center justify-end">
+        <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors"
+            className="px-5 py-2.5 text-[14px] font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
           >
             Đã hiểu
           </button>

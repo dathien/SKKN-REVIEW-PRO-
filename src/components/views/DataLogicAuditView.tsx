@@ -196,7 +196,7 @@ export const DataLogicAuditView: React.FC<DataLogicAuditViewProps> = ({
                       </p>
                       <p className="text-[13px] sm:text-[14px] text-slate-600 pt-1.5 border-t border-rose-200/60">
                         <strong className="font-bold text-slate-800">Trạng thái: </strong>
-                        <span className="font-semibold text-rose-800">REQUIRES_VERIFICATION (Cần xác minh thực tế)</span>
+                        <span className="font-semibold text-rose-800">Cần xác minh thực tế</span>
                       </p>
                     </div>
                   </div>
@@ -338,7 +338,7 @@ export const DataLogicAuditView: React.FC<DataLogicAuditViewProps> = ({
                           </label>
                           {selectedSampleSizeOption === 'undetermined' && (
                             <div className="ml-7 p-3 bg-rose-50 rounded-lg border border-rose-200 text-[14px] text-rose-950 leading-[1.6]">
-                              Vấn đề được giữ ở trạng thái CẦN XÁC MINH (REQUIRES_VERIFICATION). Hệ thống không tạo bản sửa và chưa thể đánh dấu đã xử lý khi chưa có xác nhận từ tác giả.
+                              Vấn đề được giữ ở trạng thái Cần xác nhận. Hệ thống không tạo bản sửa và chưa thể đánh dấu đã xử lý khi chưa có xác nhận từ tác giả.
                             </div>
                           )}
 
@@ -350,19 +350,19 @@ export const DataLogicAuditView: React.FC<DataLogicAuditViewProps> = ({
                             disabled={!selectedSampleSizeOption || (selectedSampleSizeOption === 'both_different_scope' && !scopeDifferenceNote.trim()) || (selectedSampleSizeOption === 'other_number' && !customSampleNumber.trim())}
                             className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold text-[14px] rounded-xl shadow-xs transition-colors cursor-pointer"
                           >
-                            LƯU XÁC NHẬN CỠ MẪU (USER_CONFIRMED)
+                            LƯU XÁC NHẬN
                           </button>
                         </div>
                       </form>
 
                       {sampleVerificationStatus === 'CONFIRMED' && (
                         <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-300 text-[14px] text-emerald-950 leading-[1.6]">
-                          ✓ <strong>Đã ghi nhận xác nhận của tác giả (USER_CONFIRMED):</strong> Hệ thống sẽ chuẩn hóa bản sửa dựa trên thông tin thực tế này, không tự chèn nguyên nhân suy đoán.
+                          ✓ <strong>Đã xác nhận dữ liệu:</strong> Hệ thống sẽ chuẩn hóa bản sửa dựa trên thông tin thực tế này, không tự chèn nguyên nhân suy đoán.
                         </div>
                       )}
                       {sampleVerificationStatus === 'NEEDS_RECHECK' && (
                         <div className="p-3 bg-rose-50 rounded-lg border border-rose-300 text-[14px] text-rose-950 leading-[1.6]">
-                          ⚠ <strong>Trạng thái: REQUIRES_VERIFICATION.</strong> Giữ nguyên cảnh báo mâu thuẫn để Thầy/Cô đối chiếu dữ liệu gốc trước khi nộp sáng kiến.
+                          ⚠ <strong>Trạng thái: Cần xác nhận.</strong> Giữ nguyên cảnh báo mâu thuẫn để Thầy/Cô đối chiếu dữ liệu gốc trước khi nộp sáng kiến.
                         </div>
                       )}
                       {sampleVerificationStatus === 'NEEDS_RECHECK' && (
@@ -423,7 +423,7 @@ export const DataLogicAuditView: React.FC<DataLogicAuditViewProps> = ({
                   {isPercentAnomaly && (
                     <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl text-[14px] sm:text-[15px] text-blue-950 leading-[1.65] space-y-1">
                       <span className="font-bold text-blue-900 block">
-                        Phép tính suy ra trực tiếp (DERIVED_CALCULATION):
+                        Phép tính suy ra trực tiếp từ số liệu có sẵn:
                       </span>
                       <p>
                         • Mức tăng tuyệt đối: <strong>75% - 60% = 15 điểm phần trăm</strong> (percentage points).

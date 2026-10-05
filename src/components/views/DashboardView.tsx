@@ -144,25 +144,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <button
               type="button"
               onClick={onExitDemo}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200 text-xs font-bold transition-all shadow-2xs cursor-pointer shrink-0 group"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200 text-[14px] font-[650] transition-all shadow-2xs cursor-pointer shrink-0 group"
             >
-              <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+              <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
               <span>← Quay lại chấm SKKN của tôi</span>
             </button>
 
             <div className="h-4 w-px bg-amber-200 hidden sm:block shrink-0" />
 
             <div className="flex items-center gap-2 min-w-0">
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-200/80 text-amber-900 border border-amber-300 shrink-0">
+              <span className="px-2.5 py-0.5 rounded text-[13px] font-[700] bg-amber-200/80 text-amber-900 border border-amber-300 shrink-0">
                 HỒ SƠ MẪU
               </span>
-              <span className="text-xs font-semibold text-slate-800 truncate" title={metadata.title}>
+              <span className="text-[14px] font-[600] text-slate-800 truncate" title={metadata.title}>
                 {metadata.title}
               </span>
             </div>
           </div>
 
-          <span className="text-[11px] text-amber-800 font-medium shrink-0">
+          <span className="text-[13.5px] text-amber-800 font-medium shrink-0">
             Đang xem kết quả thẩm định mẫu
           </span>
         </div>
@@ -230,17 +230,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {isAllResolved ? (
           // Trạng thái khi 5/5 vấn đề đã xử lý
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-700">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <div className="flex items-center gap-2 text-[15px] font-[700] uppercase tracking-wider text-emerald-700">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
               <span>SẴN SÀNG CHẤM LẠI</span>
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-1">
               <div>
-                <p className="text-sm font-semibold text-slate-800">
+                <p className="text-[15px] font-[650] text-slate-800">
                   {totalIssuesCount}/{totalIssuesCount} vấn đề đã được xử lý thành công.
                 </p>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-[14px] text-slate-500 mt-0.5">
                   Bản chỉnh sửa đã sẵn sàng để đối chiếu và nâng điểm chính thức.
                 </p>
               </div>
@@ -249,7 +249,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <button
                 type="button"
                 onClick={() => onNavigateTab('rescore')}
-                className="py-3 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold text-xs uppercase tracking-wide flex items-center justify-center gap-2 shadow-sm shadow-blue-600/25 transition-all cursor-pointer shrink-0"
+                className="py-3 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-[700] text-[15px] uppercase tracking-wide flex items-center justify-center gap-2 shadow-sm shadow-blue-600/25 transition-all cursor-pointer shrink-0"
               >
                 <RefreshCw className="w-4 h-4" />
                 <span>CHẤM LẠI →</span>
@@ -262,61 +262,61 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
               <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-[15px] font-[700] uppercase tracking-wide text-slate-700 block">
                     KẾT QUẢ ĐÁNH GIÁ
                   </span>
                   {isSample && (
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300">
+                    <span className="px-2.5 py-0.5 rounded text-[13px] font-[700] bg-amber-50 text-amber-800 border border-amber-300">
                       HỒ SƠ MẪU
                     </span>
                   )}
                 </div>
                 
-                {/* Điểm vừa vặn, không chiếm toàn bộ panel (Không tạo điểm giả - Item 4) */}
+                {/* Điểm vừa vặn, không chiếm toàn bộ panel (Section 14) */}
                 {canShowScore ? (
                   <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-black text-slate-900 tracking-tight">
+                    <span className="text-[32px] font-[800] leading-none text-slate-900 tracking-tight">
                       {totalScore.toFixed(1)}
                     </span>
-                    <span className="text-sm font-bold text-slate-400">
+                    <span className="text-[15px] font-[650] text-slate-400">
                       / {maxScore}
                     </span>
                     
                     {metadata.isOfficialRubric && (
-                      <span className="ml-2 px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                      <span className="ml-2 px-2.5 py-1 rounded text-[14px] leading-[1.5] font-[600] bg-slate-100 text-slate-700 border border-slate-200">
                         {metadata.appliedRubricName || 'Rubric chính thức'}
                       </span>
                     )}
                   </div>
                 ) : (
                   <div className="py-1">
-                    <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded border border-amber-200 inline-block">
+                    <span className="text-[13.5px] font-[700] text-amber-700 bg-amber-50 px-2.5 py-1 rounded border border-amber-200 inline-block">
                       Chưa đủ căn cứ để chấm điểm tổng
                     </span>
-                    <p className="text-[11px] text-slate-500 mt-1">
+                    <p className="text-[13.5px] text-slate-500 mt-1">
                       Các vấn đề phản biện vẫn được phân tích đầy đủ và chi tiết bên dưới.
                     </p>
                   </div>
                 )}
               </div>
 
-              {/* Dòng tóm tắt vấn đề */}
-              <div className="text-xs text-slate-600 sm:text-right">
-                <span className="font-semibold text-slate-800 block mb-1">
+              {/* Dòng tóm tắt vấn đề (Section 14) */}
+              <div className="text-slate-600 sm:text-right">
+                <span className="text-[14px] font-[600] text-slate-800 block mb-1">
                   Tổng cộng: {totalIssuesCount} vấn đề · Đã xử lý: {resolvedCount} · Còn: {totalIssuesCount - resolvedCount}
                 </span>
-                <div className="flex items-center gap-3 text-[11px] text-slate-500 flex-wrap sm:justify-end">
-                  <span className="flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-rose-600 inline-block" />
+                <div className="flex items-center gap-3 text-[13.5px] text-slate-500 flex-wrap sm:justify-end">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-600 inline-block" />
                     <span>{seriousCount} phải sửa</span>
                   </span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
                     <span>{warningCount} nên xem</span>
                   </span>
                   {missingEvidenceCount > 0 && (
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1.5">
                       <span className="text-amber-600 font-bold inline-block">△</span>
                       <span>{missingEvidenceCount} thiếu minh chứng</span>
                     </span>
@@ -325,7 +325,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
             </div>
 
-            {/* CTA DUY NHẤT: Primary Blue, Không dùng nút đỏ */}
+            {/* CTA DUY NHẤT: Primary Blue, font 15px bold (Section 14) */}
             <div className="pt-2 border-t border-slate-100">
               <button
                 type="button"
@@ -336,10 +336,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     onNavigateTab('rescore');
                   }
                 }}
-                className="w-full py-3 px-5 rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold text-xs uppercase tracking-wide flex items-center justify-center gap-2 shadow-sm shadow-blue-600/25 transition-all cursor-pointer"
+                className="w-full py-3.5 px-5 rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-[700] text-[15px] uppercase tracking-wide flex items-center justify-center gap-2 shadow-sm shadow-blue-600/25 transition-all cursor-pointer"
               >
                 <span>XEM & XỬ LÝ {totalIssuesCount - resolvedCount} VẤN ĐỀ →</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4.5 h-4.5" />
               </button>
             </div>
 
@@ -353,17 +353,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* ========================================================================= */}
       <div id="issues-list-section" className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-6 space-y-4 scroll-mt-6">
         
-        {/* Header danh sách: CẦN XỬ LÝ           0/5 */}
+        {/* Header danh sách: CẦN XỬ LÝ           0/5 (Section 15) */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-          <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+          <h2 className="text-[19px] font-[750] text-slate-900 tracking-tight">
             CẦN XỬ LÝ
           </h2>
-          <span className="text-xs font-bold text-slate-500 font-mono">
+          <span className="text-[14px] font-[650] text-slate-600 font-mono">
             {resolvedCount}/{totalIssuesCount}
           </span>
         </div>
 
-        {/* List items - Sắp xếp: PHẢI SỬA → NÊN SỬA → TỐI ƯU THÊM (Mục 17, 18) */}
+        {/* List items - Sắp xếp: PHẢI SỬA → NÊN SỬA → TỐI ƯU THÊM (Section 15) */}
         <div className="divide-y divide-slate-100">
           {sortedCards.map((card) => {
             const isDone = isDoneCard(card);
@@ -392,7 +392,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   {/* Status Indicator */}
                   <div className="shrink-0">
                     {isDone ? (
-                      <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">
+                      <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[13px] font-bold">
                         ✓
                       </span>
                     ) : (
@@ -401,30 +401,30 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   </div>
 
                   <div className="min-w-0 flex-1 space-y-1">
-                    {/* ● Mức độ + Tên vấn đề + Đã xử lý */}
+                    {/* ● Mức độ + Tên vấn đề + Đã xử lý (Section 5, 10, 15) */}
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${severityBadgeStyle}`}>
+                      <span className={`px-2.5 py-0.5 rounded text-[13px] font-[700] border ${severityBadgeStyle}`}>
                         ● {severityLabel}
                       </span>
-                      <span className={`text-xs font-bold truncate ${isDone ? 'text-slate-500' : 'text-slate-900'}`}>
+                      <span className={`text-[16px] font-[700] leading-[1.45] truncate ${isDone ? 'text-slate-500' : 'text-slate-900'}`}>
                         {card.issueType || card.issueDetected || 'Vấn đề phản biện'}
                       </span>
                       {isDone && (
-                        <span className="px-2 py-0.2 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                        <span className="px-2.5 py-0.5 rounded text-[13px] font-[700] bg-emerald-100 text-emerald-800 border border-emerald-200">
                           ✓ Đã xử lý
                         </span>
                       )}
                     </div>
 
-                    {/* 📍 Vị trí */}
-                    <div className="text-[11px] text-slate-500 flex items-center gap-1.5">
+                    {/* 📍 Vị trí (Section 9, 15) */}
+                    <div className="text-[13.5px] leading-[1.5] text-slate-500 flex items-center gap-1.5">
                       <span className="font-semibold text-slate-600 shrink-0">📍 Vị trí:</span>
                       <span className="truncate">{card.location || 'Toàn văn sáng kiến'}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Right: [ XỬ LÝ → ] */}
+                {/* Right: [ XỬ LÝ → ] (Section 11, 15) */}
                 <div className="shrink-0 sm:self-center pl-8 sm:pl-0">
                   <button
                     type="button"
@@ -432,7 +432,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       e.stopPropagation();
                       handleOpenDrawer(card);
                     }}
-                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold inline-flex items-center gap-1 transition-colors cursor-pointer ${
+                    className={`px-4 py-2 rounded-xl text-[14px] font-[650] inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
                       isDone
                         ? 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                         : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 shadow-2xs'
@@ -457,24 +457,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <button
             type="button"
             onClick={() => setIsMapExpanded(!isMapExpanded)}
-            className="w-full p-4 flex items-center justify-between text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer"
+            className="w-full p-4 flex items-center justify-between text-[14px] font-[650] text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer"
           >
             <div className="flex items-center gap-2">
-              <MapPin className="w-3.5 h-3.5 text-slate-400" />
+              <MapPin className="w-4 h-4 text-slate-500" />
               <span>Cấu trúc văn bản ({sectionsMap.length} mục)</span>
             </div>
-            <div className="flex items-center gap-1 text-[11px] text-slate-400">
+            <div className="flex items-center gap-1.5 text-[13.5px] text-slate-500">
               <span>{isMapExpanded ? 'Thu gọn' : 'Xem cấu trúc'}</span>
-              {isMapExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              {isMapExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </div>
           </button>
 
           {isMapExpanded && (
-            <div className="p-4 pt-0 border-t border-slate-100 space-y-2 text-xs text-slate-600">
+            <div className="p-4 pt-0 border-t border-slate-100 space-y-2 text-[14px] text-slate-600">
               {sectionsMap.map((sec, idx) => (
-                <div key={idx} className="flex items-center justify-between py-1 border-b border-slate-50 last:border-0">
+                <div key={idx} className="flex items-center justify-between py-1.5 border-b border-slate-50 last:border-0">
                   <span className="truncate">{sec.name}</span>
-                  <span className="text-[11px] text-slate-400 font-mono shrink-0 ml-2">
+                  <span className="text-[13px] text-slate-500 font-mono shrink-0 ml-2">
                     {sec.page ? `Trang ${sec.page}` : ''}
                   </span>
                 </div>
@@ -485,8 +485,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       )}
       </>
     ) : (
-      <div className="text-center py-6">
-        <p className="text-xs text-slate-400">
+      <div className="text-center py-8">
+        <p className="text-[14px] text-slate-500">
           Chưa có kết quả đánh giá.
         </p>
       </div>

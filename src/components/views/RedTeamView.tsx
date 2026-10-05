@@ -81,20 +81,20 @@ export const RedTeamView: React.FC<RedTeamViewProps> = ({
       <div className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
-            <span className="px-2.5 py-0.5 rounded-full text-[12.5px] sm:text-[13px] font-bold bg-blue-100 text-blue-800 border border-blue-200 uppercase tracking-wide">
+            <span className="px-2.5 py-0.5 rounded-full text-[13px] font-[700] bg-blue-100 text-blue-800 border border-blue-200 uppercase tracking-wide">
               {resolvedCount}/{totalCount} ĐÃ XỬ LÝ
             </span>
-            <span className="text-[13px] sm:text-[14px] text-slate-500 font-medium">
+            <span className="text-[14px] text-slate-500 font-medium">
               {totalCount} vấn đề phản biện học thuật
             </span>
           </div>
           
-          <h1 className="text-[22px] sm:text-[24px] font-bold text-slate-900 tracking-tight leading-[1.3] flex items-center gap-2.5">
+          <h1 className="text-[22px] font-[750] text-slate-900 tracking-tight leading-[1.3] flex items-center gap-2.5">
             <ShieldAlert className="w-6 h-6 text-blue-600 shrink-0" />
             <span>CẦN XỬ LÝ</span>
           </h1>
 
-          <div className="flex items-center gap-3 text-[14px] text-slate-600 mt-1 font-medium flex-wrap">
+          <div className="flex items-center gap-3 text-[14px] text-slate-600 mt-1.5 font-medium flex-wrap">
             <span className="flex items-center gap-1.5 text-rose-700 font-bold">
               <span>🔴</span> {seriousCount} phải sửa
             </span>
@@ -109,20 +109,20 @@ export const RedTeamView: React.FC<RedTeamViewProps> = ({
           </div>
         </div>
 
-        {/* 1 Primary Action (Section XXXIII: 14-15px font 600) */}
+        {/* 1 Primary Action (Section 11: 15px font 700) */}
         <button
           type="button"
           onClick={handlePrimaryAction}
-          className="py-3 px-5 rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-semibold text-[14px] sm:text-[15px] flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer shrink-0 self-start sm:self-auto"
+          className="py-3 px-5 rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-[700] text-[15px] flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer shrink-0 self-start sm:self-auto"
         >
-          <ShieldAlert className="w-4 h-4" />
+          <ShieldAlert className="w-4.5 h-4.5" />
           <span>XỬ LÝ VẤN ĐỀ ({totalCount - resolvedCount} CHƯA XỬ LÝ)</span>
-          <ArrowRight className="w-4 h-4" />
+          <ArrowRight className="w-4.5 h-4.5" />
         </button>
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. DANH SÁCH VẤN ĐỀ (Section XXXVIII: Tên 16-17px/700, Meta 13-14px, Nút 14px) */}
+      {/* 2. DANH SÁCH VẤN ĐỀ (Section 5: Tên 16px/700, Meta 13.5px, Nút 14px)      */}
       {/* ========================================================================= */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs divide-y divide-slate-100 overflow-hidden">
         {sortedCards.map((card, index) => {
@@ -141,7 +141,7 @@ export const RedTeamView: React.FC<RedTeamViewProps> = ({
           return (
             <div
               key={card.id}
-              className={`p-4 sm:p-5 hover:bg-slate-50/80 transition-colors flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${
+              className={`p-4.5 sm:p-5.5 hover:bg-slate-50/80 transition-colors flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${
                 isDone ? 'opacity-70 bg-slate-50/50' : isIgnored ? 'opacity-60 bg-slate-50/40' : ''
               }`}
             >
@@ -150,30 +150,30 @@ export const RedTeamView: React.FC<RedTeamViewProps> = ({
                   {String(index + 1).padStart(2, '0')}.
                 </span>
                 
-                <span className={`text-[12.5px] sm:text-[13px] font-bold px-2.5 py-0.5 rounded-md shrink-0 mt-0.5 sm:mt-0 ${badgeStyle}`}>
+                <span className={`text-[13px] font-[700] px-2.5 py-0.5 rounded-md shrink-0 mt-0.5 sm:mt-0 ${badgeStyle}`}>
                   {severityLabel}
                 </span>
 
                 <div className="min-w-0">
-                  <h3 className="text-[16px] sm:text-[17px] font-bold text-slate-900 leading-[1.4] truncate">
+                  <h3 className="text-[16px] font-[700] text-slate-900 leading-[1.45] truncate">
                     {card.issueDetected}
                   </h3>
-                  <div className="text-[13px] sm:text-[14px] text-slate-600 leading-[1.5] flex items-center gap-2 mt-1 flex-wrap">
+                  <div className="text-[13.5px] text-slate-600 leading-[1.5] flex items-center gap-2 mt-1 flex-wrap">
                     <span className="font-semibold text-slate-800">📍 {card.location}</span>
                     <span>•</span>
                     <span className="truncate max-w-[280px]">Tiêu chí: {card.affectedCriterion}</span>
                     {isDone && (
-                      <span className="text-emerald-800 font-bold text-[12px] bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-300">
+                      <span className="text-emerald-800 font-[700] text-[13px] bg-emerald-100 px-2.5 py-0.5 rounded-md border border-emerald-300">
                         ✓ Đã xử lý
                       </span>
                     )}
                     {isInProgress && (
-                      <span className="text-blue-800 font-bold text-[12px] bg-blue-100 px-2 py-0.5 rounded-md border border-blue-300">
+                      <span className="text-blue-800 font-[700] text-[13px] bg-blue-100 px-2.5 py-0.5 rounded-md border border-blue-300">
                         ⚡ Đang xử lý
                       </span>
                     )}
                     {isIgnored && (
-                      <span className="text-slate-700 font-bold text-[12px] bg-slate-100 px-2 py-0.5 rounded-md border border-slate-300">
+                      <span className="text-slate-700 font-[700] text-[13px] bg-slate-100 px-2.5 py-0.5 rounded-md border border-slate-300">
                         Bỏ qua
                       </span>
                     )}
@@ -181,11 +181,11 @@ export const RedTeamView: React.FC<RedTeamViewProps> = ({
                 </div>
               </div>
 
-              {/* Action Button (Section XXXIII: 14-15px font 600) */}
+              {/* Action Button (Section 11: 14px font 650) */}
               <button
                 type="button"
                 onClick={() => handleOpenCard(card)}
-                className="shrink-0 self-start sm:self-auto text-[14px] font-semibold text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3.5 py-2 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                className="shrink-0 self-start sm:self-auto text-[14px] font-[650] text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-4 py-2 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
               >
                 <span>{isDone ? 'Xem lại' : 'Xem & xử lý'}</span>
                 <ArrowRight className="w-4 h-4" />

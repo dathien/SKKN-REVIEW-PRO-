@@ -107,16 +107,16 @@ export const SimilarityCitationsView: React.FC<SimilarityCitationsViewProps> = (
       <div className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 uppercase tracking-wide">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="px-2.5 py-0.5 rounded-full text-[13px] font-bold bg-amber-100 text-amber-800 border border-amber-200 uppercase tracking-wide">
                 Liêm chính học thuật
               </span>
             </div>
-            <h1 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
-              <BookCopy className="w-5 h-5 text-amber-600" />
+            <h1 className="text-[22px] font-[750] text-slate-900 tracking-tight flex items-center gap-2">
+              <BookCopy className="w-6 h-6 text-amber-600" />
               NGUỒN & TRÍCH DẪN
             </h1>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-[14.5px] text-slate-600 mt-1">
               Phân tích đối sánh tương đồng văn bản, chuẩn hóa trích dẫn và củng cố cơ sở lý luận khoa học.
             </p>
           </div>
@@ -124,7 +124,7 @@ export const SimilarityCitationsView: React.FC<SimilarityCitationsViewProps> = (
           <button
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer shrink-0"
+            className="py-2.5 px-4.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-[14px] flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer shrink-0"
           >
             <span>{isExpanded ? 'Thu gọn' : 'Xem chi tiết nguồn →'}</span>
             {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -132,13 +132,13 @@ export const SimilarityCitationsView: React.FC<SimilarityCitationsViewProps> = (
         </div>
 
         {/* Minimal Status Strip */}
-        <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs">
+        <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-[14px]">
           <div>
-            <span className="font-bold text-amber-900 flex items-center gap-1.5 text-xs">
-              <AlertTriangle className="w-4 h-4 text-amber-600" />
+            <span className="font-bold text-amber-900 flex items-center gap-1.5 text-[14px]">
+              <AlertTriangle className="w-4.5 h-4.5 text-amber-600" />
               RÀ SOÁT TƯƠNG ĐỒNG & DANH MỤC TÀI LIỆU ({totalIssues} ĐIỂM LƯU Ý):
             </span>
-            <div className="flex items-center gap-2 mt-1 text-slate-700 flex-wrap text-[11px]">
+            <div className="flex items-center gap-2.5 mt-1 text-slate-700 flex-wrap text-[13.5px]">
               <span className="font-semibold">{similarityCount} đoạn tương đồng</span>
               <span>•</span>
               <span className="font-semibold">{citationIssuesCount} vấn đề trích dẫn</span>
@@ -147,7 +147,7 @@ export const SimilarityCitationsView: React.FC<SimilarityCitationsViewProps> = (
             </div>
           </div>
 
-          <div className="text-[11px] text-slate-500 italic sm:text-right">
+          <div className="text-[13px] text-slate-500 italic sm:text-right font-medium">
             * Phân biệt rõ: Tương đồng văn bản ≠ Đạo văn.
           </div>
         </div>
@@ -159,17 +159,17 @@ export const SimilarityCitationsView: React.FC<SimilarityCitationsViewProps> = (
           
           {/* PHẦN 14: Cảnh báo bắt buộc khi tra cứu nguồn */}
           {!hasExternalWebCheck ? (
-            <div className="p-4 rounded-xl bg-slate-100 border border-slate-300 text-xs text-slate-700 flex items-center gap-2">
-              <Info className="w-4 h-4 text-slate-500 shrink-0" />
+            <div className="p-4 rounded-xl bg-slate-100 border border-slate-300 text-[14px] text-slate-700 flex items-center gap-2.5">
+              <Info className="w-5 h-5 text-slate-500 shrink-0" />
               <span>
                 <strong>CHƯA THỰC HIỆN ĐỐI SÁNH NGUỒN BÊN NGOÀI:</strong> Hệ thống không tự tạo nguồn, URL hay tỷ lệ % giả.
               </span>
             </div>
           ) : (
-            <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 text-xs text-blue-900 flex items-start gap-2.5">
-              <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+            <div className="p-4.5 rounded-xl bg-blue-50 border border-blue-200 text-[14.5px] text-blue-900 flex items-start gap-3">
+              <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <strong>Nguyên tắc đánh giá liêm chính học thuật (PHẦN 13 & 14):</strong>
+                <strong className="text-[15px]">Nguyên tắc đánh giá liêm chính học thuật (PHẦN 13 & 14):</strong>
                 <p className="leading-relaxed">
                   Hệ thống chỉ rà soát mức độ trùng khớp câu chữ với tài liệu trong cơ sở dữ liệu đối soát. <strong>Tuyệt đối không kết luận là "Đạo văn"</strong> khi chưa có hội đồng chuyên môn thẩm định bối cảnh trích dẫn. Không tạo tác giả giả, sách giả, DOI giả hay URL giả.
                 </p>
@@ -178,7 +178,7 @@ export const SimilarityCitationsView: React.FC<SimilarityCitationsViewProps> = (
           )}
 
           {/* Subtabs Switcher */}
-          <div className="flex border-b border-slate-200 gap-4 text-xs font-bold">
+          <div className="flex border-b border-slate-200 gap-4 text-[14px] font-bold">
             <button
               onClick={() => setActiveSubTab('similarity')}
               className={`pb-2.5 transition-colors border-b-2 cursor-pointer ${
@@ -220,52 +220,52 @@ export const SimilarityCitationsView: React.FC<SimilarityCitationsViewProps> = (
                 return (
                   <div
                     key={finding.id}
-                    className="p-4 sm:p-5 rounded-2xl border border-slate-200 bg-white shadow-2xs space-y-3 text-xs"
+                    className="p-5 rounded-2xl border border-slate-200 bg-white shadow-2xs space-y-3.5 text-[14px]"
                   >
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-2.5">
+                      <div className="flex items-center gap-2.5">
+                        <span className="font-bold text-slate-900 text-[15px]">
                           📍 Vị trí: {finding.location}
                         </span>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                        <span className={`text-[12.5px] font-bold px-2.5 py-0.5 rounded border ${
                           isWarning ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-emerald-100 text-emerald-800 border-emerald-300'
                         }`}>
                           📊 Mức độ tương đồng: {isWarning ? 'Tương đồng đáng kể' : 'Thấp'}
                         </span>
                       </div>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                      <span className={`text-[12.5px] font-bold px-2.5 py-0.5 rounded ${
                         finding.isCitedInText ? 'bg-emerald-50 text-emerald-800' : 'bg-rose-50 text-rose-800 border border-rose-200'
                       }`}>
                         📚 {finding.isCitedInText ? 'Đã trích dẫn trong bài' : 'Chưa có trích dẫn'}
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-slate-700">
-                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase block">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 text-slate-700">
+                      <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+                        <span className="text-[13px] font-bold text-slate-500 uppercase block">
                           📄 Đoạn trong SKKN cần kiểm tra:
                         </span>
-                        <p className="font-serif italic text-[11px] leading-relaxed">
+                        <p className="font-serif italic text-[14.5px] leading-relaxed text-slate-800">
                           "{finding.excerpt}"
                         </p>
                       </div>
 
-                      <div className="p-3 bg-amber-50/50 rounded-xl border border-amber-200 space-y-1">
-                        <span className="text-[10px] font-bold text-amber-900 uppercase block">
+                      <div className="p-3.5 bg-amber-50/50 rounded-xl border border-amber-200 space-y-1.5">
+                        <span className="text-[13px] font-bold text-amber-900 uppercase block">
                           🌐 Nguồn đối chiếu & Nội dung tương đồng:
                         </span>
-                        <p className="font-bold text-[11px] text-amber-950">
+                        <p className="font-bold text-[14px] text-amber-950">
                           {finding.matchedSource}
                         </p>
-                        <p className="font-serif text-[11px] text-slate-700 leading-relaxed pt-1">
+                        <p className="font-serif text-[14px] text-slate-700 leading-relaxed pt-1">
                           "{finding.matchedContent}"
                         </p>
                       </div>
                     </div>
 
                     {/* Khuyến nghị xử lý */}
-                    <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-200 text-slate-800 text-[11px] flex items-start gap-2">
-                      <BookmarkCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                    <div className="p-3.5 bg-blue-50/60 rounded-xl border border-blue-200 text-slate-800 text-[14px] flex items-start gap-2.5 leading-[1.6]">
+                      <BookmarkCheck className="w-4.5 h-4.5 text-blue-600 shrink-0 mt-0.5" />
                       <div>
                         <strong>💡 Khuyến nghị xử lý: </strong>
                         <span>{finding.resolutionAction}</span>
@@ -286,20 +286,20 @@ export const SimilarityCitationsView: React.FC<SimilarityCitationsViewProps> = (
                 return (
                   <div
                     key={refItem.id}
-                    className="p-4 rounded-xl border border-slate-200 bg-white shadow-2xs space-y-2 text-xs"
+                    className="p-4.5 rounded-xl border border-slate-200 bg-white shadow-2xs space-y-2.5 text-[14px]"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <strong className="text-slate-900 text-xs">
+                      <strong className="text-slate-900 text-[15px]">
                         {refItem.referenceEntry}
                       </strong>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded border self-start sm:self-auto ${
+                      <span className={`text-[12.5px] font-bold px-2.5 py-0.5 rounded border self-start sm:self-auto ${
                         isVerified ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-rose-100 text-rose-800 border-rose-300'
                       }`}>
                         {isVerified ? '✓ Đã xác minh nguồn' : '⚠ Cần kiểm tra chuẩn mực'}
                       </span>
                     </div>
 
-                    <div className="text-[11px] text-slate-600 space-y-1">
+                    <div className="text-[13.5px] text-slate-600 space-y-1">
                       <p><strong>Vị trí trích trong bài:</strong> {refItem.citationInText}</p>
                       <p><strong>Đánh giá học thuật:</strong> {refItem.verificationNote}</p>
                     </div>
@@ -310,12 +310,12 @@ export const SimilarityCitationsView: React.FC<SimilarityCitationsViewProps> = (
                           type="button"
                           onClick={() => handleVerifyReference(refItem)}
                           disabled={verifyingId === refItem.id}
-                          className="text-[11px] font-bold px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+                          className="text-[13px] font-bold px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
                         >
                           {verifyingId === refItem.id ? (
-                            <RefreshCw className="w-3 h-3 animate-spin" />
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                           ) : (
-                            <ShieldCheck className="w-3 h-3" />
+                            <ShieldCheck className="w-3.5 h-3.5" />
                           )}
                           <span>Xác minh lại nguồn này</span>
                         </button>
@@ -330,29 +330,29 @@ export const SimilarityCitationsView: React.FC<SimilarityCitationsViewProps> = (
           {/* TAB 3: PHẦN 3 - LUẬN ĐIỂM CẦN CỦNG CỐ NGUỒN CƠ SỞ LÝ LUẬN */}
           {activeSubTab === 'theory_needs' && (
             <div className="space-y-3">
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600">
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[14px] text-slate-600 leading-[1.6]">
                 <strong>Nguyên tắc đề xuất nguồn (PHẦN 3):</strong> Tuyệt đối không tự bịa nguồn hay tài liệu không kiểm chứng được. Nếu chưa tìm được nguồn chính thức, hệ thống thông báo rõ để giáo viên chủ động rà soát.
               </div>
 
               {theoryNeeds.map((item) => (
                 <div
                   key={item.id}
-                  className="p-4 rounded-xl border border-slate-200 bg-white shadow-2xs space-y-2.5 text-xs"
+                  className="p-4.5 rounded-xl border border-slate-200 bg-white shadow-2xs space-y-3 text-[14px]"
                 >
                   <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                    <strong className="text-slate-900 text-xs">
+                    <strong className="text-slate-900 text-[15px]">
                       1. Luận điểm cần củng cố nguồn:
                     </strong>
-                    <span className="text-[11px] font-mono text-slate-500 bg-slate-50 px-2 py-0.5 rounded border">
+                    <span className="text-[13px] font-mono text-slate-500 bg-slate-50 px-2.5 py-0.5 rounded border">
                       {item.targetSection}
                     </span>
                   </div>
 
-                  <p className="font-serif italic text-slate-800 bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-[11px]">
+                  <p className="font-serif italic text-slate-800 bg-slate-50 p-3 rounded-lg border border-slate-200 text-[14.5px] leading-relaxed">
                     "{item.claim}"
                   </p>
 
-                  <div className="space-y-1.5 text-[11px]">
+                  <div className="space-y-1.5 text-[14px] leading-relaxed">
                     <p className="text-blue-900">
                       <strong>2. Đề xuất loại nguồn phù hợp:</strong> {item.suggestedSourceType}
                     </p>

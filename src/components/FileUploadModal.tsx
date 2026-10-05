@@ -184,13 +184,13 @@ Phương pháp: Nghiên cứu thực nghiệm sư phạm đối chứng có ki�
       <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
         
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/80">
+        <div className="px-6 py-4.5 border-b border-slate-200 flex items-center justify-between bg-slate-50/80">
           <div>
-            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <h3 className="text-[17px] font-bold text-slate-900 flex items-center gap-2">
               <Upload className="w-5 h-5 text-blue-600" />
               Tải hồ sơ Sáng kiến & Phiếu chấm đánh giá
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-[14px] text-slate-500 mt-0.5">
               Hỗ trợ phân loại đa file: SKKN, Phiếu chấm, Minh chứng, Dữ liệu khảo sát.
             </p>
           </div>
@@ -204,27 +204,27 @@ Phương pháp: Nghiên cứu thực nghiệm sư phạm đối chứng có ki�
         </div>
 
         {/* Tab switchers */}
-        <div className="flex border-b border-slate-200 px-6 bg-white gap-4 text-xs font-semibold">
+        <div className="flex border-b border-slate-200 px-6 bg-white gap-4 text-[14px] font-bold">
           <button
             onClick={() => setActiveTab('paste')}
-            className={`py-3 border-b-2 transition-colors flex items-center gap-1.5 ${
+            className={`py-3.5 border-b-2 transition-colors flex items-center gap-2 ${
               activeTab === 'paste'
                 ? 'border-blue-600 text-blue-600'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <FileText className="w-4 h-4" />
+            <FileText className="w-4.5 h-4.5" />
             Nhập / Dán văn bản trực tiếp
           </button>
           <button
             onClick={() => setActiveTab('upload')}
-            className={`py-3 border-b-2 transition-colors flex items-center gap-1.5 ${
+            className={`py-3.5 border-b-2 transition-colors flex items-center gap-2 ${
               activeTab === 'upload'
                 ? 'border-blue-600 text-blue-600'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <FolderOpen className="w-4 h-4" />
+            <FolderOpen className="w-4.5 h-4.5" />
             Tải tập tin (Word, PDF, Excel, Ảnh)
           </button>
         </div>
@@ -232,8 +232,8 @@ Phương pháp: Nghiên cứu thực nghiệm sư phạm đối chứng có ki�
         {/* Modal Body */}
         <div className="p-6 overflow-y-auto space-y-4 flex-1">
           {errorMessage && (
-            <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" />
+            <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-[14px] flex items-center gap-2">
+              <AlertCircle className="w-4.5 h-4.5 shrink-0" />
               <span>{errorMessage}</span>
             </div>
           )}
@@ -241,23 +241,23 @@ Phương pháp: Nghiên cứu thực nghiệm sư phạm đối chứng có ki�
           {activeTab === 'paste' ? (
             <div className="space-y-4">
               {/* Quick sample loader buttons */}
-              <div className="flex items-center justify-between bg-blue-50/70 p-3 rounded-xl border border-blue-100 text-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-blue-50/70 p-3.5 rounded-xl border border-blue-100 text-[14px] gap-2">
                 <span className="text-blue-900 font-medium flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-blue-600" />
+                  <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
                   Bạn muốn thử nghiệm nhanh với dữ liệu có sẵn?
                 </span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   <button
                     type="button"
                     onClick={() => loadSampleToInput('sample1')}
-                    className="px-2.5 py-1 bg-white hover:bg-blue-100 text-blue-700 font-medium rounded-md border border-blue-200 text-xs transition-colors"
+                    className="px-3 py-1.5 bg-white hover:bg-blue-100 text-blue-700 font-semibold rounded-lg border border-blue-200 text-[13px] transition-colors cursor-pointer shadow-2xs"
                   >
                     Dán mẫu 1 (Sử 8)
                   </button>
                   <button
                     type="button"
                     onClick={() => loadSampleToInput('sample2')}
-                    className="px-2.5 py-1 bg-white hover:bg-blue-100 text-blue-700 font-medium rounded-md border border-blue-200 text-xs transition-colors"
+                    className="px-3 py-1.5 bg-white hover:bg-blue-100 text-blue-700 font-semibold rounded-lg border border-blue-200 text-[13px] transition-colors cursor-pointer shadow-2xs"
                   >
                     Dán mẫu 2 (Toán 10)
                   </button>
@@ -266,28 +266,28 @@ Phương pháp: Nghiên cứu thực nghiệm sư phạm đối chứng có ki�
 
               {/* SKKN Text Input */}
               <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1">
+                <label className="block text-[14px] font-bold text-slate-800 mb-1">
                   NỘI DUNG SÁNG KIẾN KINH NGHIỆM (SKKN) <span className="text-rose-500">*</span>
                 </label>
                 <textarea
                   value={skknText}
                   onChange={(e) => setSkknText(e.target.value)}
                   placeholder="Dán toàn bộ hoặc các phần chính của SKKN vào đây (Đặt vấn đề, Thực trạng, Biện pháp, Hiệu quả, Kết luận, Danh mục minh chứng)..."
-                  className="w-full h-44 p-3 text-xs text-slate-800 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-mono leading-relaxed"
+                  className="w-full h-44 p-3.5 text-[14px] text-slate-800 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-mono leading-relaxed"
                 />
-                <p className="text-[11px] text-slate-400 mt-1 flex items-center justify-between">
+                <p className="text-[13px] text-slate-500 mt-1 flex items-center justify-between">
                   <span>Hệ thống tự động bóc tách: Tên đề tài, Giải pháp, Dữ liệu đối chứng, Minh chứng.</span>
-                  <span>{skknText.length} ký tự</span>
+                  <span className="font-mono">{skknText.length} ký tự</span>
                 </p>
               </div>
 
               {/* Rubric Text Input */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-bold text-slate-800">
+                  <label className="text-[14px] font-bold text-slate-800">
                     PHIẾU CHẤM / HƯỚNG DẪN / RUBRIC CHÍNH THỨC (NẾU CÓ)
                   </label>
-                  <span className="text-[11px] text-slate-500">
+                  <span className="text-[13px] text-slate-500">
                     Để trống nếu muốn dùng Rubric hệ thống 7 tiêu chí (100đ)
                   </span>
                 </div>
@@ -295,13 +295,13 @@ Phương pháp: Nghiên cứu thực nghiệm sư phạm đối chứng có ki�
                   value={rubricText}
                   onChange={(e) => setRubricText(e.target.value)}
                   placeholder="Dán tiêu chí phiếu chấm của Sở/Phòng GD&ĐT nếu có (Ví dụ: Tiêu chí 1: Tính mới (20đ), Tiêu chí 2: Tính thực tiễn...)..."
-                  className="w-full h-24 p-3 text-xs text-slate-800 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-mono leading-relaxed"
+                  className="w-full h-24 p-3.5 text-[14px] text-slate-800 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-mono leading-relaxed"
                 />
               </div>
 
               {/* Additional Notes */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-[14px] font-bold text-slate-700 mb-1">
                   Ghi chú bổ sung cho trợ lý đánh giá (Tùy chọn)
                 </label>
                 <input
@@ -309,15 +309,15 @@ Phương pháp: Nghiên cứu thực nghiệm sư phạm đối chứng có ki�
                   value={additionalNotes}
                   onChange={(e) => setAdditionalNotes(e.target.value)}
                   placeholder="Ví dụ: Tập trung soi kỹ phần số liệu và tính mới ở giải pháp 2..."
-                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  className="w-full px-3.5 py-2.5 text-[14px] bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 />
               </div>
             </div>
           ) : (
             <div className="space-y-4">
               {/* File category selector */}
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <label className="block text-[14px] font-semibold text-slate-700 mb-2">
                   Chọn phân loại tập tin trước khi tải:
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -326,7 +326,7 @@ Phương pháp: Nghiên cứu thực nghiệm sư phạm đối chứng có ki�
                       key={cat}
                       type="button"
                       onClick={() => setSelectedCategory(cat)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                      className={`px-3.5 py-2 rounded-xl text-[13px] font-semibold border transition-all cursor-pointer ${
                         selectedCategory === cat
                           ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
                           : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
@@ -341,13 +341,13 @@ Phương pháp: Nghiên cứu thực nghiệm sư phạm đối chứng có ki�
               {/* Drop area */}
               <label className="border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer bg-slate-50/50 hover:bg-blue-50/20 transition-all text-center">
                 <Upload className="w-8 h-8 text-blue-600 mb-2" />
-                <span className="text-xs font-bold text-slate-800">
+                <span className="text-[15px] font-bold text-slate-800">
                   Bấm để chọn tệp hoặc kéo thả vào đây
                 </span>
-                <span className="text-[11px] text-slate-500 mt-1">
+                <span className="text-[13.5px] text-slate-600 mt-1">
                   Đang tải vào mục: <strong className="text-blue-700">{getCategoryLabel(selectedCategory)}</strong>
                 </span>
-                <span className="text-[10px] text-slate-400 mt-0.5">
+                <span className="text-[12.5px] text-slate-500 mt-0.5">
                   Định dạng hỗ trợ: Word (.docx), PDF (.pdf), Text (.txt), Excel/CSV (.csv, .xlsx), Ảnh (.png, .jpg)
                 </span>
                 <input
@@ -362,12 +362,12 @@ Phương pháp: Nghiên cứu thực nghiệm sư phạm đối chứng có ki�
               {/* File list */}
               {uploadedFiles.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-xs font-bold text-slate-800 flex items-center justify-between">
+                  <h4 className="text-[14px] font-bold text-slate-800 flex items-center justify-between">
                     <span>Danh sách tập tin đã tải ({uploadedFiles.length})</span>
                     <button
                       type="button"
                       onClick={() => setUploadedFiles([])}
-                      className="text-[11px] text-rose-600 hover:underline"
+                      className="text-[13px] text-rose-600 hover:underline cursor-pointer"
                     >
                       Xóa tất cả
                     </button>
@@ -376,26 +376,26 @@ Phương pháp: Nghiên cứu thực nghiệm sư phạm đối chứng có ki�
                     {uploadedFiles.map(file => (
                       <div
                         key={file.id}
-                        className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200 text-xs"
+                        className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-[13.5px]"
                       >
                         <div className="flex items-center gap-2 truncate">
                           <FileText className="w-4 h-4 text-slate-500 shrink-0" />
                           <span className="truncate font-medium text-slate-800" title={file.name}>
                             {file.name}
                           </span>
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${getCategoryBadgeClass(file.category)}`}>
+                          <span className={`text-[12px] px-2 py-0.5 rounded-full border font-semibold ${getCategoryBadgeClass(file.category)}`}>
                             {getCategoryLabel(file.category)}
                           </span>
-                          <span className="text-[10px] text-slate-400">
+                          <span className="text-[12px] text-slate-400">
                             ({(file.size / 1024).toFixed(1)} KB)
                           </span>
                         </div>
                         <button
                           type="button"
                           onClick={() => removeFile(file.id)}
-                          className="text-slate-400 hover:text-rose-600 p-1"
+                          className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     ))}
@@ -408,16 +408,16 @@ Phương pháp: Nghiên cứu thực nghiệm sư phạm đối chứng có ki�
 
         {/* Modal Footer */}
         <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
-          <div className="text-[11px] text-slate-500 flex items-center gap-1.5">
-            <HelpCircle className="w-3.5 h-3.5 text-blue-600" />
+          <div className="text-[13px] text-slate-600 flex items-center gap-1.5">
+            <HelpCircle className="w-4 h-4 text-blue-600 shrink-0" />
             <span>Nguyên tắc: Không tự tạo số liệu, không tự tạo minh chứng.</span>
           </div>
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={onClose}
               disabled={isLoading}
-              className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg transition-colors"
+              className="px-4.5 py-2.5 text-[14px] font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-xl transition-colors cursor-pointer"
             >
               Hủy
             </button>
@@ -425,11 +425,11 @@ Phương pháp: Nghiên cứu thực nghiệm sư phạm đối chứng có ki�
               type="button"
               onClick={handleSubmit}
               disabled={isLoading}
-              className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm shadow-blue-500/20 transition-all flex items-center gap-1.5 disabled:opacity-50"
+              className="px-5 py-2.5 text-[14px] font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm shadow-blue-500/20 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
             >
               {isLoading ? (
                 <>
-                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   <span>Đang phân tích & chấm phản biện...</span>
                 </>
               ) : (

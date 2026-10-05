@@ -140,10 +140,10 @@ export const EvidenceInspectorModal: React.FC<EvidenceInspectorModalProps> = ({
               {activeTab === 'how_to_fix' && <Lightbulb className="w-5 h-5" />}
             </div>
             <div>
-              <span className="text-[12px] font-semibold text-slate-500 uppercase tracking-[0.03em] leading-[1.4] block">
+              <span className="text-[13px] font-bold text-slate-500 uppercase tracking-[0.03em] leading-[1.4] block">
                 TRUY VẾT & GIẢI TRÌNH
               </span>
-              <h3 className="text-[15px] sm:text-[16px] font-bold text-slate-900 leading-[1.4] line-clamp-2 mt-0.5">
+              <h3 className="text-[16px] sm:text-[17px] font-bold text-slate-900 leading-[1.4] line-clamp-2 mt-0.5">
                 {title}
               </h3>
             </div>
@@ -158,48 +158,48 @@ export const EvidenceInspectorModal: React.FC<EvidenceInspectorModalProps> = ({
           </button>
         </div>
 
-        {/* Tab switcher (Section C.3: 13px, font 600, active font 700) */}
-        <div className="flex border-b border-slate-200 bg-white px-5 sm:px-6 gap-2 text-[13px] leading-[1.4] pt-2 shrink-0 overflow-x-auto">
+        {/* Tab switcher (Section C.3: 14px font 650-700) */}
+        <div className="flex border-b border-slate-200 bg-white px-5 sm:px-6 gap-3 text-[14px] leading-[1.4] pt-2 shrink-0 overflow-x-auto">
           <button
             type="button"
             onClick={() => setActiveTab('basis')}
-            className={`pb-2.5 px-3 border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+            className={`pb-3 px-3.5 border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
               activeTab === 'basis'
                 ? 'border-blue-600 text-blue-600 font-bold'
                 : 'border-transparent text-slate-500 hover:text-slate-800 font-semibold'
             }`}
           >
-            <Search className="w-4 h-4" />
+            <Search className="w-4.5 h-4.5" />
             <span>XEM CĂN CỨ</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('deduction')}
-            className={`pb-2.5 px-3 border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+            className={`pb-3 px-3.5 border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
               activeTab === 'deduction'
                 ? 'border-rose-600 text-rose-600 font-bold'
                 : 'border-transparent text-slate-500 hover:text-slate-800 font-semibold'
             }`}
           >
-            <AlertTriangle className="w-4 h-4" />
+            <AlertTriangle className="w-4.5 h-4.5" />
             <span>TẠI SAO BỊ TRỪ ĐIỂM?</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('how_to_fix')}
-            className={`pb-2.5 px-3 border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+            className={`pb-3 px-3.5 border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
               activeTab === 'how_to_fix'
                 ? 'border-emerald-600 text-emerald-600 font-bold'
                 : 'border-transparent text-slate-500 hover:text-slate-800 font-semibold'
             }`}
           >
-            <Lightbulb className="w-4 h-4" />
+            <Lightbulb className="w-4.5 h-4.5" />
             <span>SỬA THẾ NÀO?</span>
           </button>
         </div>
 
-        {/* Body (Section C.4, C.5, C.6, C.7 & D: Card padding 14-16px, spacing 14-16px, body 14px, line-height 1.65) */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1">
+        {/* Body */}
+        <div className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1">
           
           {/* ================================================================= */}
           {/* TAB 1: XEM CĂN CỨ (FACT SAFETY)                                  */}
@@ -208,22 +208,22 @@ export const EvidenceInspectorModal: React.FC<EvidenceInspectorModalProps> = ({
             <div className="space-y-4">
               
               {/* Vị trí truy vết trong tài liệu */}
-              <div className="p-3.5 sm:p-4 bg-blue-50/70 border border-blue-200 rounded-xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <span className="text-blue-950 text-[14px] font-bold leading-[1.45] flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-blue-600 shrink-0" />
+              <div className="p-4 bg-blue-50/70 border border-blue-200 rounded-xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <span className="text-blue-950 text-[15px] font-bold leading-[1.45] flex items-center gap-2">
+                  <FileText className="w-4.5 h-4.5 text-blue-600 shrink-0" />
                   <span>Vị trí truy vết trong tài liệu:</span>
                 </span>
-                <span className="px-3 py-1 bg-white rounded-lg border border-blue-200 text-[14px] font-semibold text-blue-800 self-start sm:self-auto shadow-2xs">
+                <span className="px-3.5 py-1 bg-white rounded-lg border border-blue-200 text-[14px] font-semibold text-blue-800 self-start sm:self-auto shadow-2xs">
                   📍 {location}
                 </span>
               </div>
 
               {/* Đoạn trích dẫn nguyên văn trong SKKN làm căn cứ */}
               <div className="space-y-2">
-                <h4 className="text-[14px] font-bold text-slate-900 leading-[1.45]">
+                <h4 className="text-[15px] font-bold text-slate-900 leading-[1.45]">
                   Đoạn trích dẫn nguyên văn trong SKKN làm căn cứ:
                 </h4>
-                <div className="p-3.5 sm:p-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 leading-[1.65] italic text-[14px] font-normal relative group">
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 leading-[1.65] italic text-[15px] font-normal relative group">
                   "{quote || 'Không có đoạn trích dẫn cụ thể.'}"
                   {quote && (
                     <button
@@ -240,11 +240,11 @@ export const EvidenceInspectorModal: React.FC<EvidenceInspectorModalProps> = ({
 
               {/* Căn cứ phản biện của hội đồng */}
               {redTeamCard && (
-                <div className="p-3.5 sm:p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                  <h4 className="text-[14px] font-bold text-slate-900 leading-[1.45]">
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                  <h4 className="text-[15px] font-bold text-slate-900 leading-[1.45]">
                     Căn cứ phản biện của hội đồng:
                   </h4>
-                  <p className="text-[14px] font-normal text-slate-800 leading-[1.65]">
+                  <p className="text-[15px] font-normal text-slate-800 leading-[1.65]">
                     {redTeamCard.criticismBasis}
                   </p>
                 </div>
@@ -253,19 +253,19 @@ export const EvidenceInspectorModal: React.FC<EvidenceInspectorModalProps> = ({
               {/* Chi tiết theo tiêu chí Rubric (nếu mở từ Rubric) */}
               {criterion && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-3.5 sm:p-4 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-2">
-                    <h4 className="text-[14px] font-bold text-emerald-950 leading-[1.45]">
+                  <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-2">
+                    <h4 className="text-[15px] font-bold text-emerald-950 leading-[1.45]">
                       ✓ Điểm mạnh ghi nhận được:
                     </h4>
-                    <p className="text-[14px] font-normal text-slate-800 leading-[1.65]">
+                    <p className="text-[15px] font-normal text-slate-800 leading-[1.65]">
                       {criterion.strengths || 'Chưa ghi nhận điểm mạnh nổi bật trong mục này.'}
                     </p>
                   </div>
-                  <div className="p-3.5 sm:p-4 rounded-xl bg-amber-50/70 border border-amber-200 space-y-2">
-                    <h4 className="text-[14px] font-bold text-amber-950 leading-[1.45]">
+                  <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200 space-y-2">
+                    <h4 className="text-[15px] font-bold text-amber-950 leading-[1.45]">
                       Minh chứng hiện có trong hồ sơ:
                     </h4>
-                    <p className="text-[14px] font-normal text-slate-800 leading-[1.65]">
+                    <p className="text-[15px] font-normal text-slate-800 leading-[1.65]">
                       {criterion.existingEvidence || 'Chưa phát hiện minh chứng cụ thể đính kèm.'}
                     </p>
                   </div>
@@ -281,34 +281,34 @@ export const EvidenceInspectorModal: React.FC<EvidenceInspectorModalProps> = ({
           {activeTab === 'deduction' && (
             <div className="space-y-4">
               
-              {/* Lý do chưa đạt điểm tối đa (Section C.7: 14px, bold 700, content 14px regular 1.65) */}
-              <div className="p-3.5 sm:p-4 bg-rose-50 border border-rose-200 rounded-xl space-y-2">
-                <h4 className="text-[14px] font-bold text-rose-900 leading-[1.45] flex items-center gap-2">
+              {/* Lý do chưa đạt điểm tối đa */}
+              <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl space-y-2">
+                <h4 className="text-[15px] font-bold text-rose-900 leading-[1.45] flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
                   <span>Lý do chưa đạt điểm tối đa:</span>
                 </h4>
-                <p className="text-[14px] font-normal text-rose-950 leading-[1.65]">
+                <p className="text-[15px] font-normal text-rose-950 leading-[1.65]">
                   {deductionReason}
                 </p>
               </div>
 
               {/* Chi tiết hạn chế phát hiện */}
-              <div className="p-3.5 sm:p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-                <h4 className="text-[14px] font-bold text-slate-900 leading-[1.45]">
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <h4 className="text-[15px] font-bold text-slate-900 leading-[1.45]">
                   Chi tiết hạn chế phát hiện:
                 </h4>
-                <p className="text-[14px] font-normal text-slate-800 leading-[1.65]">
+                <p className="text-[15px] font-normal text-slate-800 leading-[1.65]">
                   {limitations}
                 </p>
               </div>
 
-              {/* Minh chứng cần làm rõ (Section I: Đổi từ 'Minh chứng còn thiếu (Hội đồng sẽ chất vấn)') */}
-              <div className="p-3.5 sm:p-4 bg-amber-50/80 border border-amber-200 rounded-xl space-y-2">
-                <h4 className="text-[14px] font-bold text-amber-950 leading-[1.45] flex items-center gap-2">
+              {/* Minh chứng cần làm rõ */}
+              <div className="p-4 bg-amber-50/80 border border-amber-200 rounded-xl space-y-2">
+                <h4 className="text-[15px] font-bold text-amber-950 leading-[1.45] flex items-center gap-2">
                   <ShieldAlert className="w-4 h-4 text-amber-700 shrink-0" />
                   <span>Minh chứng cần làm rõ:</span>
                 </h4>
-                <p className="text-[14px] font-normal text-amber-950 leading-[1.65]">
+                <p className="text-[15px] font-normal text-amber-950 leading-[1.65]">
                   {missingEvidence}
                 </p>
               </div>
@@ -323,29 +323,29 @@ export const EvidenceInspectorModal: React.FC<EvidenceInspectorModalProps> = ({
             <div className="space-y-4">
               
               {/* Hướng xử lý & cách cải thiện cụ thể */}
-              <div className="p-3.5 sm:p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
-                <h4 className="text-[14px] font-bold text-emerald-950 leading-[1.45] flex items-center gap-2">
+              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
+                <h4 className="text-[15px] font-bold text-emerald-950 leading-[1.45] flex items-center gap-2">
                   <Lightbulb className="w-4 h-4 text-emerald-700 shrink-0" />
                   <span>Hướng xử lý & cách cải thiện cụ thể:</span>
                 </h4>
-                <p className="text-[14px] font-normal text-emerald-950 leading-[1.65]">
+                <p className="text-[15px] font-normal text-emerald-950 leading-[1.65]">
                   {improvementGuidance || 'Rà soát và củng cố lại lập luận dựa trên căn cứ thực tiễn đã thực hiện.'}
                 </p>
               </div>
 
-              {/* Hộp xác minh Fact-Safety khi cần tác giả xác nhận điểm mới (Section L & N) */}
+              {/* Hộp xác minh Fact-Safety khi cần tác giả xác nhận điểm mới */}
               {showAuthorNoveltyCheck && (
-                <div className="p-3.5 sm:p-4 bg-amber-50/90 border border-amber-300 rounded-xl space-y-2.5">
+                <div className="p-4 bg-amber-50/90 border border-amber-300 rounded-xl space-y-2.5">
                   <div className="flex items-center gap-2 text-amber-950">
-                    <span className="px-2 py-0.5 bg-amber-200/90 rounded text-[12px] font-bold uppercase tracking-wider text-amber-900 border border-amber-300">
+                    <span className="px-2.5 py-0.5 bg-amber-200/90 rounded text-[13px] font-bold uppercase tracking-wider text-amber-900 border border-amber-300">
                       ⚠ CẦN TÁC GIẢ XÁC NHẬN
                     </span>
                   </div>
-                  <p className="text-[14px] font-normal text-amber-950 leading-[1.65]">
+                  <p className="text-[15px] font-normal text-amber-950 leading-[1.65]">
                     Để làm rõ tính mới, Thầy/Cô vui lòng cho biết <strong>điểm khác biệt thực sự của giải pháp</strong> so với cách đã áp dụng trước đây.
                   </p>
                   
-                  <div className="bg-white/80 p-3 rounded-lg border border-amber-200 text-[13px] leading-[1.6] text-slate-800 space-y-1">
+                  <div className="bg-white/80 p-3.5 rounded-lg border border-amber-200 text-[14px] leading-[1.65] text-slate-800 space-y-1.5">
                     <p className="font-bold text-slate-900">Các câu hỏi gợi mở định hướng (không phải dữ kiện thực tế):</p>
                     <ul className="list-disc pl-5 space-y-0.5 text-slate-700">
                       <li>Quy trình tổ chức có điểm gì khác?</li>
@@ -355,7 +355,7 @@ export const EvidenceInspectorModal: React.FC<EvidenceInspectorModalProps> = ({
                       <li>Cách thức kiểm tra, đánh giá có gì khác?</li>
                       <li>Việc kết hợp các công cụ có tạo ra quy trình sư phạm riêng hay không?</li>
                     </ul>
-                    <p className="text-[12px] text-slate-500 italic pt-1 border-t border-amber-100">
+                    <p className="text-[13px] text-slate-500 italic pt-1 border-t border-amber-100">
                       * Nguyên tắc Fact-Safety: AI chỉ định hướng các góc nhìn, tuyệt đối không tự bịa quy trình hay đặt tên giải pháp thay tác giả khi chưa có dữ liệu hồ sơ.
                     </p>
                   </div>
@@ -364,24 +364,24 @@ export const EvidenceInspectorModal: React.FC<EvidenceInspectorModalProps> = ({
 
               {/* Vị trí nên bổ sung trong văn bản */}
               {redTeamCard?.insertLocation && (
-                <div className="p-3.5 sm:p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-                  <h4 className="text-[14px] font-bold text-slate-900 leading-[1.45]">
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                  <h4 className="text-[15px] font-bold text-slate-900 leading-[1.45]">
                     Vị trí nên bổ sung trong văn bản:
                   </h4>
-                  <p className="text-[14px] font-normal text-slate-800 leading-[1.65]">
+                  <p className="text-[15px] font-normal text-slate-800 leading-[1.65]">
                     {redTeamCard.insertLocation}
                   </p>
                 </div>
               )}
 
-              {/* Câu hỏi có thể dùng khi phản biện (Section C.4 & M) */}
+              {/* Câu hỏi có thể dùng khi phản biện */}
               {councilQuestion && (
-                <div className="p-3.5 sm:p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-                  <h4 className="text-[14px] font-bold text-slate-900 leading-[1.45] flex items-center gap-1.5">
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                  <h4 className="text-[15px] font-bold text-slate-900 leading-[1.45] flex items-center gap-1.5">
                     <HelpCircle className="w-4 h-4 text-blue-600 shrink-0" />
                     <span>Câu hỏi có thể dùng khi phản biện:</span>
                   </h4>
-                  <p className="text-[14px] font-normal text-slate-800 italic leading-[1.65]">
+                  <p className="text-[15px] font-normal text-slate-800 italic leading-[1.65]">
                     "{councilQuestion}"
                   </p>
                 </div>
@@ -392,15 +392,15 @@ export const EvidenceInspectorModal: React.FC<EvidenceInspectorModalProps> = ({
 
         </div>
 
-        {/* Footer (Section C.8: 12px italic footnote, stable button) */}
-        <div className="px-5 sm:px-6 py-3.5 border-t border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
-          <span className="text-[12px] text-slate-500 italic leading-[1.5]">
+        {/* Footer */}
+        <div className="px-5 sm:px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
+          <span className="text-[13px] text-slate-500 italic leading-[1.5]">
             * Nguyên tắc: Không tự tạo số liệu giả, không tự tạo minh chứng.
           </span>
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 sm:px-5 sm:py-2 text-[13px] sm:text-[14px] font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-xl shadow-2xs transition-colors cursor-pointer"
+            className="px-5 py-2.5 text-[14px] font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-xl shadow-2xs transition-colors cursor-pointer"
           >
             Đóng
           </button>

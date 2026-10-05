@@ -170,21 +170,21 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
         {/* Left Side */}
         <div className="w-full lg:w-[50%] flex flex-col justify-center space-y-2 z-20 pr-2">
           <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/20 text-blue-300 border border-blue-400/40 uppercase tracking-wider shadow-2xs">
+            <span className="px-2.5 py-0.5 rounded-full text-[13px] font-[700] bg-blue-500/20 text-blue-300 border border-blue-400/40 uppercase tracking-wider shadow-2xs">
               HỒ SƠ SÁNG KIẾN
             </span>
             {isDemoMode && (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-400/30">
+              <span className="px-2.5 py-0.5 rounded-full text-[13px] font-[700] bg-amber-500/20 text-amber-300 border border-amber-400/30">
                 HỒ SƠ MẪU
               </span>
             )}
           </div>
 
-          <h2 className="text-xl sm:text-2xl lg:text-[25px] font-black text-white tracking-tight leading-snug">
+          <h2 className="text-xl sm:text-2xl lg:text-[23px] font-[750] text-white tracking-tight leading-snug">
             Đọc hồ sơ. Hiểu cấu trúc.
           </h2>
 
-          <p className="text-xs text-slate-300 font-medium line-clamp-2 leading-relaxed">
+          <p className="text-[14px] text-slate-300 font-medium line-clamp-2 leading-[1.55]">
             {metadata.title || 'Ứng dụng sơ đồ tư duy kết hợp trò chơi tương tác môn Lịch sử 8'}
           </p>
 
@@ -195,17 +195,17 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
                 if (onViewProfileDetail) onViewProfileDetail();
                 else if (onOpenProfileDrawer) onOpenProfileDrawer();
               }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-600/30 transition-all cursor-pointer group"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-[650] text-[14px] shadow-md shadow-blue-600/30 transition-all cursor-pointer group"
             >
               <span>Xem hồ sơ</span>
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
 
             {isDemoMode && onExitDemo && (
               <button
                 type="button"
                 onClick={onExitDemo}
-                className="text-xs text-amber-300 hover:text-amber-200 transition-colors cursor-pointer"
+                className="text-[13.5px] text-amber-300 hover:text-amber-200 transition-colors cursor-pointer"
               >
                 ← Quay lại chấm SKKN của tôi
               </button>
@@ -222,8 +222,8 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
                 <FileText className="w-4 h-4" />
               </div>
               <div className="space-y-1">
-                <span className="text-[10px] text-blue-300 font-semibold block">Văn bản</span>
-                <span className="text-xs font-bold text-white block truncate">SKKN.docx</span>
+                <span className="text-[12px] text-blue-300 font-semibold block">Văn bản</span>
+                <span className="text-[13px] font-bold text-white block truncate">SKKN.docx</span>
               </div>
               <div className="space-y-1 border-t border-slate-800 pt-1.5">
                 <div className="h-1 bg-slate-700 rounded w-full" />
@@ -237,8 +237,8 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
                 <Award className="w-4 h-4" />
               </div>
               <div className="space-y-1">
-                <span className="text-[10px] text-emerald-300 font-semibold block">Phiếu chấm</span>
-                <span className="text-xs font-bold text-white block">Thang điểm 100</span>
+                <span className="text-[12px] text-emerald-300 font-semibold block">Phiếu chấm</span>
+                <span className="text-[13px] font-bold text-white block">Thang điểm 100</span>
               </div>
               <div className="space-y-1 border-t border-slate-800 pt-1.5">
                 <div className="h-1 bg-emerald-700/60 rounded w-full" />
@@ -252,8 +252,8 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
                 <Paperclip className="w-4 h-4" />
               </div>
               <div className="space-y-1">
-                <span className="text-[10px] text-amber-300 font-semibold block">Đính kèm</span>
-                <span className="text-xs font-bold text-white block">Minh chứng</span>
+                <span className="text-[12px] text-amber-300 font-semibold block">Đính kèm</span>
+                <span className="text-[13px] font-bold text-white block">Minh chứng</span>
               </div>
               <div className="space-y-1 border-t border-slate-800 pt-1.5">
                 <div className="h-1 bg-slate-700 rounded w-full" />
@@ -277,19 +277,19 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
         {/* Left Side */}
         <div className="w-full lg:w-[50%] flex flex-col justify-center space-y-2 z-20 pr-2">
           <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 uppercase tracking-wider shadow-2xs">
+            <span className="px-2.5 py-0.5 rounded-full text-[13px] font-[700] bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 uppercase tracking-wider shadow-2xs">
               PHÂN TÍCH HỒ SƠ
             </span>
-            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/20 text-rose-300 border border-rose-400/40">
+            <span className="px-2.5 py-0.5 rounded-full text-[13px] font-[700] bg-rose-500/20 text-rose-300 border border-rose-400/40">
               {totalIssuesCount} vấn đề
             </span>
           </div>
 
-          <h2 className="text-xl sm:text-2xl lg:text-[25px] font-black text-white tracking-tight leading-snug">
+          <h2 className="text-xl sm:text-2xl lg:text-[23px] font-[750] text-white tracking-tight leading-snug">
             Phát hiện điểm cần xem xét.
           </h2>
 
-          <p className="text-xs text-slate-300 font-medium leading-relaxed">
+          <p className="text-[14px] text-slate-300 font-medium leading-[1.55]">
             Rà soát đa tầng từ cấu trúc, số liệu, tính mới đến chuỗi minh chứng thực nghiệm.
           </p>
 
@@ -300,10 +300,10 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
                 if (onScrollToIssues) onScrollToIssues();
                 else if (onNavigateTab) onNavigateTab('red_team');
               }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white font-bold text-xs shadow-md shadow-cyan-600/30 transition-all cursor-pointer group"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white font-[650] text-[14px] shadow-md shadow-cyan-600/30 transition-all cursor-pointer group"
             >
               <span>Xem chi tiết</span>
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
           </div>
         </div>
@@ -315,31 +315,31 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
             <div className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_8px_#38bdf8] pointer-events-none animate-[laserSweep_2.5s_linear_infinite]" />
 
             <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
-              <span className="text-[10px] font-bold text-cyan-400 font-mono">BẢN KIỂM TRA ĐA TẦNG</span>
+              <span className="text-[12px] font-bold text-cyan-400 font-mono">BẢN KIỂM TRA ĐA TẦNG</span>
               <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
             </div>
 
             {/* 5 Markers */}
-            <div className="grid grid-cols-2 gap-1.5 text-[10px] font-bold">
+            <div className="grid grid-cols-2 gap-1.5 text-[11px] font-bold">
               <div className="px-2 py-1 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center justify-between">
                 <span>● SỐ LIỆU</span>
-                <span className="text-[9px] opacity-80">Mục I ↔ II</span>
+                <span className="text-[10px] opacity-80">Mục I ↔ II</span>
               </div>
               <div className="px-2 py-1 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center justify-between">
                 <span>● MINH CHỨNG</span>
-                <span className="text-[9px] opacity-80">Thiếu phiếu</span>
+                <span className="text-[10px] opacity-80">Thiếu phiếu</span>
               </div>
               <div className="px-2 py-1 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 flex items-center justify-between">
                 <span>● TÍNH MỚI</span>
-                <span className="text-[9px] opacity-80">Khẳng định</span>
+                <span className="text-[10px] opacity-80">Khẳng định</span>
               </div>
               <div className="px-2 py-1 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center justify-between">
                 <span>● LOGIC</span>
-                <span className="text-[9px] opacity-80">Đối chiếu</span>
+                <span className="text-[10px] opacity-80">Đối chiếu</span>
               </div>
             </div>
 
-            <div className="flex items-center justify-between text-[9px] text-slate-400 border-t border-slate-800 pt-1 font-mono">
+            <div className="flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-800 pt-1 font-mono">
               <span>● NGUỒN: Trích dẫn</span>
               <span className="text-cyan-400 font-bold">HOÀN TẤT QUÉT</span>
             </div>
@@ -360,19 +360,19 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
         {/* Left Side */}
         <div className="w-full lg:w-[50%] flex flex-col justify-center space-y-2 z-20 pr-2">
           <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-400/40 uppercase tracking-wider shadow-2xs">
+            <span className="px-2.5 py-0.5 rounded-full text-[13px] font-[700] bg-indigo-500/20 text-indigo-300 border border-indigo-400/40 uppercase tracking-wider shadow-2xs">
               GỢI Ý SỬA
             </span>
-            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">
+            <span className="px-2.5 py-0.5 rounded-full text-[13px] font-[700] bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">
               3 mức độ chỉnh sửa
             </span>
           </div>
 
-          <h2 className="text-xl sm:text-2xl lg:text-[25px] font-black text-white tracking-tight leading-snug">
+          <h2 className="text-xl sm:text-2xl lg:text-[23px] font-[750] text-white tracking-tight leading-snug">
             Sửa đúng chỗ. Giữ đúng bản chất.
           </h2>
 
-          <p className="text-xs text-slate-300 font-medium leading-relaxed">
+          <p className="text-[14px] text-slate-300 font-medium leading-[1.55]">
             Đề xuất sửa nhẹ, học thuật, hoặc tái cấu trúc sâu mà không tự bịa số liệu hay phóng đại.
           </p>
 
@@ -383,10 +383,10 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
                 if (onNavigateTab) onNavigateTab('suggestions');
                 else if (onOpenFirstIssue) onOpenFirstIssue();
               }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/30 transition-all cursor-pointer group"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-[650] text-[14px] shadow-md shadow-indigo-600/30 transition-all cursor-pointer group"
             >
               <span>Xem gợi ý</span>
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
 
             <button
@@ -394,9 +394,9 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
               onClick={() => {
                 if (onNavigateTab) onNavigateTab('rescore');
               }}
-              className="inline-flex items-center gap-1 text-xs text-indigo-300 hover:text-white transition-colors cursor-pointer group"
+              className="inline-flex items-center gap-1 text-[13.5px] text-indigo-300 hover:text-white transition-colors cursor-pointer group"
             >
-              <RefreshCw className="w-3 h-3 group-hover:rotate-180 transition-transform duration-500" />
+              <RefreshCw className="w-3.5 h-3.5 group-hover:rotate-180 transition-transform duration-500" />
               <span>Chấm lại sau khi sửa</span>
             </button>
           </div>
@@ -406,26 +406,26 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
         <div className="hidden sm:flex lg:w-[48%] h-full items-center justify-center relative">
           <div className="w-64 rounded-xl bg-slate-900/90 border border-indigo-500/40 shadow-2xl p-3.5 space-y-2 backdrop-blur-sm">
             <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
-              <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-wide">DANH SÁCH SỬA</span>
+              <span className="text-[12px] font-bold text-indigo-300 uppercase tracking-wide">DANH SÁCH SỬA</span>
               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
             </div>
 
             <div className="space-y-1.5 text-xs font-bold">
               <div className="flex items-center gap-2 p-1.5 rounded bg-rose-500/10 text-rose-300 border border-rose-500/20">
                 <CheckCircle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                <span className="text-[11px]">Cần sửa trước khi nộp</span>
+                <span className="text-[12px]">Cần sửa trước khi nộp</span>
               </div>
               <div className="flex items-center gap-2 p-1.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
                 <CheckCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <span className="text-[11px]">Nên bổ sung</span>
+                <span className="text-[12px]">Nên bổ sung</span>
               </div>
               <div className="flex items-center gap-2 p-1.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20">
                 <CheckCircle className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                <span className="text-[11px]">Tối ưu thêm</span>
+                <span className="text-[12px]">Tối ưu thêm</span>
               </div>
             </div>
 
-            <div className="pt-1 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-300 font-semibold">
+            <div className="pt-1 border-t border-slate-800 flex items-center justify-between text-[12px] text-slate-300 font-semibold">
               <span>Sẵn sàng:</span>
               <span className="inline-flex items-center gap-1 text-cyan-400 font-bold">
                 <span>CHẤM LẠI</span>
@@ -446,7 +446,7 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
               type="button"
               onClick={() => setActiveSlide(slide.id)}
               title={slide.title}
-              className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-3 py-1 rounded-full text-[12px] font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                 isActive
                   ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30'
                   : 'bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800'
