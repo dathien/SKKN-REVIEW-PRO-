@@ -976,12 +976,12 @@ export const AssistantMascot: React.FC<AssistantMascotProps> = ({
                 {/* TÓC TÍM NÂU: TÓC MÁI, TÓC MAI HAI BÊN & BÚI TÓC             */}
                 {/* =========================================================== */}
                 <g id="front-hair">
-                  {/* BÚI TÓC TRÊN ĐỈNH ĐẦU (Top Bun) */}
+                  {/* BÚI TÓC TRÊN ĐỈNH ĐẦU (Top Bun) - Đã hạ 16px để nối liền tự nhiên với mái tóc */}
                   <g id="top-hair-bun">
-                    <circle cx="150" cy="40" r="24" fill="url(#chibiHairGrad)" stroke="#321738" strokeWidth="1" />
-                    <circle cx="150" cy="38" r="20" fill="url(#chibiHairSheen)" />
-                    {/* Hair tie / nơ cột tóc xanh cổ vịt */}
-                    <ellipse cx="150" cy="56" rx="14" ry="4.5" fill="#0D9488" stroke="#115E59" strokeWidth="0.8" />
+                    <circle cx="150" cy="56" r="24" fill="url(#chibiHairGrad)" stroke="#321738" strokeWidth="1" />
+                    <circle cx="150" cy="54" r="20" fill="url(#chibiHairSheen)" />
+                    {/* Hair tie / nơ cột tóc xanh cổ vịt tại điểm tiếp giáp với mái tóc */}
+                    <ellipse cx="150" cy="63" rx="14" ry="4.5" fill="#0D9488" stroke="#115E59" strokeWidth="0.8" />
                   </g>
 
                   {/* Tóc mái trên trán (Arched Bangs) */}
