@@ -67,15 +67,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
   appMode,
   setAppMode
 }) => {
+  const isShowBadges = Boolean(hasEvaluated);
+
   const totalIssues = analysis.redTeamCards.length;
   const processedIssues = analysis.redTeamCards.filter(c => 
     c.status === 'Đã xử lý' || c.status === 'resolved' || c.status === 'Bỏ qua' || c.status === 'ignored'
   ).length;
   const remainingIssues = totalIssues - processedIssues;
 
-  // Badge trên sidebar: Dùng đúng số issue chưa xử lý. Nếu còn 0: hiển thị ✓ (success), không hiển thị "0" đỏ
-  const isShowIssueProgress = Boolean(hasEvaluated && totalIssues > 0);
-  const issueProgressBadge = isShowIssueProgress
+  // CẦN XỬ LÝ: số vấn đề chưa xử lý. Nếu còn 0: hiển thị ✓
+  const issueProgressBadge = isShowBadges && totalIssues > 0
     ? remainingIssues === 0
       ? '✓'
       : `${remainingIssues}`
@@ -83,17 +84,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const issueBadgeType: 'success' | 'danger' | 'warning' | 'neutral' = 
     remainingIssues === 0 ? 'success' : 'danger';
 
+  // MINH CHỨNG: số vấn đề minh chứng cần xử lý
   const missingEvidenceCount = analysis.evidenceChain.filter(
     e => e.status === 'chua_tim_thay_minh_chung'
   ).length;
+  const evidenceBadge = isShowBadges && missingEvidenceCount > 0 ? missingEvidenceCount : undefined;
 
+  // SỐ LIỆU & LOGIC: số lỗi/mâu thuẫn thật
   const dataIssuesCount = analysis.dataAnomalies.length;
+  const dataBadge = isShowBadges && dataIssuesCount > 0 ? dataIssuesCount : undefined;
+
+  // DẤU HIỆU AI: số đoạn cần rà soát (KHÔNG phải "do AI viết")
   const aiFindingsCount = analysis.aiMarkers?.findings?.length || 0;
-  const similarityCount = (analysis.similarityAndCitations?.similarityFindings?.length || 0) + 
+  const aiBadge = isShowBadges && aiFindingsCount > 0 ? aiFindingsCount : undefined;
+
+  // NGUỒN & TRÍCH DẪN: số vấn đề nguồn/trích dẫn cần xử lý
+  const similarityCount = (analysis.similarityAndCitations?.similarityFindings?.filter(f => f.reviewLevel !== 'chua_phat_hien')?.length || 0) + 
     (analysis.similarityAndCitations?.referenceChecks?.filter(r => r.verificationStatus !== 'xac_minh_duoc')?.length || 0);
-  const councilQuestionsCount = analysis.councilQuestions.length;
-  const hasNoveltyRisk = analysis.novelty.overallLevel === 'tuong_dong_dang_ke' || 
-    analysis.novelty.overallLevel === 'nguy_co_trung_lap_cao';
+  const citationBadge = isShowBadges && similarityCount > 0 ? similarityCount : undefined;
+
+  // GỢI Ý SỬA & HOÀN THIỆN: số đề xuất chưa xử lý
+  const suggestionsBadge = isShowBadges && remainingIssues > 0 ? remainingIssues : undefined;
+
+  // TÍNH MỚI: cảnh báo nếu có nguy cơ trùng lặp
+  const hasNoveltyRisk = analysis.novelty?.overallLevel === 'tuong_dong_dang_ke' || 
+    analysis.novelty?.overallLevel === 'nguy_co_trung_lap_cao';
+  const noveltyBadge = isShowBadges && hasNoveltyRisk ? '!' : undefined;
+
+  // CHẤM LẠI: đã chấm lại thành công
+  const rescoreBadge = isShowBadges && analysis.rescoreHistory ? '✓' : undefined;
 
   // 1. CHẾ ĐỘ DỄ DÙNG: CỰC GỌN (5 mục luồng thao tác)
   const easyNavItems: NavItemConfig[] = [
@@ -116,14 +135,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'GỢI Ý SỬA & HOÀN THIỆN',
       desc: 'Chỉ rõ lỗi, căn cứ, cách sửa và gợi ý viết lại 3 mức độ',
       icon: PenTool,
-      badge: analysis.suggestions.length,
+      badge: suggestionsBadge,
       badgeType: 'neutral'
     },
     {
       id: 'rescore',
       label: 'CHẤM LẠI',
       desc: 'Chấm lại sau khi hoàn tất chỉnh sửa các vấn đề',
-      icon: RefreshCw
+      icon: RefreshCw,
+      badge: rescoreBadge,
+      badgeType: 'success'
     },
     {
       id: 'report',
@@ -145,9 +166,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'rubric',
       label: 'CHẤM RUBRIC',
       desc: 'Chấm điểm từng tiêu chí theo phiếu chấm chính thức',
-      icon: Award,
-      badge: analysis.rubricCriteria.length > 0 ? analysis.rubricCriteria.length : undefined,
-      badgeType: 'neutral'
+      icon: Award
+      // PHẦN 27: không cần dùng số 7 chỉ vì có 7 tiêu chí. Bỏ badge không mang ý nghĩa hành động.
     },
     {
       id: 'red_team',
@@ -162,31 +182,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'TÍNH MỚI',
       desc: 'Kiểm tra mức độ khác biệt và phân biệt công nghệ vs phương pháp',
       icon: Sparkles,
-      badge: hasNoveltyRisk ? '!' : '✓',
-      badgeType: hasNoveltyRisk ? 'warning' : 'neutral'
+      badge: noveltyBadge,
+      badgeType: 'warning'
     },
     {
       id: 'evidence',
       label: 'MINH CHỨNG',
       desc: 'Kiểm tra luận điểm đã có bằng chứng thực nghiệm chưa',
       icon: Layers,
-      badge: missingEvidenceCount > 0 ? missingEvidenceCount : '✓',
-      badgeType: missingEvidenceCount > 0 ? 'warning' : 'neutral'
+      badge: evidenceBadge,
+      badgeType: 'warning'
     },
     {
       id: 'data_logic',
       label: 'SỐ LIỆU & LOGIC',
       desc: 'Phát hiện sai lệch cỡ mẫu, phần trăm và đứt gãy logic',
       icon: Calculator,
-      badge: dataIssuesCount > 0 ? dataIssuesCount : '✓',
-      badgeType: dataIssuesCount > 0 ? 'danger' : 'neutral'
+      badge: dataBadge,
+      badgeType: 'danger'
     },
     {
       id: 'ai_markers',
       label: 'DẤU HIỆU AI',
       desc: 'Rà soát các đoạn văn phong khái quát mang tính công thức',
       icon: Cpu,
-      badge: aiFindingsCount > 0 ? aiFindingsCount : '0',
+      badge: aiBadge,
       badgeType: 'neutral'
     },
     {
@@ -194,40 +214,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'NGUỒN & TRÍCH DẪN',
       desc: 'Kiểm tra độ chính xác của trích dẫn và tương đồng văn bản',
       icon: BookCopy,
-      badge: similarityCount > 0 ? similarityCount : '✓',
-      badgeType: similarityCount > 0 ? 'warning' : 'neutral'
+      badge: citationBadge,
+      badgeType: 'warning'
     },
     {
       id: 'suggestions',
       label: 'GỢI Ý SỬA & HOÀN THIỆN',
       desc: 'Chỉ rõ lỗi, căn cứ, cách sửa và gợi ý viết lại 3 mức độ',
       icon: PenTool,
-      badge: analysis.suggestions.length,
+      badge: suggestionsBadge,
       badgeType: 'neutral'
     },
     {
       id: 'council',
       label: 'HỎI HỘI ĐỒNG',
       desc: 'Dự báo câu hỏi chất vấn của ban giám khảo',
-      icon: MessageSquareWarning,
-      badge: councilQuestionsCount,
-      badgeType: 'neutral'
+      icon: MessageSquareWarning
     },
     {
       id: 'rescore',
       label: 'CHẤM LẠI',
       desc: 'Chấm lại sau khi hoàn tất chỉnh sửa các vấn đề',
       icon: RefreshCw,
-      badge: analysis.rescoreHistory ? '✓' : '—',
-      badgeType: analysis.rescoreHistory ? 'success' : 'neutral'
+      badge: rescoreBadge,
+      badgeType: 'success'
     },
     {
       id: 'report',
       label: 'BÁO CÁO',
-      desc: 'Báo cáo thẩm định toàn diện 14 mục',
-      icon: FileText,
-      badge: '14 mục',
-      badgeType: 'neutral'
+      desc: 'Báo cáo thẩm định toàn diện phục vụ nộp hội đồng',
+      icon: FileText
     }
   ];
 

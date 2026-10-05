@@ -441,6 +441,103 @@ export const sampleInitiative1: SKKNAnalysisResult = {
       insertPosition: "Trang 31, thay thế toàn bộ Danh mục Tài liệu tham khảo."
     }
   ],
+  languageCheck: {
+    totalCount: 5,
+    summary: "Phát hiện 5 điểm cần lưu ý về chính tả, dấu câu, viết hoa và diễn đạt chưa chuẩn mực học thuật.",
+    findings: [
+      {
+        id: "lang-1",
+        location: "Trang 4, Mục 1.1",
+        currentText: "Trong bối cảnh toàn ngành giáo dục đang phấn đấu nổ lực đổi mới phương pháp...",
+        issueType: "lỗi chính tả",
+        issueDescription: "Sai chính tả: 'nổ lực' viết sai dấu hỏi, đúng chính tả tiếng Việt phải là 'nỗ lực'.",
+        suggestion: "Sửa thành 'nỗ lực'.",
+        proposedText: "Trong bối cảnh toàn ngành giáo dục đang phấn đấu nỗ lực đổi mới phương pháp...",
+        status: "proposed"
+      },
+      {
+        id: "lang-2",
+        location: "Trang 11, Mục 2.3",
+        currentText: "Giáo viên tổ chức các hoạt động học tập đa dạng nhằm phát huy tối đa tiềm năng của từng cá thể học sinh trong lớp học và đồng thời phối hợp chặt chẽ với phụ huynh học sinh để theo dõi sự tiến bộ hàng ngày của các em thông qua việc chia sẻ các sản phẩm học tập trên nhóm Zalo và bảng tin trực tuyến của lớp học.",
+        issueType: "câu quá dài",
+        issueDescription: "Câu dài 68 từ không có dấu ngắt ý, gây khó hiểu và giảm tính mạch lạc của văn bản khoa học.",
+        suggestion: "Tách thành 2 câu mạch lạc, có dấu chấm câu rõ ràng.",
+        proposedText: "Giáo viên tổ chức các hoạt động học tập đa dạng nhằm phát huy tối đa tiềm năng của từng học sinh. Đồng thời, giáo viên phối hợp chặt chẽ với phụ huynh để theo dõi sự tiến bộ của các em qua các sản phẩm học tập được chia sẻ định kỳ.",
+        status: "proposed"
+      },
+      {
+        id: "lang-3",
+        location: "Trang 14, Mục 3.2",
+        currentText: "Căn cứ theo hướng dẫn của bộ Giáo dục và Đào tạo...",
+        issueType: "viết hoa không nhất quán",
+        issueDescription: "Viết hoa không đúng quy chuẩn tên cơ quan nhà nước: 'bộ Giáo dục' phải viết hoa chữ cái đầu của từ 'Bộ'.",
+        suggestion: "Chuẩn hóa thành 'Bộ Giáo dục và Đào tạo'.",
+        proposedText: "Căn cứ theo hướng dẫn của Bộ Giáo dục và Đào tạo...",
+        status: "proposed"
+      },
+      {
+        id: "lang-4",
+        location: "Trang 28, Mục 4.3",
+        currentText: "Giải pháp chắc chắn mang lại hiệu quả cao cho tất cả học sinh trong mọi điều kiện.",
+        issueType: "diễn đạt quá tuyệt đối",
+        issueDescription: "Cách diễn đạt khẳng định tuyệt đối ('chắc chắn mang lại hiệu quả', 'tất cả học sinh') thiếu tính thận trọng khoa học.",
+        suggestion: "Diễn đạt khiêm tốn, gắn với phạm vi dữ liệu khảo sát.",
+        proposedText: "Kết quả trong phạm vi nhóm học sinh được khảo sát cho thấy giải pháp có tác động tích cực và rõ nét.",
+        status: "proposed"
+      },
+      {
+        id: "lang-5",
+        location: "Trang 25, Mục 4.1",
+        currentText: "Toàn thể học sinh đều say mê học tập và không còn bất kỳ em nào cảm thấy sợ môn Lịch sử.",
+        issueType: "khẳng định vượt quá bằng chứng",
+        issueDescription: "Tuyên bố '100% không còn bất kỳ em nào sợ' vượt quá bằng chứng thu thập được từ mẫu khảo sát 82 học sinh.",
+        suggestion: "Gắn kết luận với số liệu phần trăm và tỷ lệ phản hồi khảo sát.",
+        proposedText: "Đại đa số học sinh (85.3%) phản hồi tích cực và cảm thấy tự tin hơn khi học các bài Lịch sử nặng về dữ kiện.",
+        status: "proposed"
+      }
+    ]
+  },
+  missingContents: [
+    {
+      id: "miss-1",
+      category: "THIẾU",
+      whatIsMissing: "Kế hoạch bài dạy mẫu (Lesson Plan) lồng ghép giải pháp sơ đồ tương tác",
+      criterionName: "Tiêu chí 6: Khả năng chuyển giao & Nhân rộng",
+      whyNeeded: "Hội đồng cần tài liệu mẫu hoàn chỉnh để giáo viên trường khác có thể tự triển khai mà không cần tác giả hướng dẫn trực tiếp.",
+      suggestedLocation: "Đính kèm tại Phụ lục 1 của hồ sơ SKKN",
+      requiredDataFromTeacher: "01 Giáo án chi tiết (theo Công văn 5512/BGDĐT) cho 1 bài học Lịch sử 8 cụ thể có áp dụng giải pháp."
+    },
+    {
+      id: "miss-2",
+      category: "CHƯA ĐỦ CĂN CỨ",
+      whatIsMissing: "Minh chứng khách quan cho kết luận 'học sinh tích cực, chủ động hơn'",
+      criterionName: "Tiêu chí 5: Tính hiệu quả & Minh chứng xác thực",
+      whyNeeded: "Hiện chỉ có lời khẳng định chủ quan của tác giả, chưa có thước đo và phiếu quan sát hành vi trong các tiết dự giờ.",
+      suggestedLocation: "Trang 26, Mục 4.2 và Phụ lục 3",
+      requiredDataFromTeacher: "Phiếu dự giờ / Biên bản sinh hoạt tổ chuyên môn ghi nhận tần suất phát biểu và tương tác của học sinh."
+    }
+  ],
+  supportTemplates: [
+    {
+      id: "tpl-1",
+      templateType: "rubric",
+      title: "Rubric quan sát hành vi tích cực của học sinh trong giờ học Lịch sử (3 mức độ)",
+      purpose: "Hỗ trợ giáo viên thu thập minh chứng định lượng về sự chuyển biến của học sinh để đưa vào Phụ lục.",
+      isSuggestedTemplate: true,
+      content: "RUBRIC QUAN SÁT HÀNH VI HỌC TẬP TÍCH CỰC (3 TIÊU CHÍ)\n(Lưu ý khoa học: Đây là biểu mẫu đề xuất hỗ trợ. Giáo viên cần điền kết quả quan sát thực tế trong các tiết dạy đối chứng).\n\n1. Tiêu chí 1: Mức độ tương tác với sơ đồ tư duy\n- Mức 1 (Cần cố gắng): Chỉ sao chép sơ đồ mẫu của giáo viên, chưa tự xác định từ khóa biến cố.\n- Mức 2 (Đạt): Tự lập được sơ đồ nhánh đơn giản theo tiến trình bài học trong SGK.\n- Mức 3 (Tốt): Chủ động thiết lập mối quan hệ nhân - quả giữa các sự kiện và thuyết trình tự tin trước lớp.\n\n2. Tiêu chí 2: Tần suất tham gia thảo luận nhóm\n- Mức 1: Thụ động, ít phát biểu ý kiến.\n- Mức 2: Tham gia đóng góp khi được nhóm trưởng phân công nhiệm vụ.\n- Mức 3: Chủ động điều phối hoặc đề xuất giải pháp liên kết các mốc thời gian.\n\n3. Tiêu chí 3: Tỷ lệ hoàn thành sản phẩm đúng hạn\n- Mức 1: Nộp muộn sau tiết học.\n- Mức 2: Hoàn thành trong vòng 10-15 phút hoạt động nhóm.\n- Mức 3: Hoàn thành sớm và hỗ trợ các nhóm bạn phản biện.",
+      guide: "In mẫu này gửi cho đồng nghiệp tổ chuyên môn dự giờ trong 3-4 tiết dạy thực nghiệm và thu thập chữ ký xác nhận."
+    },
+    {
+      id: "tpl-2",
+      templateType: "phiếu khảo sát",
+      title: "Phiếu khảo sát thái độ học tập môn Lịch sử (Dành cho học sinh THCS)",
+      purpose: "Chuẩn hóa công cụ điều tra định lượng, giúp tránh lỗi mâu thuẫn số liệu mẫu.",
+      isSuggestedTemplate: true,
+      content: "PHIẾU THĂM DÒ Ý KIẾN HỌC SINH VỀ PHƯƠNG PHÁP HỌC TẬP MỚI\n(Khảo sát ẩn danh phục vụ nghiên cứu sư phạm)\n\nChào các em! Hãy chọn 1 mức độ phù hợp nhất với cảm nghĩ của em khi học Lịch sử qua sơ đồ tư duy tương tác:\n\nCâu 1: Việc sử dụng sơ đồ tư duy trực quan giúp em ghi nhớ các sự kiện lịch sử:\n[ ] 1. Rất dễ nhớ\n[ ] 2. Dễ nhớ hơn cách học truyền thống\n[ ] 3. Bình thường, không có nhiều thay đổi\n[ ] 4. Khó nhớ hơn\n\nCâu 2: Mức độ hào hứng của em khi tham gia hoạt động nhóm với sơ đồ tương tác:\n[ ] 1. Rất thích thú\n[ ] 2. Thích thú\n[ ] 3. Bình thường\n[ ] 4. Không thích\n\n* Ghi chú xử lý số liệu: Ghi rõ tổng số phiếu phát ra, số phiếu thu về hợp lệ và lưu giữ phiếu gốc vào hồ sơ đối soát.",
+      guide: "Phát cho học sinh lớp thực nghiệm sau khi kết thúc đợt áp dụng giải pháp. Lập bảng tổng hợp kết quả đính kèm Phụ lục."
+    }
+  ],
+  changeSet: [],
   councilQuestions: [
     {
       id: "cq-1",

@@ -304,6 +304,74 @@ export interface RescoreComparison {
   evaluatedAt?: string;
 }
 
+export type LanguageIssueType =
+  | 'lỗi chính tả'
+  | 'lỗi đánh máy'
+  | 'lỗi dấu câu'
+  | 'viết hoa không nhất quán'
+  | 'thuật ngữ không thống nhất'
+  | 'câu quá dài'
+  | 'câu tối nghĩa'
+  | 'lặp từ'
+  | 'thiếu tính học thuật'
+  | 'diễn đạt quá tuyệt đối'
+  | 'khẳng định vượt quá bằng chứng';
+
+export interface LanguageFindingItem {
+  id: string;
+  location: string;          // 📍 Vị trí (Trang / Mục)
+  currentText: string;       // 📄 Nội dung hiện tại
+  issueType: LanguageIssueType; // 🔎 Loại vấn đề
+  issueDescription: string;  // 🔎 Mô tả chi tiết vấn đề
+  suggestion: string;        // 💡 Đề xuất
+  proposedText: string;      // ✍️ Phiên bản đề nghị
+  status: 'proposed' | 'approved' | 'rejected' | 'applied';
+}
+
+export interface LanguageSpellingAnalysis {
+  totalCount: number;
+  summary: string;
+  findings: LanguageFindingItem[];
+}
+
+export type ChangeStatus = 'proposed' | 'approved' | 'rejected' | 'applied';
+export type DecisionMaker = 'AI đề xuất / Giáo viên duyệt' | 'Giáo viên chỉnh trực tiếp';
+
+export interface ChangeSetItem {
+  changeId: string;
+  issueId?: string;
+  type: 'language' | 'suggestion' | 'manual';
+  location: string;
+  originalText: string;
+  proposedText: string;
+  approvedText: string;
+  status: ChangeStatus;
+  reason: string;
+  rubricCriterion?: string;
+  decidedBy: DecisionMaker;
+  appliedAt?: string;
+}
+
+export interface MissingContentItem {
+  id: string;
+  category: 'THIẾU' | 'CHƯA ĐỦ CĂN CỨ';
+  whatIsMissing: string;     // Thiếu gì
+  criterionName: string;     // Nằm ở tiêu chí nào
+  whyNeeded: string;         // Tại sao cần
+  suggestedLocation: string; // Nên đặt ở đâu
+  requiredDataFromTeacher: string; // Cần giáo viên cung cấp dữ liệu gì
+}
+
+export interface SupportTemplateItem {
+  id: string;
+  templateType: 'giáo án minh chứng' | 'phiếu học tập' | 'phiếu khảo sát' | 'phiếu quan sát' | 'bảng tiêu chí' | 'rubric' | 'biểu mẫu thu thập dữ liệu';
+  title: string;
+  purpose: string;
+  isSuggestedTemplate: true; // Phân biệt: MẪU ĐỀ XUẤT vs MINH CHỨNG THỰC TẾ
+  content: string;
+  guide: string;
+}
+
 export interface SKKNAnalysisResult {
   metadata: SKKNMetadata;
   sectionsMap: SKKNSectionMap[];
@@ -316,6 +384,10 @@ export interface SKKNAnalysisResult {
   aiMarkers?: AiMarkersAnalysis;
   similarityAndCitations?: SimilarityAndCitationsAnalysis;
   suggestions: SuggestionRewrite[];
+  languageCheck?: LanguageSpellingAnalysis;
+  missingContents?: MissingContentItem[];
+  supportTemplates?: SupportTemplateItem[];
+  changeSet?: ChangeSetItem[];
   councilQuestions: CouncilQuestion[];
   priorityActions: PriorityActionItem[];
   rescoreHistory?: RescoreComparison;

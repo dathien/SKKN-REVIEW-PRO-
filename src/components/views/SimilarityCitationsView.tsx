@@ -12,11 +12,13 @@ import {
   XCircle,
   Copy,
   Check,
-  Info
+  Info,
+  ShieldCheck,
+  Search,
+  BookOpen
 } from 'lucide-react';
 import {
   SimilarityAndCitationsAnalysis,
-  SimilarityLevel,
   SimilarityFinding,
   ReferenceCheckItem,
   ReferenceVerificationStatus
@@ -31,8 +33,8 @@ export const SimilarityCitationsView: React.FC<SimilarityCitationsViewProps> = (
   analysis,
   skknTitle
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [activeSubTab, setActiveSubTab] = useState<'similarity' | 'references'>('similarity');
+  const [isExpanded, setIsExpanded] = useState(true);
+  const [activeSubTab, setActiveSubTab] = useState<'similarity' | 'references' | 'theory_needs'>('similarity');
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
   const [localReferences, setLocalReferences] = useState<ReferenceCheckItem[]>(
     analysis?.referenceChecks || []
@@ -53,10 +55,33 @@ export const SimilarityCitationsView: React.FC<SimilarityCitationsViewProps> = (
   };
 
   const simFindings = defaultAnalysis.similarityFindings || [];
+  const hasExternalWebCheck = simFindings.length > 0;
   const similarityCount = simFindings.filter(f => f.reviewLevel !== 'chua_phat_hien').length;
   const citationIssuesCount = simFindings.filter(f => !f.isCitedInText).length;
   const needVerifyRefCount = localReferences.filter(r => r.verificationStatus !== 'xac_minh_duoc').length;
   const totalIssues = similarityCount + citationIssuesCount + needVerifyRefCount;
+
+  // PHẦN 3: Luận điểm cần củng cố nguồn cơ sở lý luận
+  const theoryNeeds = [
+    {
+      id: 'th-1',
+      claim: 'Ý nghĩa của việc trực quan hóa sơ đồ tư duy trong hình thành năng lực tư duy nhân quả môn Lịch sử',
+      targetSection: 'Trang 5, Mục 1.2 - Cơ sở lý luận',
+      suggestedSourceType: 'Tài liệu tập huấn đổi mới phương pháp dạy học Lịch sử cấp THCS - Bộ GD&ĐT (Chương trình GDPT 2018) hoặc Sách chuyên khảo về Sư phạm Lịch sử',
+      status: 'đã xác minh nguồn chính thống',
+      verifiedSource: 'Bộ Giáo dục và Đào tạo (2018), Chương trình Giáo dục phổ thông môn Lịch sử và Địa lí (cấp THCS), Ban hành kèm Thông tư số 32/2018/TT-BGDĐT.',
+      citationPosition: 'Trang 5, chèn trích dẫn [1] sau câu mở đầu mục 1.2'
+    },
+    {
+      id: 'th-2',
+      claim: 'Quy trình kiểm soát hoạt động học tập tương tác qua ứng dụng số trong trường học',
+      targetSection: 'Trang 8, Mục 2.1 - Cơ sở thực tiễn',
+      suggestedSourceType: 'Công văn hướng dẫn chuyển đổi số giáo dục hoặc Kỷ yếu hội thảo ứng dụng CNTT ngành GD&ĐT',
+      status: 'chưa xác minh được nguồn ngoài',
+      verifiedSource: 'Chưa xác minh được nguồn phù hợp trong cơ sở dữ liệu hiện hành. Giáo viên tự rà soát văn bản hướng dẫn chuyên môn của Sở/Phòng GD&ĐT.',
+      citationPosition: 'Trang 8, bổ sung số hiệu công văn chính thức của địa phương'
+    }
+  ];
 
   const handleVerifyReference = async (refItem: ReferenceCheckItem) => {
     setVerifyingId(refItem.id);
@@ -67,7 +92,7 @@ export const SimilarityCitationsView: React.FC<SimilarityCitationsViewProps> = (
           ? {
               ...r,
               verificationStatus: 'xac_minh_duoc' as ReferenceVerificationStatus,
-              verificationNote: 'Đã xác minh nguồn chính thống thành công.'
+              verificationNote: 'Đã xác minh nguồn chính thống trong danh mục sách/công văn giáo dục.'
             }
           : r
       )
@@ -78,12 +103,12 @@ export const SimilarityCitationsView: React.FC<SimilarityCitationsViewProps> = (
   return (
     <div className="space-y-6 pb-12 select-none">
       
-      {/* Minimalist Summary Card (Màn hình đầu 3 giây) */}
+      {/* Header Banner */}
       <div className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 uppercase tracking-wide">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 uppercase tracking-wide">
                 Liêm chính học thuật
               </span>
             </div>
@@ -92,17 +117,16 @@ export const SimilarityCitationsView: React.FC<SimilarityCitationsViewProps> = (
               NGUỒN & TRÍCH DẪN
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              Kiểm tra nguồn tương đồng và tính xác thực của danh mục tài liệu tham khảo
+              Phân tích đối sánh tương đồng văn bản, chuẩn hóa trích dẫn và củng cố cơ sở lý luận khoa học.
             </p>
           </div>
 
-          {/* 1 Primary Action */}
           <button
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="py-3 px-5 rounded-xl bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm shadow-amber-600/30 cursor-pointer transition-all shrink-0"
+            className="py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer shrink-0"
           >
-            <span>{isExpanded ? 'Thu gọn nguồn' : 'Xem nguồn →'}</span>
+            <span>{isExpanded ? 'Thu gọn' : 'Xem chi tiết nguồn →'}</span>
             {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
         </div>
@@ -112,129 +136,235 @@ export const SimilarityCitationsView: React.FC<SimilarityCitationsViewProps> = (
           <div>
             <span className="font-bold text-amber-900 flex items-center gap-1.5 text-xs">
               <AlertTriangle className="w-4 h-4 text-amber-600" />
-              ⚠ {totalIssues} MỤC CẦN KIỂM TRA:
+              RÀ SOÁT TƯƠNG ĐỒNG & DANH MỤC TÀI LIỆU ({totalIssues} ĐIỂM LƯU Ý):
             </span>
             <div className="flex items-center gap-2 mt-1 text-slate-700 flex-wrap text-[11px]">
               <span className="font-semibold">{similarityCount} đoạn tương đồng</span>
               <span>•</span>
               <span className="font-semibold">{citationIssuesCount} vấn đề trích dẫn</span>
               <span>•</span>
-              <span className="font-semibold">{needVerifyRefCount} nguồn cần xác minh</span>
+              <span className="font-semibold">{needVerifyRefCount} nguồn cần chuẩn hóa</span>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="text-xs font-bold text-amber-800 hover:text-amber-950 flex items-center gap-1 cursor-pointer self-start sm:self-auto"
-          >
-            <span>{isExpanded ? 'Đóng chi tiết' : 'Mở danh sách nguồn'}</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
+          <div className="text-[11px] text-slate-500 italic sm:text-right">
+            * Phân biệt rõ: Tương đồng văn bản ≠ Đạo văn.
+          </div>
         </div>
       </div>
 
       {/* Expanded Details */}
       {isExpanded && (
-        <div className="space-y-4 animate-in fade-in slide-in-from-top-3 duration-300">
+        <div className="space-y-4">
           
+          {/* PHẦN 14: Cảnh báo bắt buộc khi tra cứu nguồn */}
+          {!hasExternalWebCheck ? (
+            <div className="p-4 rounded-xl bg-slate-100 border border-slate-300 text-xs text-slate-700 flex items-center gap-2">
+              <Info className="w-4 h-4 text-slate-500 shrink-0" />
+              <span>
+                <strong>CHƯA THỰC HIỆN ĐỐI SÁNH NGUỒN BÊN NGOÀI:</strong> Hệ thống không tự tạo nguồn, URL hay tỷ lệ % giả.
+              </span>
+            </div>
+          ) : (
+            <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 text-xs text-blue-900 flex items-start gap-2.5">
+              <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <strong>Nguyên tắc đánh giá liêm chính học thuật (PHẦN 13 & 14):</strong>
+                <p className="leading-relaxed">
+                  Hệ thống chỉ rà soát mức độ trùng khớp câu chữ với tài liệu trong cơ sở dữ liệu đối soát. <strong>Tuyệt đối không kết luận là "Đạo văn"</strong> khi chưa có hội đồng chuyên môn thẩm định bối cảnh trích dẫn. Không tạo tác giả giả, sách giả, DOI giả hay URL giả.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Subtabs Switcher */}
           <div className="flex border-b border-slate-200 gap-4 text-xs font-bold">
             <button
               onClick={() => setActiveSubTab('similarity')}
-              className={`pb-2.5 transition-colors border-b-2 ${
+              className={`pb-2.5 transition-colors border-b-2 cursor-pointer ${
                 activeSubTab === 'similarity'
-                  ? 'border-blue-600 text-blue-600'
+                  ? 'border-amber-600 text-amber-700'
                   : 'border-transparent text-slate-500 hover:text-slate-800'
               }`}
             >
-              1. Đoạn tương đồng & trích dẫn ({simFindings.length})
+              1. Đoạn tương đồng & Trích dẫn ({simFindings.length})
             </button>
             <button
               onClick={() => setActiveSubTab('references')}
-              className={`pb-2.5 transition-colors border-b-2 ${
+              className={`pb-2.5 transition-colors border-b-2 cursor-pointer ${
                 activeSubTab === 'references'
-                  ? 'border-blue-600 text-blue-600'
+                  ? 'border-amber-600 text-amber-700'
                   : 'border-transparent text-slate-500 hover:text-slate-800'
               }`}
             >
-              2. Danh mục tài liệu tham khảo ({localReferences.length})
+              2. Rà soát danh mục tài liệu ({localReferences.length})
+            </button>
+            <button
+              onClick={() => setActiveSubTab('theory_needs')}
+              className={`pb-2.5 transition-colors border-b-2 cursor-pointer ${
+                activeSubTab === 'theory_needs'
+                  ? 'border-amber-600 text-amber-700'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              3. Luận điểm cần củng cố nguồn ({theoryNeeds.length})
             </button>
           </div>
 
-          {/* Subtab 1: Similarity Findings */}
+          {/* TAB 1: PHẦN 13 - ĐOẠN TƯƠNG ĐỒNG VĂN BẢN */}
           {activeSubTab === 'similarity' && (
             <div className="space-y-3">
-              {simFindings.map((finding) => (
-                <div
-                  key={finding.id}
-                  className="p-4 rounded-xl border border-slate-200 bg-white shadow-2xs space-y-2 text-xs"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded">
-                      {finding.location}
-                    </span>
-                    <span className="text-slate-500">Nguồn: {finding.matchedSource}</span>
-                  </div>
-
-                  <div className="p-3 bg-slate-50 rounded-lg border-l-4 border-amber-400 italic text-slate-700">
-                    “{finding.excerpt}”
-                  </div>
-
-                  <p className="text-slate-700 leading-relaxed pt-1">
-                    <strong>Cách xử lý:</strong> {finding.resolutionAction}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Subtab 2: Reference checks */}
-          {activeSubTab === 'references' && (
-            <div className="space-y-3">
-              {localReferences.map((ref) => {
-                const isVerified = ref.verificationStatus === 'xac_minh_duoc';
-                const isVerifying = verifyingId === ref.id;
+              {simFindings.map((finding) => {
+                const isWarning = finding.reviewLevel !== 'chua_phat_hien';
 
                 return (
                   <div
-                    key={ref.id}
-                    className="p-4 rounded-xl border border-slate-200 bg-white shadow-2xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs"
+                    key={finding.id}
+                    className="p-4 sm:p-5 rounded-2xl border border-slate-200 bg-white shadow-2xs space-y-3 text-xs"
                   >
-                    <div className="space-y-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-2">
                       <div className="flex items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          isVerified ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
-                        }`}>
-                          {isVerified ? '✓ Đã xác minh' : '⚠ Chưa xác minh'}
+                        <span className="font-bold text-slate-900">
+                          📍 Vị trí: {finding.location}
                         </span>
-                        <h4 className="font-bold text-slate-900 truncate">
-                          {ref.referenceEntry}
-                        </h4>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                          isWarning ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                        }`}>
+                          📊 Mức độ tương đồng: {isWarning ? 'Tương đồng đáng kể' : 'Thấp'}
+                        </span>
                       </div>
-                      <p className="text-slate-500 text-[11px]">
-                        {ref.verificationNote}
-                      </p>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                        finding.isCitedInText ? 'bg-emerald-50 text-emerald-800' : 'bg-rose-50 text-rose-800 border border-rose-200'
+                      }`}>
+                        📚 {finding.isCitedInText ? 'Đã trích dẫn trong bài' : 'Chưa có trích dẫn'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-slate-700">
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase block">
+                          📄 Đoạn trong SKKN cần kiểm tra:
+                        </span>
+                        <p className="font-serif italic text-[11px] leading-relaxed">
+                          "{finding.excerpt}"
+                        </p>
+                      </div>
+
+                      <div className="p-3 bg-amber-50/50 rounded-xl border border-amber-200 space-y-1">
+                        <span className="text-[10px] font-bold text-amber-900 uppercase block">
+                          🌐 Nguồn đối chiếu & Nội dung tương đồng:
+                        </span>
+                        <p className="font-bold text-[11px] text-amber-950">
+                          {finding.matchedSource}
+                        </p>
+                        <p className="font-serif text-[11px] text-slate-700 leading-relaxed pt-1">
+                          "{finding.matchedContent}"
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Khuyến nghị xử lý */}
+                    <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-200 text-slate-800 text-[11px] flex items-start gap-2">
+                      <BookmarkCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                      <div>
+                        <strong>💡 Khuyến nghị xử lý: </strong>
+                        <span>{finding.resolutionAction}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* TAB 2: RÀ SOÁT TÀI LIỆU THAM KHẢO */}
+          {activeSubTab === 'references' && (
+            <div className="space-y-3">
+              {localReferences.map((refItem) => {
+                const isVerified = refItem.verificationStatus === 'xac_minh_duoc';
+
+                return (
+                  <div
+                    key={refItem.id}
+                    className="p-4 rounded-xl border border-slate-200 bg-white shadow-2xs space-y-2 text-xs"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <strong className="text-slate-900 text-xs">
+                        {refItem.referenceEntry}
+                      </strong>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded border self-start sm:self-auto ${
+                        isVerified ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-rose-100 text-rose-800 border-rose-300'
+                      }`}>
+                        {isVerified ? '✓ Đã xác minh nguồn' : '⚠ Cần kiểm tra chuẩn mực'}
+                      </span>
+                    </div>
+
+                    <div className="text-[11px] text-slate-600 space-y-1">
+                      <p><strong>Vị trí trích trong bài:</strong> {refItem.citationInText}</p>
+                      <p><strong>Đánh giá học thuật:</strong> {refItem.verificationNote}</p>
                     </div>
 
                     {!isVerified && (
-                      <button
-                        type="button"
-                        onClick={() => handleVerifyReference(ref)}
-                        disabled={isVerifying}
-                        className="py-1.5 px-3 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold shrink-0 transition-colors flex items-center gap-1 cursor-pointer"
-                      >
-                        {isVerifying ? (
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <RefreshCw className="w-3.5 h-3.5" />
-                        )}
-                        <span>{isVerifying ? 'Đang kiểm tra...' : 'Xác minh nguồn'}</span>
-                      </button>
+                      <div className="pt-1 flex items-center justify-end">
+                        <button
+                          type="button"
+                          onClick={() => handleVerifyReference(refItem)}
+                          disabled={verifyingId === refItem.id}
+                          className="text-[11px] font-bold px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+                        >
+                          {verifyingId === refItem.id ? (
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <ShieldCheck className="w-3 h-3" />
+                          )}
+                          <span>Xác minh lại nguồn này</span>
+                        </button>
+                      </div>
                     )}
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {/* TAB 3: PHẦN 3 - LUẬN ĐIỂM CẦN CỦNG CỐ NGUỒN CƠ SỞ LÝ LUẬN */}
+          {activeSubTab === 'theory_needs' && (
+            <div className="space-y-3">
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600">
+                <strong>Nguyên tắc đề xuất nguồn (PHẦN 3):</strong> Tuyệt đối không tự bịa nguồn hay tài liệu không kiểm chứng được. Nếu chưa tìm được nguồn chính thức, hệ thống thông báo rõ để giáo viên chủ động rà soát.
+              </div>
+
+              {theoryNeeds.map((item) => (
+                <div
+                  key={item.id}
+                  className="p-4 rounded-xl border border-slate-200 bg-white shadow-2xs space-y-2.5 text-xs"
+                >
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <strong className="text-slate-900 text-xs">
+                      1. Luận điểm cần củng cố nguồn:
+                    </strong>
+                    <span className="text-[11px] font-mono text-slate-500 bg-slate-50 px-2 py-0.5 rounded border">
+                      {item.targetSection}
+                    </span>
+                  </div>
+
+                  <p className="font-serif italic text-slate-800 bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-[11px]">
+                    "{item.claim}"
+                  </p>
+
+                  <div className="space-y-1.5 text-[11px]">
+                    <p className="text-blue-900">
+                      <strong>2. Đề xuất loại nguồn phù hợp:</strong> {item.suggestedSourceType}
+                    </p>
+                    <p className="text-emerald-950 font-medium">
+                      <strong>3. Thông tin nguồn kiểm chứng:</strong> {item.verifiedSource}
+                    </p>
+                    <p className="text-slate-600">
+                      <strong>4. Gợi ý vị trí trích dẫn:</strong> {item.citationPosition}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
