@@ -1,33 +1,44 @@
 /**
  * Google Identity Services helper for SKKN REVIEW PRO.
- * Quản lý nạp Google Identity script (accounts.google.com/gsi/client)
- * và Google Client ID với timeout, retry và bảo vệ chống load trùng lặp.
+ * Quản lý nạp Google Identity script (accounts.google.com/gsi/client),
+ * Google Client ID và đảm bảo initialize duy nhất một lần (single initialization guard).
  */
 
 declare global {
   interface Window {
     google?: any;
+    __gsiInitializedClientId?: string;
   }
 }
 
 let scriptPromise: Promise<any> | null = null;
 let cachedClientId: string = '';
+let activeCredentialCallback: ((res: any) => void) | null = null;
 
 const isDev = process.env.NODE_ENV !== 'production';
 
 /**
- * Lấy Google Client ID từ runtime server hoặc build-time env với timeout
+ * Lấy Google Client ID:
+ * - Ưu tiên số 1: Build-time env (Vite / Vercel define) -> KHÔNG gọi network để tránh 404 trên Vercel
+ * - Dự phòng: Gọi /api/auth/config nếu build-time env chưa có
  */
 export async function fetchGoogleClientId(timeoutMs = 8000): Promise<string> {
-  // 1. Nếu đã có cache trong memory
+  // 1. Kiểm tra cache trong memory
   if (cachedClientId) {
     return cachedClientId;
   }
 
-  // 2. Kiểm tra build-time env (Vite / Vercel define)
+  // 2. ƯU TIÊN SỐ 1: Kiểm tra build-time env (Vite / Vercel define)
   const envClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
+  if (envClientId) {
+    cachedClientId = envClientId;
+    if (isDev) {
+      console.log('[Google Auth] Sử dụng Google Client ID từ environment/build');
+    }
+    return envClientId;
+  }
 
-  // 3. Gọi endpoint /api/auth/config từ server với timeout
+  // 3. Chỉ gọi /api/auth/config nếu build-time env chưa có (chế độ local server)
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -44,44 +55,26 @@ export async function fetchGoogleClientId(timeoutMs = 8000): Promise<string> {
       if (srvClientId) {
         cachedClientId = srvClientId;
         if (isDev) {
-          console.log('[Google Auth] Google Client config loaded');
+          console.log('[Google Auth] Nạp Google Client ID từ /api/auth/config');
         }
         return srvClientId;
       }
     }
-  } catch (err) {
+  } catch {
     clearTimeout(timer);
-    // Nếu gọi endpoint lỗi nhưng envClientId có sẵn -> fallback sang envClientId
-    if (envClientId) {
-      cachedClientId = envClientId;
-      if (isDev) {
-        console.log('[Google Auth] Google Client config loaded (fallback)');
-      }
-      return envClientId;
-    }
   }
 
-  // 4. Nếu server không trả về client ID nhưng envClientId có sẵn
-  if (envClientId) {
-    cachedClientId = envClientId;
-    if (isDev) {
-      console.log('[Google Auth] Google Client config loaded (env)');
-    }
-    return envClientId;
-  }
-
-  throw new Error('CONFIG_ERROR: Không tìm thấy Google Client ID được cấu hình');
+  throw new Error('CONFIG_ERROR: Chưa có Google Client ID được cấu hình');
 }
 
 /**
  * Nạp script Google Identity Services (https://accounts.google.com/gsi/client)
  * - Tái sử dụng script nếu đã có trong DOM
  * - Không inject trùng lặp
- * - Bắt timeout 8-10 giây
+ * - Bắt timeout 8 giây
  * - Bắt sự kiện onload và onerror
  */
 export function loadGoogleIdentityScript(timeoutMs = 8000): Promise<any> {
-  // Nếu window.google.accounts.id đã sẵn sàng
   if (typeof window !== 'undefined' && window.google?.accounts?.id) {
     return Promise.resolve(window.google);
   }
@@ -107,7 +100,7 @@ export function loadGoogleIdentityScript(timeoutMs = 8000): Promise<any> {
     const timer = setTimeout(() => {
       if (!isDone) {
         cleanup();
-        scriptPromise = null; // Cho phép retry
+        scriptPromise = null;
         reject(new Error('GOOGLE_SCRIPT_TIMEOUT: Hết thời gian nạp Google Identity script'));
       }
     }, timeoutMs);
@@ -116,7 +109,7 @@ export function loadGoogleIdentityScript(timeoutMs = 8000): Promise<any> {
       if (isDone) return;
       cleanup();
       if (isDev) {
-        console.log('[Google Auth] Google Identity script loaded');
+        console.log('[Google Auth] Google Identity script đã sẵn sàng');
       }
       resolve(window.google);
     };
@@ -124,17 +117,15 @@ export function loadGoogleIdentityScript(timeoutMs = 8000): Promise<any> {
     const onError = () => {
       if (isDone) return;
       cleanup();
-      scriptPromise = null; // Cho phép retry
+      scriptPromise = null;
       reject(new Error('GOOGLE_ERROR: Không thể tải script Google Identity Services'));
     };
 
-    // Kiểm tra xem script tag đã tồn tại trong DOM chưa (ví dụ từ index.html)
     const existingScript = document.querySelector<HTMLScriptElement>(
       'script[src*="accounts.google.com/gsi/client"]'
     );
 
     if (existingScript) {
-      // Script tag đã có -> Polling kiểm tra window.google.accounts.id
       pollInterval = setInterval(() => {
         if (window.google?.accounts?.id) {
           onReady();
@@ -146,13 +137,11 @@ export function loadGoogleIdentityScript(timeoutMs = 8000): Promise<any> {
       return;
     }
 
-    // Nếu chưa có script trong DOM -> Tạo mới một lần
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
     script.defer = true;
     script.onload = () => {
-      // Chờ window.google.accounts.id được gán
       pollInterval = setInterval(() => {
         if (window.google?.accounts?.id) {
           onReady();
@@ -167,8 +156,56 @@ export function loadGoogleIdentityScript(timeoutMs = 8000): Promise<any> {
 }
 
 /**
- * Xóa cache script và client ID để cho phép retry hoàn toàn
+ * Khởi tạo Google Identity Services CHỈ MỘT LẦN DUY NHẤT.
+ * Khắc phục triệt để lỗi:
+ * "[GSI_LOGGER]: google.accounts.id.initialize() is called multiple times."
+ */
+export function initializeGoogleIdentityOnce(
+  clientId: string,
+  onCredential: (response: any) => void
+): boolean {
+  if (typeof window === 'undefined' || !window.google?.accounts?.id) {
+    return false;
+  }
+
+  // Luôn cập nhật callback mới nhất mà không cần gọi lại initialize()
+  activeCredentialCallback = onCredential;
+
+  // Nếu đã khởi tạo trước đó với cùng Client ID -> Không gọi initialize() nữa
+  if (window.__gsiInitializedClientId === clientId) {
+    return true;
+  }
+
+  try {
+    window.google.accounts.id.initialize({
+      client_id: clientId,
+      callback: (res: any) => {
+        if (activeCredentialCallback) {
+          activeCredentialCallback(res);
+        }
+      },
+      auto_select: false, // TẮT auto-select
+      cancel_on_tap_outside: true,
+    });
+
+    window.__gsiInitializedClientId = clientId;
+
+    if (isDev) {
+      console.log('[Google Auth] Google Identity khởi tạo thành công (chỉ 1 lần)');
+    }
+    return true;
+  } catch (err) {
+    console.warn('Google Identity initialize error:', err);
+    return false;
+  }
+}
+
+/**
+ * Reset cache khi người dùng chủ động bấm THỬ LẠI
  */
 export function resetGoogleAuthCache() {
   scriptPromise = null;
+  if (typeof window !== 'undefined') {
+    delete window.__gsiInitializedClientId;
+  }
 }

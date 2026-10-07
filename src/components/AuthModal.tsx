@@ -16,6 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   loadGoogleIdentityScript,
   fetchGoogleClientId,
+  initializeGoogleIdentityOnce,
   resetGoogleAuthCache,
 } from '../utils/googleIdentity';
 
@@ -131,39 +132,29 @@ export const AuthModal: React.FC = () => {
       return;
     }
 
-    // 3. GOOGLE_READY: Khởi tạo Client và chuẩn bị render button
-    try {
-      window.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: async (response: any) => {
-          if (response.credential) {
-            setAuthError(null);
-            setIsSubmittingGoogle(true);
-            try {
-              const success = await loginWithGoogleCredential(response.credential);
-              if (!success) {
-                setAuthError('Không thể hoàn tất đăng nhập Google.');
-              }
-            } catch {
-              setAuthError('Không thể hoàn tất đăng nhập Google.');
-            } finally {
-              setIsSubmittingGoogle(false);
-            }
-          } else {
+    // 3. GOOGLE_READY: Khởi tạo Client an toàn (chỉ gọi 1 lần duy nhất)
+    const success = initializeGoogleIdentityOnce(clientId, async (response: any) => {
+      if (response?.credential) {
+        setAuthError(null);
+        setIsSubmittingGoogle(true);
+        try {
+          const ok = await loginWithGoogleCredential(response.credential);
+          if (!ok) {
             setAuthError('Không thể hoàn tất đăng nhập Google.');
           }
-        },
-        auto_select: false,
-        cancel_on_tap_outside: true,
-      });
-
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('[Google Auth] Google Identity initialized');
+        } catch {
+          setAuthError('Không thể hoàn tất đăng nhập Google.');
+        } finally {
+          setIsSubmittingGoogle(false);
+        }
+      } else {
+        setAuthError('Không thể hoàn tất đăng nhập Google.');
       }
+    });
 
+    if (success) {
       setGoogleAuthStatus('GOOGLE_READY');
-    } catch (err: any) {
-      console.warn('Google Identity initialization error:', err);
+    } else {
       setGoogleAuthStatus('GOOGLE_ERROR');
       setGoogleAuthErrorMsg('Không thể khởi tạo dịch vụ đăng nhập Google.');
     }
@@ -185,7 +176,10 @@ export const AuthModal: React.FC = () => {
       googleBtnRef.current &&
       window.google?.accounts?.id
     ) {
-      googleBtnRef.current.innerHTML = '';
+      // Nếu container đã có button rendered thì không render lại gây chớp/biến đổi
+      if (googleBtnRef.current.hasChildNodes()) {
+        return;
+      }
       try {
         window.google.accounts.id.renderButton(googleBtnRef.current, {
           type: 'standard',

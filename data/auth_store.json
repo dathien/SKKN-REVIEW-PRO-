@@ -117,6 +117,26 @@
       "createdAt": "2026-10-07T11:25:06.183Z",
       "lastActiveAt": "2026-10-07T11:25:06.183Z",
       "analysisCount": 0
+    },
+    "guest_test_verify": {
+      "guestId": "guest_test_verify",
+      "quota": {
+        "easy": 3,
+        "advanced": 1
+      },
+      "createdAt": "2026-10-07T12:03:09.783Z",
+      "lastActiveAt": "2026-10-07T12:03:09.783Z",
+      "analysisCount": 0
+    },
+    "test": {
+      "guestId": "test",
+      "quota": {
+        "easy": 3,
+        "advanced": 1
+      },
+      "createdAt": "2026-10-07T12:03:16.178Z",
+      "lastActiveAt": "2026-10-07T12:03:16.178Z",
+      "analysisCount": 0
     }
   },
   "licenses": {
