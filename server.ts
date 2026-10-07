@@ -746,8 +746,10 @@ app.post('/api/save-mascot', (req, res) => {
 
 // 1. Client Auth Configuration
 app.get('/api/auth/config', (_req, res) => {
+  const rawClientId = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || '';
+  const cleanClientId = rawClientId.replace(/^["']|["']$/g, '').trim();
   return res.json({
-    googleClientId: process.env.GOOGLE_CLIENT_ID || '',
+    googleClientId: cleanClientId,
     hasLicenseApi: Boolean(process.env.LICENSE_API_URL),
   });
 });

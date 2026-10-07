@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { UserAccount, UserQuota, UserRole, LicensePlan } from '../types';
+import { fetchGoogleClientId } from '../utils/googleIdentity';
 
 interface AuthContextType {
   user: UserAccount | null;
@@ -72,7 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [quota, setQuota] = useState<UserQuota>({ easy: 3, advanced: 1 });
   const [role, setRole] = useState<UserRole>('GUEST');
   const [plan, setPlan] = useState<LicensePlan>('GUEST');
-  const [googleClientId, setGoogleClientId] = useState<string>('');
+  const [googleClientId, setGoogleClientId] = useState<string>(() => (import.meta.env.VITE_GOOGLE_CLIENT_ID || ''));
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Modals
@@ -85,13 +86,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Load Google Client ID & initial user status from server
   const refreshStatus = useCallback(async () => {
     try {
-      // 1. Get Client ID
-      const cfgResp = await fetch('/api/auth/config').catch(() => null);
-      if (cfgResp?.ok) {
-        const cfgData = await cfgResp.json();
-        if (cfgData.googleClientId) {
-          setGoogleClientId(cfgData.googleClientId);
+      // 1. Get Client ID (với timeout và fallback thông minh)
+      try {
+        const cid = await fetchGoogleClientId(8000);
+        if (cid) {
+          setGoogleClientId(cid);
         }
+      } catch (e) {
+        console.warn('Could not load Google Client ID:', e);
       }
 
       // 2. Get User / Guest status
@@ -266,6 +268,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const openAuthModal = (tab: 'login' | 'license' = 'login') => {
     setAuthModalTab(tab);
     setIsAuthModalOpen(true);
+    if (!googleClientId) {
+      fetchGoogleClientId(8000)
+        .then((cid) => {
+          if (cid) setGoogleClientId(cid);
+        })
+        .catch(() => {});
+    }
   };
 
   const closeAuthModal = () => setIsAuthModalOpen(false);

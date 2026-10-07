@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   X,
   User,
@@ -9,15 +9,28 @@ import {
   Gift,
   RefreshCw,
   Shield,
-  Key
+  Key,
+  Loader2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import {
+  loadGoogleIdentityScript,
+  fetchGoogleClientId,
+  resetGoogleAuthCache,
+} from '../utils/googleIdentity';
 
 declare global {
   interface Window {
     google?: any;
   }
 }
+
+type GoogleAuthStatus =
+  | 'LOADING_CONFIG'
+  | 'CONFIG_ERROR'
+  | 'GOOGLE_SCRIPT_LOADING'
+  | 'GOOGLE_READY'
+  | 'GOOGLE_ERROR';
 
 export const AuthModal: React.FC = () => {
   const {
@@ -42,6 +55,9 @@ export const AuthModal: React.FC = () => {
   const [isActivatingLicense, setIsActivatingLicense] = useState(false);
   const [licenseFeedback, setLicenseFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showLicenseEntry, setShowLicenseEntry] = useState(false);
+  const [googleAuthStatus, setGoogleAuthStatus] = useState<GoogleAuthStatus>('LOADING_CONFIG');
+  const [googleAuthErrorMsg, setGoogleAuthErrorMsg] = useState<string | null>(null);
+  const [isSubmittingGoogle, setIsSubmittingGoogle] = useState(false);
   const googleBtnRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -72,42 +88,116 @@ export const AuthModal: React.FC = () => {
     }
   };
 
-  // Google Identity Services Button chuẩn
-  useEffect(() => {
-    if (!isAuthModalOpen || isLoggedIn) return;
+  // Khởi tạo Google Identity Services với state rõ ràng và timeout
+  const initGoogleIdentity = useCallback(async () => {
+    if (isLoggedIn) return;
 
-    if (window.google?.accounts?.id && googleClientId) {
+    setGoogleAuthErrorMsg(null);
+    setAuthError(null);
+
+    // 1. LOADING_CONFIG: Nạp Google Client ID
+    setGoogleAuthStatus('LOADING_CONFIG');
+    let clientId = googleClientId;
+    if (!clientId) {
       try {
-        window.google.accounts.id.initialize({
-          client_id: googleClientId,
-          callback: async (response: any) => {
-            if (response.credential) {
-              setAuthError(null);
+        clientId = await fetchGoogleClientId(8000);
+      } catch (err: any) {
+        setGoogleAuthStatus('CONFIG_ERROR');
+        setGoogleAuthErrorMsg('Không thể nạp thông tin Google Client ID từ hệ thống.');
+        return;
+      }
+    }
+
+    if (!clientId) {
+      setGoogleAuthStatus('CONFIG_ERROR');
+      setGoogleAuthErrorMsg('Chưa tìm thấy Google Client ID hợp lệ trong cấu hình.');
+      return;
+    }
+
+    // 2. GOOGLE_SCRIPT_LOADING: Nạp thư viện Google Identity Services
+    setGoogleAuthStatus('GOOGLE_SCRIPT_LOADING');
+    try {
+      await loadGoogleIdentityScript(8000);
+    } catch (err: any) {
+      setGoogleAuthStatus('GOOGLE_ERROR');
+      setGoogleAuthErrorMsg('Không thể tải thư viện Google Identity Services từ Google.');
+      return;
+    }
+
+    if (!window.google?.accounts?.id) {
+      setGoogleAuthStatus('GOOGLE_ERROR');
+      setGoogleAuthErrorMsg('Thư viện Google Identity chưa sẵn sàng.');
+      return;
+    }
+
+    // 3. GOOGLE_READY: Khởi tạo Client và chuẩn bị render button
+    try {
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: async (response: any) => {
+          if (response.credential) {
+            setAuthError(null);
+            setIsSubmittingGoogle(true);
+            try {
               const success = await loginWithGoogleCredential(response.credential);
               if (!success) {
                 setAuthError('Không thể đăng nhập Google. Vui lòng thử lại.');
               }
-            } else {
-              setAuthError('Không thể đăng nhập Google. Vui lòng thử lại.');
+            } catch {
+              setAuthError('Lỗi kết nối khi xác thực tài khoản Google.');
+            } finally {
+              setIsSubmittingGoogle(false);
             }
-          },
-        });
+          } else {
+            setAuthError('Không nhận được thông tin xác thực từ Google.');
+          }
+        },
+        auto_select: false,
+        cancel_on_tap_outside: true,
+      });
 
-        if (googleBtnRef.current) {
-          googleBtnRef.current.innerHTML = '';
-          window.google.accounts.id.renderButton(googleBtnRef.current, {
-            theme: 'outline',
-            size: 'large',
-            width: '100%',
-            text: 'continue_with',
-            locale: 'vi',
-          });
-        }
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[Google Auth] Google Identity initialized');
+      }
+
+      setGoogleAuthStatus('GOOGLE_READY');
+    } catch (err: any) {
+      console.warn('Google Identity initialization error:', err);
+      setGoogleAuthStatus('GOOGLE_ERROR');
+      setGoogleAuthErrorMsg('Không thể khởi tạo dịch vụ đăng nhập Google.');
+    }
+  }, [isLoggedIn, googleClientId, loginWithGoogleCredential]);
+
+  // Kích hoạt nạp khi modal mở
+  useEffect(() => {
+    if (isAuthModalOpen && !isLoggedIn) {
+      initGoogleIdentity();
+    }
+  }, [isAuthModalOpen, isLoggedIn, initGoogleIdentity]);
+
+  // Render Google Button khi trạng thái GOOGLE_READY
+  useEffect(() => {
+    if (
+      isAuthModalOpen &&
+      !isLoggedIn &&
+      googleAuthStatus === 'GOOGLE_READY' &&
+      googleBtnRef.current &&
+      window.google?.accounts?.id
+    ) {
+      googleBtnRef.current.innerHTML = '';
+      try {
+        window.google.accounts.id.renderButton(googleBtnRef.current, {
+          theme: 'outline',
+          size: 'large',
+          width: '100%',
+          text: 'continue_with',
+          locale: 'vi',
+        });
       } catch (err) {
-        console.warn('Google Identity button initialization error:', err);
+        console.warn('Could not render Google Button:', err);
       }
     }
-  }, [isAuthModalOpen, isLoggedIn, googleClientId, loginWithGoogleCredential]);
+  }, [isAuthModalOpen, isLoggedIn, googleAuthStatus]);
 
   if (!isAuthModalOpen) return null;
 
@@ -394,7 +484,7 @@ export const AuthModal: React.FC = () => {
                   Đăng nhập bằng tài khoản Google
                 </h4>
                 <p className="text-[13px] sm:text-[13.5px] text-slate-500 leading-relaxed">
-                  Đăng nhập để đồng bộ tài khoản và kiểm tra quyền sử dụng trên SKKN REVIEW PRO.
+                  Không cần đăng ký riêng. Lần đầu đăng nhập, hệ thống sẽ tự tạo tài khoản và cấp quyền trải nghiệm.
                 </p>
               </div>
 
@@ -406,13 +496,52 @@ export const AuthModal: React.FC = () => {
                 </div>
               )}
 
-              {/* Google Identity Services Button Container */}
-              <div className="py-2 flex flex-col items-center justify-center">
-                <div ref={googleBtnRef} className="min-h-[44px] flex justify-center w-full max-w-xs" />
-                {!googleClientId && (
-                  <p className="text-[12px] text-amber-700 mt-2 text-center">
-                    Đang nạp thông tin Google Client ID...
-                  </p>
+              {/* Google Identity Services State & Button Container */}
+              <div className="py-2 flex flex-col items-center justify-center min-h-[56px]">
+                {isSubmittingGoogle ? (
+                  <div className="w-full max-w-xs py-3 px-4 flex items-center justify-center gap-2.5 text-[13px] text-blue-700 font-semibold bg-blue-50 border border-blue-200 rounded-xl">
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-600 shrink-0" />
+                    <span>Đang xác thực tài khoản Google...</span>
+                  </div>
+                ) : googleAuthStatus === 'LOADING_CONFIG' ? (
+                  <div className="py-2 flex flex-col items-center justify-center gap-2">
+                    <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                    <p className="text-[12.5px] text-slate-500 text-center font-medium">
+                      Đang nạp thông tin Google Client ID...
+                    </p>
+                  </div>
+                ) : googleAuthStatus === 'GOOGLE_SCRIPT_LOADING' ? (
+                  <div className="py-2 flex flex-col items-center justify-center gap-2">
+                    <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                    <p className="text-[12.5px] text-slate-500 text-center font-medium">
+                      Đang khởi tạo dịch vụ đăng nhập Google...
+                    </p>
+                  </div>
+                ) : googleAuthStatus === 'CONFIG_ERROR' || googleAuthStatus === 'GOOGLE_ERROR' ? (
+                  <div className="w-full max-w-xs p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-center space-y-2">
+                    <div className="flex items-center justify-center gap-1.5 text-rose-800 text-[13px] font-semibold">
+                      <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                      <span>Không thể khởi tạo đăng nhập Google.</span>
+                    </div>
+                    {googleAuthErrorMsg && (
+                      <p className="text-[12px] text-rose-600 leading-snug">
+                        {googleAuthErrorMsg}
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        resetGoogleAuthCache();
+                        initGoogleIdentity();
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-[12.5px] font-bold shadow-xs transition-colors cursor-pointer"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span>THỬ LẠI</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div ref={googleBtnRef} className="min-h-[44px] flex justify-center w-full max-w-xs" />
                 )}
               </div>
 

@@ -69,7 +69,7 @@
         "advanced": 1
       },
       "createdAt": "2026-10-07T00:30:56.839Z",
-      "lastActiveAt": "2026-10-07T04:47:24.998Z",
+      "lastActiveAt": "2026-10-07T11:21:00.849Z",
       "analysisCount": 0
     },
     "guest_test123": {
@@ -90,6 +90,16 @@
       },
       "createdAt": "2026-10-07T08:25:54.173Z",
       "lastActiveAt": "2026-10-07T08:25:54.173Z",
+      "analysisCount": 0
+    },
+    "guest_test_check": {
+      "guestId": "guest_test_check",
+      "quota": {
+        "easy": 3,
+        "advanced": 1
+      },
+      "createdAt": "2026-10-07T11:25:06.183Z",
+      "lastActiveAt": "2026-10-07T11:25:06.183Z",
       "analysisCount": 0
     }
   },
