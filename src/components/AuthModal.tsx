@@ -18,6 +18,7 @@ import {
   fetchGoogleClientId,
   initializeGoogleIdentityOnce,
   resetGoogleAuthCache,
+  DEFAULT_GOOGLE_CLIENT_ID,
 } from '../utils/googleIdentity';
 
 declare global {
@@ -61,7 +62,6 @@ export const AuthModal: React.FC = () => {
   const [googleAuthErrorMsg, setGoogleAuthErrorMsg] = useState<string | null>(null);
   const [isSubmittingGoogle, setIsSubmittingGoogle] = useState(false);
   const googleBtnRef = useRef<HTMLDivElement>(null);
-  const userInitiatedLoginRef = useRef(false);
 
   useEffect(() => {
     setAuthError(null);
@@ -98,30 +98,26 @@ export const AuthModal: React.FC = () => {
     setGoogleAuthErrorMsg(null);
     setAuthError(null);
 
-    // 1. LOADING_CONFIG: Nạp Google Client ID
+    // 1. LOADING_CONFIG: Nạp Google Client ID (luôn có DEFAULT_GOOGLE_CLIENT_ID fallback)
     setGoogleAuthStatus('LOADING_CONFIG');
     let clientId = googleClientId;
     if (!clientId) {
       try {
-        clientId = await fetchGoogleClientId(8000);
-      } catch (err: any) {
-        setGoogleAuthStatus('CONFIG_ERROR');
-        setGoogleAuthErrorMsg('Không thể nạp thông tin Google Client ID từ hệ thống.');
-        return;
+        clientId = await fetchGoogleClientId(4000);
+      } catch {
+        clientId = DEFAULT_GOOGLE_CLIENT_ID;
       }
     }
 
     if (!clientId) {
-      setGoogleAuthStatus('CONFIG_ERROR');
-      setGoogleAuthErrorMsg('Chưa tìm thấy Google Client ID hợp lệ trong cấu hình.');
-      return;
+      clientId = DEFAULT_GOOGLE_CLIENT_ID;
     }
 
     // 2. GOOGLE_SCRIPT_LOADING: Nạp thư viện Google Identity Services
     setGoogleAuthStatus('GOOGLE_SCRIPT_LOADING');
     try {
       await loadGoogleIdentityScript(8000);
-    } catch (err: any) {
+    } catch {
       setGoogleAuthStatus('GOOGLE_ERROR');
       setGoogleAuthErrorMsg('Không thể tải thư viện Google Identity Services từ Google.');
       return;
@@ -135,13 +131,10 @@ export const AuthModal: React.FC = () => {
 
     // 3. GOOGLE_READY: Khởi tạo Client an toàn (chỉ gọi 1 lần duy nhất)
     const success = initializeGoogleIdentityOnce(clientId, async (response: any) => {
-      // Nếu người dùng đã logout và chưa chủ động click nút đăng nhập, bỏ qua callback tự động
-      if (sessionStorage.getItem('skkn_signed_out') === 'true' && !userInitiatedLoginRef.current) {
-        return;
-      }
-      userInitiatedLoginRef.current = false;
-
       if (response?.credential) {
+        try {
+          sessionStorage.removeItem('skkn_signed_out');
+        } catch {}
         setAuthError(null);
         setIsSubmittingGoogle(true);
         try {
@@ -207,6 +200,9 @@ export const AuthModal: React.FC = () => {
   const handleGoogleSignInClick = async () => {
     if (isSubmittingGoogle) return;
     setAuthError(null);
+    try {
+      sessionStorage.removeItem('skkn_signed_out');
+    } catch {}
 
     // Nếu dịch vụ Google chưa sẵn sàng, thử khởi tạo
     if (!window.google?.accounts?.id) {
@@ -218,8 +214,9 @@ export const AuthModal: React.FC = () => {
       }
     }
 
-    // Kích hoạt account chooser qua Google prompt khi người dùng đã click
-    if (window.google?.accounts?.id?.prompt) {
+    // Nếu googleBtnRef chưa có iframe (ví dụ lỗi render hoặc render chậm), gọi prompt() dự phòng
+    const hasRenderedIframe = Boolean(googleBtnRef.current?.querySelector('iframe'));
+    if (!hasRenderedIframe && window.google?.accounts?.id?.prompt) {
       try {
         window.google.accounts.id.prompt((notification: any) => {
           if (notification?.isNotDisplayed?.()) {
@@ -565,11 +562,10 @@ export const AuthModal: React.FC = () => {
                   </div>
                 ) : (
                   <div className="relative w-full max-w-xs flex flex-col items-center">
-                    {/* Nút React tùy biến ổn định tuyệt đối - Không bao giờ tự đổi sang avatar hay tên */}
-                    <button
-                      type="button"
-                      onClick={handleGoogleSignInClick}
+                    {/* Khung nút đăng nhập Google do SKKN REVIEW PRO kiểm soát UI cố định */}
+                    <div
                       className="relative w-full py-2.5 px-4 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 hover:text-slate-900 font-semibold text-[14px] rounded-xl border border-slate-300 shadow-xs flex items-center justify-center gap-3 transition-all cursor-pointer select-none overflow-hidden"
+                      onClick={handleGoogleSignInClick}
                     >
                       {/* Logo chuẩn Google */}
                       <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
@@ -595,11 +591,11 @@ export const AuthModal: React.FC = () => {
                       {/* Lớp bắt click Google chính thức (trong suốt hoàn toàn, nhận click chuẩn) */}
                       <div
                         ref={googleBtnRef}
-                        className="absolute inset-0 opacity-[0.001] overflow-hidden flex items-center justify-center pointer-events-auto"
+                        className="absolute inset-0 opacity-[0.001] overflow-hidden flex items-center justify-center pointer-events-auto cursor-pointer"
                         style={{ transform: 'scale(1.5)' }}
                         title="Đăng nhập bằng Google"
                       />
-                    </button>
+                    </div>
 
                     {/* Chỉ hiển thị thông báo lỗi nếu có */}
                     {(googleAuthStatus === 'CONFIG_ERROR' || googleAuthStatus === 'GOOGLE_ERROR') && googleAuthErrorMsg && (

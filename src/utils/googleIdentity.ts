@@ -7,6 +7,7 @@
 declare global {
   interface Window {
     google?: any;
+    __gsiInitialized?: boolean;
     __gsiInitializedClientId?: string;
   }
 }
@@ -177,14 +178,16 @@ export function initializeGoogleIdentityOnce(
   // Luôn cập nhật callback mới nhất mà không cần gọi lại initialize()
   activeCredentialCallback = onCredential;
 
-  // Nếu đã khởi tạo trước đó với cùng Client ID -> Không gọi initialize() nữa
-  if (window.__gsiInitializedClientId === clientId) {
+  // Nếu đã khởi tạo trước đó -> Không bao giờ gọi initialize() thêm lần nào
+  if (window.__gsiInitialized) {
     return true;
   }
 
+  const effectiveClientId = (clientId || '').trim() || DEFAULT_GOOGLE_CLIENT_ID;
+
   try {
     window.google.accounts.id.initialize({
-      client_id: clientId,
+      client_id: effectiveClientId,
       callback: (res: any) => {
         if (activeCredentialCallback) {
           activeCredentialCallback(res);
@@ -192,12 +195,14 @@ export function initializeGoogleIdentityOnce(
       },
       auto_select: false, // TẮT auto-select
       cancel_on_tap_outside: true,
+      itp_support: true,
     });
 
-    window.__gsiInitializedClientId = clientId;
+    window.__gsiInitialized = true;
+    window.__gsiInitializedClientId = effectiveClientId;
 
     if (isDev) {
-      console.log('[Google Auth] Google Identity khởi tạo thành công (chỉ 1 lần)');
+      console.log('[Google Auth] Google Identity khởi tạo thành công (chỉ 1 lần duy nhất)');
     }
     return true;
   } catch (err) {
@@ -207,11 +212,8 @@ export function initializeGoogleIdentityOnce(
 }
 
 /**
- * Reset cache khi người dùng chủ động bấm THỬ LẠI
+ * Reset script loading cache khi người dùng chủ động bấm THỬ LẠI
  */
 export function resetGoogleAuthCache() {
   scriptPromise = null;
-  if (typeof window !== 'undefined') {
-    delete window.__gsiInitializedClientId;
-  }
 }

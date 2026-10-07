@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { UserAccount, UserQuota, UserRole, LicensePlan } from '../types';
-import { fetchGoogleClientId } from '../utils/googleIdentity';
+import { fetchGoogleClientId, DEFAULT_GOOGLE_CLIENT_ID } from '../utils/googleIdentity';
 
 interface AuthContextType {
   user: UserAccount | null;
@@ -139,7 +139,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return 'GUEST';
   });
 
-  const [googleClientId, setGoogleClientId] = useState<string>(() => (import.meta.env.VITE_GOOGLE_CLIENT_ID || ''));
+  const [googleClientId, setGoogleClientId] = useState<string>(
+    () => (import.meta.env.VITE_GOOGLE_CLIENT_ID || DEFAULT_GOOGLE_CLIENT_ID)
+  );
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Modals
