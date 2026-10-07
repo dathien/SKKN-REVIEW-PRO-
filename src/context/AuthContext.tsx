@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { UserAccount, UserQuota, UserRole, LicensePlan } from '../types';
 import { fetchGoogleClientId } from '../utils/googleIdentity';
 
@@ -20,7 +20,7 @@ interface AuthContextType {
   loginWithEmailDemo: (email: string, name?: string) => Promise<boolean>;
   logout: () => void;
   activateLicense: (key: string) => Promise<{ success: boolean; message: string }>;
-  refreshStatus: () => Promise<void>;
+  refreshStatus: (forcedUser?: UserAccount | null) => Promise<void>;
   updateUserQuota: (newQuota: UserQuota, newRole?: UserRole) => void;
   
   // Quota verification
@@ -44,6 +44,14 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function isSignedOutByUser(): boolean {
+  try {
+    return sessionStorage.getItem('skkn_signed_out') === 'true';
+  } catch {
+    return false;
+  }
+}
+
 function getOrCreateGuestId(): string {
   try {
     let id = localStorage.getItem('skkn_guest_id');
@@ -61,8 +69,15 @@ function getOrCreateGuestId(): string {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [guestId] = useState<string>(getOrCreateGuestId);
+
+  // Intentional logout & request lifecycle guards
+  const authGenerationRef = useRef<number>(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const signedOutRef = useRef<boolean>(isSignedOutByUser());
+
   const [user, setUser] = useState<UserAccount | null>(() => {
     try {
+      if (isSignedOutByUser()) return null;
       const saved = localStorage.getItem('skkn_user');
       if (saved) {
         const parsed = JSON.parse(saved);
@@ -85,6 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [quota, setQuota] = useState<UserQuota>(() => {
     try {
+      if (isSignedOutByUser()) return { easy: 3, advanced: 1 };
       const saved = localStorage.getItem('skkn_user');
       if (saved) {
         const parsed = JSON.parse(saved);
@@ -99,6 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [role, setRole] = useState<UserRole>(() => {
     try {
+      if (isSignedOutByUser()) return 'GUEST';
       const saved = localStorage.getItem('skkn_user');
       if (saved) {
         const parsed = JSON.parse(saved);
@@ -111,6 +128,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [plan, setPlan] = useState<LicensePlan>(() => {
     try {
+      if (isSignedOutByUser()) return 'GUEST';
       const saved = localStorage.getItem('skkn_user');
       if (saved) {
         const parsed = JSON.parse(saved);
@@ -132,27 +150,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [quotaExceededMode, setQuotaExceededMode] = useState<'easy' | 'advanced'>('easy');
 
   // Load Google Client ID & initial user status from server
-  const refreshStatus = useCallback(async () => {
+  const refreshStatus = useCallback(async (forcedUser?: UserAccount | null) => {
+    const currentGen = ++authGenerationRef.current;
+
+    // Hủy request đang in-flight nếu có
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       // 1. Get Client ID (chỉ gọi nếu chưa có trong build-time env)
       if (!googleClientId) {
         try {
-          const cid = await fetchGoogleClientId(8000);
-          if (cid) {
+          const cid = await fetchGoogleClientId(4000);
+          if (cid && currentGen === authGenerationRef.current) {
             setGoogleClientId(cid);
           }
         } catch {}
       }
 
-      // 2. Get User / Guest status (an toàn với 404 trên môi trường static)
+      const isSignedOut = signedOutRef.current || isSignedOutByUser();
+      const currentUser = forcedUser !== undefined ? forcedUser : (isSignedOut ? null : user);
+
+      // 2. Query status:
+      // QUAN TRỌNG: Nếu người dùng đã logout (isSignedOut hoặc currentUser null), TUYỆT ĐỐI KHÔNG GỬI email hay userId!
+      // CHỈ gửi guestId để server trả về phiên GUEST và quota còn lại của Guest.
       const query = new URLSearchParams();
       query.set('guestId', guestId);
-      if (user?.email) query.set('email', user.email);
-      if (user?.id) query.set('userId', user.id);
 
-      const statusResp = await fetch(`/api/user/status?${query.toString()}`).catch(() => null);
+      if (!isSignedOut && currentUser?.email) {
+        query.set('email', currentUser.email);
+      }
+      if (!isSignedOut && currentUser?.id) {
+        query.set('userId', currentUser.id);
+      }
+
+      const statusResp = await fetch(`/api/user/status?${query.toString()}`, {
+        signal: controller.signal,
+      }).catch(() => null);
+
+      if (currentGen !== authGenerationRef.current) return;
+
       if (statusResp && statusResp.ok) {
         const data = await statusResp.json().catch(() => null);
+        if (currentGen !== authGenerationRef.current) return;
+
+        // Nếu người dùng đã logout, KHÔNG BAO GIỜ khôi phục user
+        if (signedOutRef.current || isSignedOutByUser()) {
+          if (data?.quota) {
+            setQuota(data.quota);
+          }
+          return;
+        }
+
         if (data?.isLoggedIn && data.user) {
           setUser(data.user);
           setRole(data.user.role);
@@ -163,12 +215,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setQuota(data.quota);
         }
       }
-    } catch (err) {
-      // Bỏ qua lỗi kết nối máy chủ để không spam console
+    } catch (err: any) {
+      if (err?.name !== 'AbortError') {
+        // Bỏ qua lỗi kết nối máy chủ để không spam console
+      }
     } finally {
-      setIsLoading(false);
+      if (currentGen === authGenerationRef.current) {
+        setIsLoading(false);
+      }
     }
-  }, [guestId, user?.email, user?.id, googleClientId]);
+  }, [guestId, user, googleClientId]);
 
   useEffect(() => {
     refreshStatus();
@@ -193,6 +249,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const loginWithGoogleCredential = async (credential: string): Promise<boolean> => {
+    // 1. Reset cờ intentional logout vì người dùng đã chủ động đăng nhập
+    signedOutRef.current = false;
+    try {
+      sessionStorage.removeItem('skkn_signed_out');
+    } catch {}
+    const currentGen = ++authGenerationRef.current;
+
     try {
       const payload = parseJwtPayload(credential);
       const resp = await fetch('/api/auth/google', {
@@ -211,6 +274,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!resp.ok) {
         // Fallback tự động nếu backend route chưa sẵn sàng (môi trường static Vercel)
         if (payload?.email) {
+          if (currentGen !== authGenerationRef.current) return false;
           const email = String(payload.email).toLowerCase().trim();
           const isRootAdmin = email === 'dathien2412@gmail.com';
           const localUser: UserAccount = {
@@ -238,12 +302,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const data = await resp.json();
       if (data.success && data.user) {
+        if (currentGen !== authGenerationRef.current) return false;
         setUser(data.user);
         setRole(data.user.role);
         setPlan(data.user.plan);
         setQuota(data.user.quota);
         localStorage.setItem('skkn_user', JSON.stringify(data.user));
-        // Modal giữ mở để chuyển sang trạng thái đã đăng nhập (Mục 9)
         return true;
       }
       return false;
@@ -253,6 +317,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const payload = parseJwtPayload(credential);
         if (payload?.email) {
+          if (currentGen !== authGenerationRef.current) return false;
           const email = String(payload.email).toLowerCase().trim();
           const isRootAdmin = email === 'dathien2412@gmail.com';
           const localUser: UserAccount = {
@@ -280,6 +345,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const loginWithEmailDemo = async (email: string, name?: string): Promise<boolean> => {
+    signedOutRef.current = false;
+    try {
+      sessionStorage.removeItem('skkn_signed_out');
+    } catch {}
+    const currentGen = ++authGenerationRef.current;
+
     try {
       const resp = await fetch('/api/auth/google', {
         method: 'POST',
@@ -290,6 +361,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!resp.ok) return false;
       const data = await resp.json();
       if (data.success && data.user) {
+        if (currentGen !== authGenerationRef.current) return false;
         setUser(data.user);
         setRole(data.user.role);
         setPlan(data.user.plan);
@@ -305,7 +377,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    // 1. Tắt auto-select của Google Identity để không tự động đăng nhập lại
+    // 1. Tăng generation ID để vô hiệu hóa mọi request async cũ
+    authGenerationRef.current += 1;
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+
+    // 2. Ghi nhận intentional logout
+    signedOutRef.current = true;
+    try {
+      sessionStorage.setItem('skkn_signed_out', 'true');
+    } catch {}
+
+    // 3. Xóa vĩnh viễn user khỏi localStorage và Context
+    try {
+      localStorage.removeItem('skkn_user');
+    } catch {}
+
+    setUser(null);
+    setRole('GUEST');
+    setPlan('GUEST');
+
+    // 4. Báo cho Google Identity Services tắt auto-select để không tự động chọn lại
     if (typeof window !== 'undefined' && window.google?.accounts?.id?.disableAutoSelect) {
       try {
         window.google.accounts.id.disableAutoSelect();
@@ -313,13 +407,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.warn('Google disableAutoSelect warning:', err);
       }
     }
-    // 2. Clear state người dùng khỏi local storage và context
-    localStorage.removeItem('skkn_user');
-    setUser(null);
-    setRole('GUEST');
-    setPlan('GUEST');
-    // 3. Khôi phục hạn mức của Guest
-    refreshStatus();
+
+    // 5. Cập nhật hạn mức thực của Guest (chỉ truy vấn guestId, forcedUser = null)
+    refreshStatus(null);
   };
 
   const getDeviceId = () => {

@@ -61,6 +61,7 @@ export const AuthModal: React.FC = () => {
   const [googleAuthErrorMsg, setGoogleAuthErrorMsg] = useState<string | null>(null);
   const [isSubmittingGoogle, setIsSubmittingGoogle] = useState(false);
   const googleBtnRef = useRef<HTMLDivElement>(null);
+  const userInitiatedLoginRef = useRef(false);
 
   useEffect(() => {
     setAuthError(null);
@@ -134,6 +135,12 @@ export const AuthModal: React.FC = () => {
 
     // 3. GOOGLE_READY: Khởi tạo Client an toàn (chỉ gọi 1 lần duy nhất)
     const success = initializeGoogleIdentityOnce(clientId, async (response: any) => {
+      // Nếu người dùng đã logout và chưa chủ động click nút đăng nhập, bỏ qua callback tự động
+      if (sessionStorage.getItem('skkn_signed_out') === 'true' && !userInitiatedLoginRef.current) {
+        return;
+      }
+      userInitiatedLoginRef.current = false;
+
       if (response?.credential) {
         setAuthError(null);
         setIsSubmittingGoogle(true);
