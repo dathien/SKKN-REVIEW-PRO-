@@ -65,6 +65,21 @@
       "createdAt": "2026-10-07T11:45:45.055Z",
       "lastActiveAt": "2026-10-07T11:45:45.055Z",
       "isBlocked": false
+    },
+    "thiennd85@gmail.com": {
+      "id": "usr_1791385650532_uds5b",
+      "email": "thiennd85@gmail.com",
+      "name": "Thiện Nguyễn",
+      "role": "TRIAL",
+      "plan": "TRIAL",
+      "quota": {
+        "easy": 3,
+        "advanced": 1
+      },
+      "licenseExpiresAt": null,
+      "createdAt": "2026-10-07T15:07:30.532Z",
+      "lastActiveAt": "2026-10-07T15:07:30.532Z",
+      "isBlocked": false
     }
   },
   "guests": {

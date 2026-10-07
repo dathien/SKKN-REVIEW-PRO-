@@ -56,6 +56,17 @@ export const AdminPortalModal: React.FC = () => {
   const [confirmRevokeUser, setConfirmRevokeUser] = useState<UserAccount | null>(null);
   const [confirmBlockUser, setConfirmBlockUser] = useState<UserAccount | null>(null);
 
+  // Modal thêm người dùng mới
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserName, setNewUserName] = useState('');
+  const [newUserPlan, setNewUserPlan] = useState<'TRIAL' | 'LICENSED'>('TRIAL');
+  const [newUserEasyQuota, setNewUserEasyQuota] = useState<number>(3);
+  const [newUserAdvancedQuota, setNewUserAdvancedQuota] = useState<number>(1);
+  const [newUserHasExpiry, setNewUserHasExpiry] = useState(false);
+  const [newUserExpiryDate, setNewUserExpiryDate] = useState('');
+  const [isSubmittingUser, setIsSubmittingUser] = useState(false);
+
   // Modals for license actions
   const [isCreateLicenseOpen, setIsCreateLicenseOpen] = useState(false);
   const [createPlan, setCreatePlan] = useState<LicensePlan>('PRO');
@@ -334,6 +345,76 @@ export const AdminPortalModal: React.FC = () => {
         type: 'error',
         text: 'Lỗi kết nối khi khóa tài khoản.'
       });
+    }
+  };
+
+  // 4B. Thao tác Thêm người dùng mới
+  const handleOpenAddUser = () => {
+    setNewUserEmail('');
+    setNewUserName('');
+    setNewUserPlan('TRIAL');
+    setNewUserEasyQuota(settings.trialEasyLimit ?? 3);
+    setNewUserAdvancedQuota(settings.trialAdvancedLimit ?? 1);
+    setNewUserHasExpiry(false);
+    setNewUserExpiryDate('');
+    setIsAddUserOpen(true);
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanEmail = newUserEmail.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      setActionFeedback({
+        type: 'error',
+        text: 'Vui lòng nhập địa chỉ email hợp lệ.'
+      });
+      return;
+    }
+
+    setIsSubmittingUser(true);
+    try {
+      const expiresAt = newUserPlan === 'LICENSED' && newUserHasExpiry && newUserExpiryDate
+        ? new Date(newUserExpiryDate).toISOString()
+        : null;
+
+      const quota = newUserPlan === 'LICENSED'
+        ? { easy: 9999, advanced: 9999 }
+        : { easy: Math.max(0, newUserEasyQuota), advanced: Math.max(0, newUserAdvancedQuota) };
+
+      const res = await fetch('/api/admin/create-user', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          email: cleanEmail,
+          name: newUserName.trim() || undefined,
+          plan: newUserPlan,
+          role: newUserPlan === 'LICENSED' ? 'LICENSED' : 'TRIAL',
+          quota,
+          expiresAt,
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setActionFeedback({
+          type: 'success',
+          text: `Đã thêm tài khoản ${cleanEmail} vào hệ thống thành công.`
+        });
+        setIsAddUserOpen(false);
+        fetchAdminData();
+      } else {
+        setActionFeedback({
+          type: 'error',
+          text: data.error || 'Thêm người dùng thất bại.'
+        });
+      }
+    } catch {
+      setActionFeedback({
+        type: 'error',
+        text: 'Lỗi kết nối khi thêm người dùng.'
+      });
+    } finally {
+      setIsSubmittingUser(false);
     }
   };
 
@@ -774,15 +855,25 @@ export const AdminPortalModal: React.FC = () => {
                     className="w-full pl-9 pr-3.5 py-2 text-[13.5px] rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 text-slate-900"
                   />
                 </div>
-                <button
-                  type="button"
-                  onClick={fetchAdminData}
-                  disabled={isLoading}
-                  className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 font-bold text-[13px] rounded-xl border border-slate-300 shadow-2xs transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-                  <span>Làm mới danh sách</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleOpenAddUser}
+                    className="px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold text-[13px] rounded-xl shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Thêm người dùng</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={fetchAdminData}
+                    disabled={isLoading}
+                    className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 font-bold text-[13px] rounded-xl border border-slate-300 shadow-2xs transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                    <span>Làm mới</span>
+                  </button>
+                </div>
               </div>
 
               {/* Bảng Danh sách Người dùng */}
@@ -1715,6 +1806,166 @@ export const AdminPortalModal: React.FC = () => {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Con 4B: THÊM NGƯỜI DÙNG MỚI */}
+        {isAddUserOpen && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+            <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+              <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-900 text-white">
+                <div className="flex items-center gap-2">
+                  <UserCheck className="w-5 h-5 text-purple-400" />
+                  <h4 className="text-[15px] font-bold">THÊM NGƯỜI DÙNG HỆ THỐNG</h4>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAddUserOpen(false)}
+                  className="text-slate-400 hover:text-white p-1 rounded-lg cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateUser} className="p-5 space-y-4">
+                {/* Email người dùng */}
+                <div>
+                  <label className="block text-[12.5px] font-bold text-slate-700 mb-1.5">
+                    Địa chỉ Email Google <span className="text-rose-500">*</span>:
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={newUserEmail}
+                    onChange={(e) => setNewUserEmail(e.target.value)}
+                    placeholder="vidu: giaovien@gmail.com"
+                    className="w-full px-3.5 py-2 text-[13.5px] rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 text-slate-900"
+                  />
+                  <p className="text-[11.5px] text-slate-400 mt-1">
+                    Người dùng đăng nhập bằng Gmail này sẽ được nhận quyền ngay lập tức.
+                  </p>
+                </div>
+
+                {/* Tên người dùng */}
+                <div>
+                  <label className="block text-[12.5px] font-bold text-slate-700 mb-1.5">
+                    Họ và tên (Tùy chọn):
+                  </label>
+                  <input
+                    type="text"
+                    value={newUserName}
+                    onChange={(e) => setNewUserName(e.target.value)}
+                    placeholder="Nguyễn Văn A"
+                    className="w-full px-3.5 py-2 text-[13.5px] rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 text-slate-900"
+                  />
+                </div>
+
+                {/* Loại tài khoản */}
+                <div>
+                  <label className="block text-[12.5px] font-bold text-slate-700 mb-1.5">
+                    Quyền hạn cấp trước:
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setNewUserPlan('TRIAL')}
+                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        newUserPlan === 'TRIAL'
+                          ? 'border-purple-600 bg-purple-50/50 text-purple-900'
+                          : 'border-slate-200 hover:border-slate-300 text-slate-700'
+                      }`}
+                    >
+                      <div className="font-bold text-[13px]">Gói Trải nghiệm</div>
+                      <div className="text-[11.5px] text-slate-500">Giới hạn số lượt</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewUserPlan('LICENSED')}
+                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        newUserPlan === 'LICENSED'
+                          ? 'border-purple-600 bg-purple-50/50 text-purple-900'
+                          : 'border-slate-200 hover:border-slate-300 text-slate-700'
+                      }`}
+                    >
+                      <div className="font-bold text-[13px]">Đã cấp quyền</div>
+                      <div className="text-[11.5px] text-slate-500">Không giới hạn</div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Nếu chọn TRIAL: Cho cấu hình số lượt ban đầu */}
+                {newUserPlan === 'TRIAL' && (
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                    <div className="text-[12px] font-bold text-slate-700">Số lượt ban đầu:</div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11.5px] text-slate-500 mb-1">Cơ bản:</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={newUserEasyQuota}
+                          onChange={(e) => setNewUserEasyQuota(parseInt(e.target.value) || 0)}
+                          className="w-full px-2.5 py-1.5 text-[13px] font-bold rounded-lg border border-slate-300 text-slate-900"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11.5px] text-slate-500 mb-1">Chuyên sâu:</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={newUserAdvancedQuota}
+                          onChange={(e) => setNewUserAdvancedQuota(parseInt(e.target.value) || 0)}
+                          className="w-full px-2.5 py-1.5 text-[13px] font-bold rounded-lg border border-slate-300 text-slate-900"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Nếu chọn LICENSED: Tùy chọn thời hạn */}
+                {newUserPlan === 'LICENSED' && (
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+                    <div className="text-[12px] font-bold text-slate-700">Thời hạn sử dụng:</div>
+                    <label className="flex items-center gap-2 text-[12.5px] text-slate-700 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newUserHasExpiry}
+                        onChange={(e) => setNewUserHasExpiry(e.target.checked)}
+                        className="rounded text-purple-600"
+                      />
+                      <span>Có giới hạn ngày hết hạn</span>
+                    </label>
+                    {newUserHasExpiry && (
+                      <input
+                        type="date"
+                        value={newUserExpiryDate}
+                        onChange={(e) => setNewUserExpiryDate(e.target.value)}
+                        className="w-full px-3 py-1.5 text-[13px] rounded-lg border border-slate-300 text-slate-900"
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* Nút submit */}
+                <div className="flex items-center gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddUserOpen(false)}
+                    className="flex-1 py-2 text-slate-600 bg-slate-100 hover:bg-slate-200 font-bold text-[13px] rounded-xl transition-colors cursor-pointer"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingUser}
+                    className="flex-1 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold text-[13px] rounded-xl shadow-xs transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>{isSubmittingUser ? 'Đang thêm...' : 'THÊM NGƯỜI DÙNG'}</span>
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

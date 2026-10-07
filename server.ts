@@ -15,6 +15,7 @@ import {
   getSystemStats,
   getAllUsersAndGuests,
   adminUpdateUser,
+  adminCreateUser,
   adminGenerateLicense,
   getAllLicenses,
   adminResetLicenseDevices,
@@ -1017,6 +1018,30 @@ app.post('/api/admin/update-user', requireAdminMiddleware, (req, res) => {
     });
     if (!result.success) {
       return res.status(400).json({ error: result.error || 'Cập nhật người dùng thất bại' });
+    }
+    return res.json({ success: true, user: result.user });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 9B. Admin: Create User (Chỉ ROLE = ADMIN - Thêm người dùng trực tiếp)
+app.post('/api/admin/create-user', requireAdminMiddleware, (req, res) => {
+  try {
+    const { email, name, role, plan, quota, expiresAt } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Email người dùng là bắt buộc' });
+    }
+    const result = adminCreateUser({
+      email,
+      name,
+      role,
+      plan,
+      quota,
+      expiresAt,
+    });
+    if (!result.success) {
+      return res.status(400).json({ error: result.error || 'Thêm người dùng thất bại' });
     }
     return res.json({ success: true, user: result.user });
   } catch (err: any) {

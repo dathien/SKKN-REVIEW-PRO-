@@ -1,3 +1,5 @@
+import { getOrCreateUser } from '../../src/server/authStore';
+
 export default async function handler(req: any, res: any) {
   res.setHeader('Content-Type', 'application/json');
 
@@ -29,21 +31,13 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: 'Không thể xác định email Google' });
     }
 
-    const ROOT_ADMIN_EMAILS = ['dathien2412@gmail.com'];
-    const isRootAdmin = ROOT_ADMIN_EMAILS.includes(userEmail);
-
-    const user = {
-      id: userId || `usr_${Date.now()}`,
+    // Persist into unified USERS database
+    const user = await getOrCreateUser({
       email: userEmail,
-      name: isRootAdmin ? (userName || 'Đa Thiện Hồ Nguyễn') : (userName || userEmail.split('@')[0]),
+      name: userName,
       picture: userPicture,
-      role: isRootAdmin ? 'ADMIN' : 'TRIAL',
-      plan: isRootAdmin ? 'PRO' : 'TRIAL',
-      quota: isRootAdmin ? { easy: 9999, advanced: 9999 } : { easy: 3, advanced: 1 },
-      createdAt: new Date().toISOString(),
-      lastActiveAt: new Date().toISOString(),
-      isBlocked: false,
-    };
+      id: userId,
+    });
 
     return res.status(200).json({ success: true, user });
   } catch (err: any) {

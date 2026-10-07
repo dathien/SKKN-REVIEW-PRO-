@@ -118,6 +118,7 @@ export function loadStore() {
         guests: parsed.guests || {},
         licenses: parsed.licenses || {},
         stats: parsed.stats || { totalAnalyses: 0 },
+        settings: parsed.settings || undefined,
       };
       // Normalize licenses
       Object.values(store.licenses).forEach(lic => {
@@ -717,6 +718,67 @@ export function adminUpdateUser(params: {
     }
   }
 
+  saveStore();
+  return { success: true, user };
+}
+
+export function adminCreateUser(params: {
+  email: string;
+  name?: string;
+  role?: UserRole;
+  plan?: LicensePlan;
+  quota?: { easy: number; advanced: number };
+  expiresAt?: string | null;
+}): { success: boolean; user?: UserAccount; error?: string } {
+  const email = params.email.trim().toLowerCase();
+  if (!email || !email.includes('@')) {
+    return { success: false, error: 'Email không hợp lệ' };
+  }
+
+  let user = findUserByEmailOrId(email);
+  const now = new Date().toISOString();
+  const isRootAdmin = ROOT_ADMIN_EMAILS.includes(email);
+
+  if (user) {
+    // Nếu user đã tồn tại, cập nhật quyền/gói/lượt nếu được chỉ định
+    if (params.role !== undefined) user.role = isRootAdmin ? 'ADMIN' : params.role;
+    if (params.plan !== undefined) user.plan = isRootAdmin ? 'PRO' : params.plan;
+    if (params.name && !user.name) user.name = params.name;
+    if (params.quota) user.quota = params.quota;
+    if (params.expiresAt !== undefined) user.licenseExpiresAt = params.expiresAt;
+    if (user.plan === 'LICENSED') {
+      if (user.role !== 'ADMIN') user.role = 'LICENSED';
+      user.quota = { easy: 9999, advanced: 9999 };
+    }
+    user.lastActiveAt = now;
+    saveStore();
+    return { success: true, user };
+  }
+
+  const role: UserRole = isRootAdmin ? 'ADMIN' : (params.role || 'TRIAL');
+  const plan: LicensePlan = isRootAdmin ? 'PRO' : (params.plan || (role === 'ADMIN' ? 'PRO' : 'TRIAL'));
+  const isUnlimited = role === 'ADMIN' || role === 'LICENSED' || role === 'FREE_ACCESS';
+
+  const defaultTrialEasy = store.settings?.trialEasyLimit ?? 3;
+  const defaultTrialAdvanced = store.settings?.trialAdvancedLimit ?? 1;
+
+  const quota = params.quota || (isUnlimited ? { easy: 9999, advanced: 9999 } : { easy: defaultTrialEasy, advanced: defaultTrialAdvanced });
+
+  user = {
+    id: `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    email,
+    name: params.name?.trim() || (isRootAdmin ? 'Đa Thiện Hồ Nguyễn' : email.split('@')[0]),
+    role,
+    plan,
+    quota,
+    licenseKey: isRootAdmin ? 'SKKN-ADMIN-SYSTEM' : (role === 'LICENSED' ? `SKKN-DIRECT-${Date.now().toString(36).toUpperCase()}` : undefined),
+    licenseExpiresAt: params.expiresAt || null,
+    createdAt: now,
+    lastActiveAt: now,
+    isBlocked: false,
+  };
+
+  store.users[email] = user;
   saveStore();
   return { success: true, user };
 }
