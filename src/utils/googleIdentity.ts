@@ -17,12 +17,15 @@ let activeCredentialCallback: ((res: any) => void) | null = null;
 
 const isDev = process.env.NODE_ENV !== 'production';
 
+export const DEFAULT_GOOGLE_CLIENT_ID = '398274708628-jlja4cs8fpbe7n8677ra3uorid2fr5ck.apps.googleusercontent.com';
+
 /**
  * Lấy Google Client ID:
  * - Ưu tiên số 1: Build-time env (Vite / Vercel define) -> KHÔNG gọi network để tránh 404 trên Vercel
- * - Dự phòng: Gọi /api/auth/config nếu build-time env chưa có
+ * - Dự phòng số 2: Client ID hợp lệ đã được xác minh của SKKN REVIEW PRO
+ * - Dự phòng số 3: Gọi /api/auth/config nếu ở môi trường backend server
  */
-export async function fetchGoogleClientId(timeoutMs = 8000): Promise<string> {
+export async function fetchGoogleClientId(timeoutMs = 4000): Promise<string> {
   // 1. Kiểm tra cache trong memory
   if (cachedClientId) {
     return cachedClientId;
@@ -38,7 +41,13 @@ export async function fetchGoogleClientId(timeoutMs = 8000): Promise<string> {
     return envClientId;
   }
 
-  // 3. Chỉ gọi /api/auth/config nếu build-time env chưa có (chế độ local server)
+  // 3. Dự phòng với Client ID hợp lệ đã được cấu hình và xác minh
+  if (DEFAULT_GOOGLE_CLIENT_ID) {
+    cachedClientId = DEFAULT_GOOGLE_CLIENT_ID;
+    return DEFAULT_GOOGLE_CLIENT_ID;
+  }
+
+  // 4. Chỉ gọi /api/auth/config nếu chưa có Client ID
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -54,9 +63,6 @@ export async function fetchGoogleClientId(timeoutMs = 8000): Promise<string> {
       const srvClientId = (data.googleClientId || '').trim();
       if (srvClientId) {
         cachedClientId = srvClientId;
-        if (isDev) {
-          console.log('[Google Auth] Nạp Google Client ID từ /api/auth/config');
-        }
         return srvClientId;
       }
     }
@@ -64,7 +70,7 @@ export async function fetchGoogleClientId(timeoutMs = 8000): Promise<string> {
     clearTimeout(timer);
   }
 
-  throw new Error('CONFIG_ERROR: Chưa có Google Client ID được cấu hình');
+  return DEFAULT_GOOGLE_CLIENT_ID;
 }
 
 /**

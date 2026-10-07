@@ -160,14 +160,14 @@ export const AuthModal: React.FC = () => {
     }
   }, [isLoggedIn, googleClientId, loginWithGoogleCredential]);
 
-  // Kích hoạt nạp khi modal mở
+  // Kích hoạt nạp dịch vụ ngầm khi modal mở (không gọi prompt tự động)
   useEffect(() => {
     if (isAuthModalOpen && !isLoggedIn) {
       initGoogleIdentity();
     }
   }, [isAuthModalOpen, isLoggedIn, initGoogleIdentity]);
 
-  // Render Google Button chính thức khi trạng thái GOOGLE_READY (Tuyệt đối dùng signin_with, không dùng continue_with để không tự hiện avatar)
+  // Chuẩn bị Google Button layer trong suốt để nhận click chuẩn từ người dùng
   useEffect(() => {
     if (
       isAuthModalOpen &&
@@ -176,7 +176,6 @@ export const AuthModal: React.FC = () => {
       googleBtnRef.current &&
       window.google?.accounts?.id
     ) {
-      // Nếu container đã có button rendered thì không render lại gây chớp/biến đổi
       if (googleBtnRef.current.hasChildNodes()) {
         return;
       }
@@ -185,17 +184,46 @@ export const AuthModal: React.FC = () => {
           type: 'standard',
           theme: 'outline',
           size: 'large',
-          width: 280,
+          width: 320,
           text: 'signin_with',
           shape: 'rectangular',
           logo_alignment: 'left',
           locale: 'vi',
         });
       } catch (err) {
-        console.warn('Could not render Google Button:', err);
+        console.warn('Could not render Google Button overlay:', err);
       }
     }
   }, [isAuthModalOpen, isLoggedIn, googleAuthStatus]);
+
+  // Xử lý khi người dùng chủ động click nút "Đăng nhập bằng Google"
+  const handleGoogleSignInClick = async () => {
+    if (isSubmittingGoogle) return;
+    setAuthError(null);
+
+    // Nếu dịch vụ Google chưa sẵn sàng, thử khởi tạo
+    if (!window.google?.accounts?.id) {
+      try {
+        await initGoogleIdentity();
+      } catch {
+        setAuthError('Không thể khởi tạo đăng nhập Google. Vui lòng thử lại.');
+        return;
+      }
+    }
+
+    // Kích hoạt account chooser qua Google prompt khi người dùng đã click
+    if (window.google?.accounts?.id?.prompt) {
+      try {
+        window.google.accounts.id.prompt((notification: any) => {
+          if (notification?.isNotDisplayed?.()) {
+            console.warn('Google prompt not displayed:', notification.getNotDisplayedReason?.());
+          }
+        });
+      } catch (err) {
+        console.warn('Google prompt error:', err);
+      }
+    }
+  };
 
   if (!isAuthModalOpen) return null;
 
@@ -521,52 +549,59 @@ export const AuthModal: React.FC = () => {
                 </div>
               )}
 
-              {/* Google Identity Services State & Button Container */}
+              {/* Nút đăng nhập Google do SKKN REVIEW PRO kiểm soát UI cố định */}
               <div className="py-2 flex flex-col items-center justify-center min-h-[56px]">
                 {isSubmittingGoogle ? (
-                  <div className="w-full max-w-xs py-3 px-4 flex items-center justify-center gap-2.5 text-[13px] text-blue-700 font-semibold bg-blue-50 border border-blue-200 rounded-xl">
+                  <div className="w-full max-w-xs py-2.5 px-4 flex items-center justify-center gap-2.5 text-[13.5px] text-blue-700 font-semibold bg-blue-50 border border-blue-200 rounded-xl shadow-xs">
                     <Loader2 className="w-4 h-4 animate-spin text-blue-600 shrink-0" />
                     <span>Đang xác thực tài khoản Google...</span>
                   </div>
-                ) : googleAuthStatus === 'LOADING_CONFIG' ? (
-                  <div className="py-2 flex flex-col items-center justify-center gap-2">
-                    <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                    <p className="text-[12.5px] text-slate-500 text-center font-medium">
-                      Đang nạp thông tin Google Client ID...
-                    </p>
-                  </div>
-                ) : googleAuthStatus === 'GOOGLE_SCRIPT_LOADING' ? (
-                  <div className="py-2 flex flex-col items-center justify-center gap-2">
-                    <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                    <p className="text-[12.5px] text-slate-500 text-center font-medium">
-                      Đang khởi tạo dịch vụ đăng nhập Google...
-                    </p>
-                  </div>
-                ) : googleAuthStatus === 'CONFIG_ERROR' || googleAuthStatus === 'GOOGLE_ERROR' ? (
-                  <div className="w-full max-w-xs p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-center space-y-2">
-                    <div className="flex items-center justify-center gap-1.5 text-rose-800 text-[13px] font-semibold">
-                      <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-                      <span>Không thể khởi tạo đăng nhập Google.</span>
-                    </div>
-                    {googleAuthErrorMsg && (
-                      <p className="text-[12px] text-rose-600 leading-snug">
-                        {googleAuthErrorMsg}
-                      </p>
-                    )}
+                ) : (
+                  <div className="relative w-full max-w-xs flex flex-col items-center">
+                    {/* Nút React tùy biến ổn định tuyệt đối - Không bao giờ tự đổi sang avatar hay tên */}
                     <button
                       type="button"
-                      onClick={() => {
-                        resetGoogleAuthCache();
-                        initGoogleIdentity();
-                      }}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-[12.5px] font-bold shadow-xs transition-colors cursor-pointer"
+                      onClick={handleGoogleSignInClick}
+                      className="relative w-full py-2.5 px-4 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 hover:text-slate-900 font-semibold text-[14px] rounded-xl border border-slate-300 shadow-xs flex items-center justify-center gap-3 transition-all cursor-pointer select-none overflow-hidden"
                     >
-                      <RefreshCw className="w-3.5 h-3.5" />
-                      <span>THỬ LẠI</span>
+                      {/* Logo chuẩn Google */}
+                      <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                        <path
+                          fill="#4285F4"
+                          d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                        />
+                        <path
+                          fill="#34A853"
+                          d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                        />
+                        <path
+                          fill="#FBBC05"
+                          d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                        />
+                        <path
+                          fill="#EA4335"
+                          d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                        />
+                      </svg>
+                      <span>Đăng nhập bằng Google</span>
+
+                      {/* Lớp bắt click Google chính thức (trong suốt hoàn toàn, nhận click chuẩn) */}
+                      <div
+                        ref={googleBtnRef}
+                        className="absolute inset-0 opacity-[0.001] overflow-hidden flex items-center justify-center pointer-events-auto"
+                        style={{ transform: 'scale(1.5)' }}
+                        title="Đăng nhập bằng Google"
+                      />
                     </button>
+
+                    {/* Chỉ hiển thị thông báo lỗi nếu có */}
+                    {(googleAuthStatus === 'CONFIG_ERROR' || googleAuthStatus === 'GOOGLE_ERROR') && googleAuthErrorMsg && (
+                      <div className="mt-2 text-center text-[12px] text-rose-600 flex items-center justify-center gap-1">
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-rose-500" />
+                        <span>{googleAuthErrorMsg}</span>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div ref={googleBtnRef} className="min-h-[44px] flex justify-center w-full max-w-xs" />
                 )}
               </div>
 
