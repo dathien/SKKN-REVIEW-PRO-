@@ -128,16 +128,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshStatus();
   }, [refreshStatus]);
 
+  const parseJwtPayload = (token: string) => {
+    try {
+      const parts = token.split('.');
+      if (parts.length < 2) return null;
+      const base64Url = parts[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      );
+      return JSON.parse(jsonPayload);
+    } catch {
+      return null;
+    }
+  };
+
   const loginWithGoogleCredential = async (credential: string): Promise<boolean> => {
     try {
+      const payload = parseJwtPayload(credential);
       const resp = await fetch('/api/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ credential, guestId })
+        body: JSON.stringify({
+          credential,
+          guestId,
+          email: payload?.email,
+          name: payload?.name,
+          picture: payload?.picture,
+          id: payload?.sub,
+        })
       });
 
       if (!resp.ok) {
-        throw new Error('Đăng nhập Google không thành công');
+        const errData = await resp.json().catch(() => null);
+        throw new Error(errData?.error || 'Đăng nhập Google không thành công');
       }
 
       const data = await resp.json();
@@ -147,7 +174,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setPlan(data.user.plan);
         setQuota(data.user.quota);
         localStorage.setItem('skkn_user', JSON.stringify(data.user));
-        setIsAuthModalOpen(false);
+        // Modal giữ mở để chuyển sang trạng thái đã đăng nhập (Mục 9)
         return true;
       }
       return false;
@@ -173,7 +200,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setPlan(data.user.plan);
         setQuota(data.user.quota);
         localStorage.setItem('skkn_user', JSON.stringify(data.user));
-        setIsAuthModalOpen(false);
         return true;
       }
       return false;
@@ -184,11 +210,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    // 1. Tắt auto-select của Google Identity để không tự động đăng nhập lại
+    if (typeof window !== 'undefined' && window.google?.accounts?.id?.disableAutoSelect) {
+      try {
+        window.google.accounts.id.disableAutoSelect();
+      } catch (err) {
+        console.warn('Google disableAutoSelect warning:', err);
+      }
+    }
+    // 2. Clear state người dùng khỏi local storage và context
     localStorage.removeItem('skkn_user');
     setUser(null);
     setRole('GUEST');
     setPlan('GUEST');
-    // Fetch guest quota
+    // 3. Khôi phục hạn mức của Guest
     refreshStatus();
   };
 

@@ -43,6 +43,7 @@ export const AuthModal: React.FC = () => {
     googleClientId,
     isAuthModalOpen,
     closeAuthModal,
+    openAdminModal,
     loginWithGoogleCredential,
     logout,
     refreshStatus,
@@ -141,15 +142,15 @@ export const AuthModal: React.FC = () => {
             try {
               const success = await loginWithGoogleCredential(response.credential);
               if (!success) {
-                setAuthError('Không thể đăng nhập Google. Vui lòng thử lại.');
+                setAuthError('Không thể hoàn tất đăng nhập Google.');
               }
             } catch {
-              setAuthError('Lỗi kết nối khi xác thực tài khoản Google.');
+              setAuthError('Không thể hoàn tất đăng nhập Google.');
             } finally {
               setIsSubmittingGoogle(false);
             }
           } else {
-            setAuthError('Không nhận được thông tin xác thực từ Google.');
+            setAuthError('Không thể hoàn tất đăng nhập Google.');
           }
         },
         auto_select: false,
@@ -175,7 +176,7 @@ export const AuthModal: React.FC = () => {
     }
   }, [isAuthModalOpen, isLoggedIn, initGoogleIdentity]);
 
-  // Render Google Button khi trạng thái GOOGLE_READY
+  // Render Google Button chính thức khi trạng thái GOOGLE_READY (Tuyệt đối dùng signin_with, không dùng continue_with để không tự hiện avatar)
   useEffect(() => {
     if (
       isAuthModalOpen &&
@@ -187,10 +188,13 @@ export const AuthModal: React.FC = () => {
       googleBtnRef.current.innerHTML = '';
       try {
         window.google.accounts.id.renderButton(googleBtnRef.current, {
+          type: 'standard',
           theme: 'outline',
           size: 'large',
-          width: '100%',
-          text: 'continue_with',
+          width: 280,
+          text: 'signin_with',
+          shape: 'rectangular',
+          logo_alignment: 'left',
           locale: 'vi',
         });
       } catch (err) {
@@ -445,7 +449,7 @@ export const AuthModal: React.FC = () => {
                 </div>
               )}
 
-              {/* Action Buttons */}
+              {/* Action Buttons (Mục 10: ĐÓNG, ĐĂNG XUẤT, QUẢN TRỊ) */}
               <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
                 <button
                   type="button"
@@ -466,6 +470,7 @@ export const AuthModal: React.FC = () => {
                   >
                     <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                   </button>
+
                   <button
                     type="button"
                     onClick={closeAuthModal}
@@ -473,6 +478,20 @@ export const AuthModal: React.FC = () => {
                   >
                     Đóng
                   </button>
+
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        closeAuthModal();
+                        openAdminModal();
+                      }}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold text-[13.5px] rounded-xl shadow-xs transition-colors cursor-pointer"
+                    >
+                      <Shield className="w-4 h-4" />
+                      <span>Quản trị</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -488,11 +507,23 @@ export const AuthModal: React.FC = () => {
                 </p>
               </div>
 
-              {/* Error Banner nếu có */}
+              {/* Error Banner nếu có (Mục 13: Có nút THỬ LẠI) */}
               {authError && (
-                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-[13px] flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                  <span>{authError}</span>
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-[13px] flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                    <span>{authError}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthError(null);
+                      initGoogleIdentity();
+                    }}
+                    className="px-2.5 py-1 text-[12px] font-bold bg-white text-rose-700 hover:bg-rose-100 border border-rose-300 rounded-lg cursor-pointer shrink-0"
+                  >
+                    THỬ LẠI
+                  </button>
                 </div>
               )}
 

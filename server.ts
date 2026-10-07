@@ -754,55 +754,74 @@ app.get('/api/auth/config', (_req, res) => {
   });
 });
 
+// Helper giải mã an toàn Google ID Token JWT
+function decodeGoogleJwt(token: string): any {
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+    const decoded = Buffer.from(parts[1], 'base64url').toString('utf-8');
+    return JSON.parse(decoded);
+  } catch {
+    try {
+      const parts = token.split('.');
+      const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const decoded = Buffer.from(b64, 'base64').toString('utf-8');
+      return JSON.parse(decoded);
+    } catch {
+      return null;
+    }
+  }
+}
+
 // 2. Google Sign-In & Verification
 app.post('/api/auth/google', async (req, res) => {
   try {
     const { credential, email, name, picture, id } = req.body;
-    let userEmail = email;
-    let userName = name;
+    let userEmail = email ? String(email).trim().toLowerCase() : '';
+    let userName = name ? String(name).trim() : '';
     let userPicture = picture;
     let userId = id;
 
-    // Backend xác minh Google ID Token để lấy sub/email thật
+    // 1. Giải mã token payload từ credential nếu có
     if (credential && typeof credential === 'string') {
+      const jwtPayload = decodeGoogleJwt(credential);
+      if (jwtPayload) {
+        if (!userEmail && jwtPayload.email) userEmail = String(jwtPayload.email).trim().toLowerCase();
+        if (!userName && jwtPayload.name) userName = jwtPayload.name;
+        if (!userPicture && jwtPayload.picture) userPicture = jwtPayload.picture;
+        if (!userId && jwtPayload.sub) userId = jwtPayload.sub;
+      }
+
+      // 2. Cố gắng xác minh qua Google tokeninfo với timeout 4s
       try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 4000);
         const tokenResp = await fetch(
-          `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`
-        );
-        if (tokenResp.ok) {
-          const gInfo = await tokenResp.json();
-          if (gInfo.email) userEmail = gInfo.email;
-          if (gInfo.name) userName = gInfo.name;
-          if (gInfo.picture) userPicture = gInfo.picture;
-          if (gInfo.sub) userId = gInfo.sub;
-        } else {
-          // Decode payload an toàn nếu không gọi được tokeninfo
-          const parts = credential.split('.');
-          if (parts.length === 3) {
-            const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
-            if (payload.email) userEmail = payload.email;
-            if (payload.name) userName = payload.name;
-            if (payload.picture) userPicture = payload.picture;
-            if (payload.sub) userId = payload.sub;
+          `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`,
+          { signal: controller.signal }
+        ).catch(() => null);
+        clearTimeout(timeout);
+
+        if (tokenResp?.ok) {
+          const gInfo = await tokenResp.json().catch(() => null);
+          if (gInfo) {
+            if (gInfo.email) userEmail = String(gInfo.email).trim().toLowerCase();
+            if (gInfo.name) userName = gInfo.name;
+            if (gInfo.picture) userPicture = gInfo.picture;
+            if (gInfo.sub) userId = gInfo.sub;
           }
         }
       } catch (tokenErr) {
-        const parts = credential.split('.');
-        if (parts.length === 3) {
-          const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
-          if (payload.email) userEmail = payload.email;
-          if (payload.name) userName = payload.name;
-          if (payload.picture) userPicture = payload.picture;
-          if (payload.sub) userId = payload.sub;
-        }
+        // Nếu tokeninfo lỗi mạng, sử dụng payload đã giải mã
+        console.warn('Google tokeninfo verification network note:', tokenErr);
       }
     }
 
     if (!userEmail) {
-      return res.status(400).json({ error: 'Thiếu thông tin email Google xác thực' });
+      return res.status(400).json({ error: 'Không thể xác định email Google hợp lệ' });
     }
 
-    // Đọc user từ License API / Google Sheets và đồng bộ vai trò USERS.ROLE
+    // Đọc user từ store / License API / Google Sheets và đồng bộ vai trò USERS.ROLE
     const user = await getOrCreateUser({
       email: userEmail,
       name: userName,

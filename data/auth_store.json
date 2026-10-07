@@ -13,9 +13,9 @@
       "licenseKey": "SKKN-ADMIN-SYSTEM",
       "licenseExpiresAt": null,
       "createdAt": "2026-10-07T00:29:18.129Z",
-      "lastActiveAt": "2026-10-07T05:01:59.372Z",
+      "lastActiveAt": "2026-10-07T11:45:54.688Z",
       "isBlocked": false,
-      "picture": "https://lh3.googleusercontent.com/a/ACg8ocJ_uW-RC5IuVcgYYhb8i9A16OPkteLCs4CLI63kdGbWptuEgXbj=s96-c"
+      "picture": "https://lh3.googleusercontent.com/test"
     },
     "teacher1@gmail.com": {
       "id": "usr_1791332976299_ra51d",
@@ -48,6 +48,22 @@
       "freeAccess": false,
       "createdAt": "2026-10-07T08:26:28.778Z",
       "lastActiveAt": "2026-10-07T08:26:28.778Z",
+      "isBlocked": false
+    },
+    "giaovien.moi.2026@gmail.com": {
+      "id": "sub_new_test",
+      "email": "giaovien.moi.2026@gmail.com",
+      "name": "Nguyễn Văn Mới",
+      "role": "TRIAL",
+      "plan": "TRIAL",
+      "quota": {
+        "easy": 3,
+        "advanced": 1
+      },
+      "licenseExpiresAt": null,
+      "freeAccess": false,
+      "createdAt": "2026-10-07T11:45:45.055Z",
+      "lastActiveAt": "2026-10-07T11:45:45.055Z",
       "isBlocked": false
     }
   },

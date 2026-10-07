@@ -22,9 +22,39 @@ let store: AuthStoreData = {
   stats: { totalAnalyses: 0 },
 };
 
-// Initialize default sample licenses
+export const ROOT_ADMIN_EMAILS: string[] = [
+  'dathien2412@gmail.com',
+];
+
+// Initialize default sample licenses and Root Admin
 function initDefaultData() {
   const now = new Date().toISOString();
+
+  // Ensure Root Admin account is always present and has full ADMIN rights
+  ROOT_ADMIN_EMAILS.forEach(adminEmail => {
+    if (!store.users[adminEmail]) {
+      store.users[adminEmail] = {
+        id: 'admin_root_' + adminEmail.split('@')[0],
+        email: adminEmail,
+        name: 'Đa Thiện Hồ Nguyễn',
+        role: 'ADMIN',
+        plan: 'PRO',
+        quota: { easy: 9999, advanced: 9999 },
+        licenseKey: 'SKKN-ADMIN-SYSTEM',
+        licenseExpiresAt: null,
+        createdAt: now,
+        lastActiveAt: now,
+        isBlocked: false,
+      };
+    } else {
+      // Đảm bảo không bị mất quyền ADMIN
+      store.users[adminEmail].role = 'ADMIN';
+      store.users[adminEmail].plan = 'PRO';
+      store.users[adminEmail].quota = { easy: 9999, advanced: 9999 };
+      store.users[adminEmail].isBlocked = false;
+    }
+  });
+
   // Seed some sample VIP / Official licenses for testing & activation
   const defaultLicenses: LicenseItem[] = [
     {
@@ -221,56 +251,69 @@ export async function getOrCreateUser(profile: {
 
   // Tra cứu vai trò từ License API / Google Sheets nếu đã cấu hình LICENSE_API_URL
   const remoteData = await fetchUserFromLicenseApi(email, profile.id);
+  const isRootAdmin = ROOT_ADMIN_EMAILS.includes(email);
 
   if (!user) {
     const userId = profile.id || `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-    const role: UserRole = remoteData?.role || 'TRIAL';
-    const plan: LicensePlan = remoteData?.plan || (role === 'ADMIN' ? 'PRO' : 'TRIAL');
+    const role: UserRole = isRootAdmin ? 'ADMIN' : (remoteData?.role || 'TRIAL');
+    const plan: LicensePlan = isRootAdmin ? 'PRO' : (remoteData?.plan || (role === 'ADMIN' ? 'PRO' : 'TRIAL'));
     const isUnlimited = role === 'ADMIN' || role === 'LICENSED' || role === 'FREE_ACCESS';
+
+    const defaultTrialEasy = store.settings?.trialEasyLimit ?? 3;
+    const defaultTrialAdvanced = store.settings?.trialAdvancedLimit ?? 1;
 
     user = {
       id: userId,
       email,
-      name: remoteData?.name || profile.name || email.split('@')[0],
+      name: isRootAdmin ? (profile.name || 'Đa Thiện Hồ Nguyễn') : (remoteData?.name || profile.name || email.split('@')[0]),
       picture: profile.picture,
       role,
       plan,
-      quota: isUnlimited ? { easy: 9999, advanced: 9999 } : { easy: 5, advanced: 2 },
-      licenseKey: role === 'ADMIN' ? 'SKKN-ADMIN-SYSTEM' : undefined,
+      quota: isUnlimited ? { easy: 9999, advanced: 9999 } : { easy: defaultTrialEasy, advanced: defaultTrialAdvanced },
+      licenseKey: isRootAdmin ? 'SKKN-ADMIN-SYSTEM' : (role === 'ADMIN' ? 'SKKN-ADMIN-SYSTEM' : undefined),
       licenseExpiresAt: null,
       freeAccess: remoteData?.freeAccess || role === 'FREE_ACCESS',
       freeAccessName: remoteData?.freeAccessName,
       freeAccessExpiresAt: remoteData?.freeAccessExpiresAt,
       createdAt: new Date().toISOString(),
       lastActiveAt: new Date().toISOString(),
-      isBlocked: role === 'BLOCKED',
+      isBlocked: isRootAdmin ? false : role === 'BLOCKED',
     };
     store.users[email] = user;
     saveStore();
   } else {
-    // Nếu có phân quyền cập nhật từ Google Sheets / License API thì đồng bộ
-    if (remoteData?.role) {
-      user.role = remoteData.role;
-      if (remoteData.role === 'ADMIN' || remoteData.role === 'LICENSED' || remoteData.role === 'FREE_ACCESS') {
-        user.quota = { easy: 9999, advanced: 9999 };
+    // Nếu là Root Admin, luôn đảm bảo quyền ADMIN cao nhất
+    if (isRootAdmin) {
+      user.role = 'ADMIN';
+      user.plan = 'PRO';
+      user.quota = { easy: 9999, advanced: 9999 };
+      user.isBlocked = false;
+      user.licenseKey = 'SKKN-ADMIN-SYSTEM';
+    } else {
+      // Nếu có phân quyền cập nhật từ Google Sheets / License API thì đồng bộ
+      if (remoteData?.role) {
+        user.role = remoteData.role;
+        if (remoteData.role === 'ADMIN' || remoteData.role === 'LICENSED' || remoteData.role === 'FREE_ACCESS') {
+          user.quota = { easy: 9999, advanced: 9999 };
+        }
       }
-    }
-    if (remoteData?.freeAccess !== undefined) {
-      user.freeAccess = remoteData.freeAccess;
-    }
-    if (remoteData?.freeAccessName) {
-      user.freeAccessName = remoteData.freeAccessName;
-    }
-    if (remoteData?.freeAccessExpiresAt) {
-      user.freeAccessExpiresAt = remoteData.freeAccessExpiresAt;
-    }
-    if (remoteData?.plan) {
-      user.plan = remoteData.plan;
-    }
-    if (remoteData?.name) {
-      user.name = remoteData.name;
-    } else if (profile.name) {
-      user.name = profile.name;
+      if (remoteData?.freeAccess !== undefined) {
+        user.freeAccess = remoteData.freeAccess;
+      }
+      if (remoteData?.freeAccessName) {
+        user.freeAccessName = remoteData.freeAccessName;
+      }
+      if (remoteData?.freeAccessExpiresAt) {
+        user.freeAccessExpiresAt = remoteData.freeAccessExpiresAt;
+      }
+      if (remoteData?.plan) {
+        user.plan = remoteData.plan;
+      }
+      if (remoteData?.name) {
+        user.name = remoteData.name;
+      } else if (profile.name) {
+        user.name = profile.name;
+      }
     }
     if (profile.picture) user.picture = profile.picture;
     user.lastActiveAt = new Date().toISOString();
