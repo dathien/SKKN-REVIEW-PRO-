@@ -12,7 +12,7 @@ import { CorePrinciplesModal } from './components/CorePrinciplesModal';
 import { DocumentProfileDrawer } from './components/DocumentProfileDrawer';
 import { ProfileSelectorModal } from './components/ProfileSelectorModal';
 import { UploadWorkspace } from './components/UploadWorkspace';
-import { CheckCircle2, FileText } from 'lucide-react';
+import { CheckCircle2, FileText, ShieldAlert } from 'lucide-react';
 import { FriendlyErrorInfo, classifyError, sleep, getRetryDelay } from './utils/aiErrorHandler';
 import { extractGeminiOutput, parseAnalysisResponse, normalizeAnalysisResult } from './utils/analysisPipeline';
 
@@ -33,6 +33,12 @@ import { CouncilSimulatorView } from './components/views/CouncilSimulatorView';
 import { RescoreView } from './components/views/RescoreView';
 import { ReportView } from './components/views/ReportView';
 
+// Auth & Modals
+import { useAuth } from './context/AuthContext';
+import { AuthModal } from './components/AuthModal';
+import { QuotaExceededModal } from './components/QuotaExceededModal';
+import { AdminPortalModal } from './components/AdminPortalModal';
+
 // Sample Data & Types
 import { sampleInitiative1, sampleInitiative2 } from './services/sampleData';
 import {
@@ -46,6 +52,7 @@ import {
 } from './types';
 
 export default function App() {
+  const { user, guestId, role, hasQuotaForMode, openQuotaModal, updateUserQuota, isAdmin, openAdminModal, isLoading: isAuthLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [selectedSampleIndex, setSelectedSampleIndex] = useState<number>(0);
   const [analysis, setAnalysis] = useState<SKKNAnalysisResult>(sampleInitiative1);
@@ -59,6 +66,21 @@ export default function App() {
   const [completionToast, setCompletionToast] = useState<{ count: number } | null>(null);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [appMode, setAppMode] = useState<AppMode>('easy');
+  const [rescoreError, setRescoreError] = useState<{ message: string; retryable?: boolean } | null>(null);
+  const [adminAccessDenied, setAdminAccessDenied] = useState<boolean>(false);
+
+  // Xử lý truy cập đường dẫn /quan-tri: Chỉ ROLE = ADMIN mới được truy cập, ngược lại hiển thị 403
+  useEffect(() => {
+    const isQuanTriPath = window.location.pathname === '/quan-tri' || window.location.pathname.startsWith('/quan-tri');
+    if (!isQuanTriPath || isAuthLoading) return;
+
+    if (role === 'ADMIN') {
+      setAdminAccessDenied(false);
+      openAdminModal();
+    } else {
+      setAdminAccessDenied(true);
+    }
+  }, [role, isAuthLoading, openAdminModal]);
 
   // Auto-dismiss completion toast after 7s (Item 8)
   useEffect(() => {
@@ -168,6 +190,12 @@ export default function App() {
       return;
     }
 
+    // Kiểm tra số lượt còn lại theo chế độ (Dễ dùng / Chuyên sâu)
+    if (!hasQuotaForMode(appMode)) {
+      openQuotaModal(appMode);
+      return;
+    }
+
     if (!skknText || skknText.trim().length < 20) {
       setWorkflowStatus('ERROR');
       setAnalysisError({
@@ -222,7 +250,13 @@ export default function App() {
                 size: f.size,
                 text: f.textContent
               })),
-              promptNotes: notes
+              promptNotes: notes,
+              userContext: {
+                guestId,
+                email: user?.email,
+                userId: user?.id,
+                mode: appMode
+              }
             }),
             signal: controller.signal
           });
@@ -234,6 +268,14 @@ export default function App() {
             try {
               errJson = await response.json();
             } catch (_) {}
+
+            if (response.status === 403 && (errJson?.code === 'GUEST_QUOTA_EXCEEDED' || errJson?.code === 'TRIAL_QUOTA_EXCEEDED')) {
+              openQuotaModal(appMode);
+              isAnalyzingRef.current = false;
+              setIsAnalyzing(false);
+              setWorkflowStatus('IDLE');
+              return;
+            }
 
             console.warn('[STAGE: RESPONSE] HTTP error from /api/analyze-skkn:', response.status, errJson);
             const classified = classifyError(response.status, errJson, null, attempt + 1);
@@ -293,6 +335,10 @@ export default function App() {
           setWorkflowStatus('COMPLETED');
           setRetryState(null);
           setAnalysisError(null);
+
+          if (rawData?.quota) {
+            updateUserQuota(rawData.quota, rawData.role);
+          }
 
           const issuesCount = parsedResult.redTeamCards.length;
           setCompletionToast({ count: issuesCount });
@@ -426,6 +472,7 @@ export default function App() {
   // Rescore after revisions
   const handleRescore = async (revisedNotes: string) => {
     setIsRescoring(true);
+    setRescoreError(null);
     try {
       const resp = await fetch('/api/rescore-skkn', {
         method: 'POST',
@@ -436,11 +483,18 @@ export default function App() {
         })
       });
 
-      if (!resp.ok) {
-        throw new Error('Lỗi thẩm định lại');
+      const rescoreData = await resp.json().catch(() => null);
+
+      if (!resp.ok || !rescoreData || rescoreData.success === false) {
+        // FACT SAFETY: AI Thất bại -> Giữ nguyên previousResult, không thay đổi điểm, không đổi issue
+        setRescoreError({
+          message: rescoreData?.message || 'Chưa thể chấm lại lúc này. Kết quả đánh giá hiện tại được giữ nguyên. Vui lòng thử lại.',
+          retryable: rescoreData?.retryable ?? true
+        });
+        return;
       }
 
-      const rescoreData = await resp.json();
+      setRescoreError(null);
 
       setAnalysis(prev => {
         // If criteria scores updated
@@ -483,7 +537,11 @@ export default function App() {
         });
       }
     } catch (err: any) {
-      console.error(err);
+      console.error('Error in rescore:', err);
+      setRescoreError({
+        message: 'Chưa thể chấm lại lúc này. Kết quả đánh giá hiện tại được giữ nguyên. Vui lòng thử lại.',
+        retryable: true
+      });
     } finally {
       setIsRescoring(false);
     }
@@ -520,8 +578,9 @@ export default function App() {
         />
 
         {/* Viewport content */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          <div className="max-w-6xl mx-auto">
+        <main className="flex-1 overflow-y-auto flex flex-col min-h-0">
+          <div className="flex-1 p-4 sm:p-6 lg:p-8">
+            <div className="max-w-6xl mx-auto">
             {activeTab === 'dashboard' && (
               isViewingProfileDetail ? (
                 <ProfileDetailView
@@ -693,6 +752,7 @@ export default function App() {
                     onRescore={handleRescore}
                     isRescoring={isRescoring}
                     onNavigateTab={(tab) => setActiveTab(tab)}
+                    rescoreError={rescoreError}
                   />
                 )}
 
@@ -704,7 +764,19 @@ export default function App() {
               </>
             )}
           </div>
-        </main>
+        </div>
+
+        {/* Footer Toàn Ứng Dụng (Mục 5, 6, 7, 8) */}
+        <footer className="w-full border-t border-slate-200/80 bg-white/60 backdrop-blur-xs py-3 sm:py-3.5 px-4 text-center shrink-0">
+          <p className="text-[12.5px] sm:text-[13px] font-[500] text-slate-500 leading-normal">
+            <span>Copyright © 2026</span>
+            <span className="hidden sm:inline text-slate-400"> · </span>
+            <span className="block sm:inline mt-0.5 sm:mt-0">
+              Developed by <span className="font-[600] text-slate-700">GV.Hồ Nguyễn Đa Thiện</span>
+            </span>
+          </p>
+        </footer>
+      </main>
       </div>
 
       {/* Upload Modal (fallback if invoked) */}
@@ -807,6 +879,40 @@ export default function App() {
                 Đóng
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Account & License Modal */}
+      <AuthModal />
+
+      {/* Quota Exceeded Notification Modal */}
+      <QuotaExceededModal />
+
+      {/* Admin Portal Modal */}
+      <AdminPortalModal />
+
+      {/* 403 Forbidden Modal khi truy cập /quan-tri mà role != ADMIN */}
+      {adminAccessDenied && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-rose-500/40 rounded-2xl p-6 max-w-md w-full shadow-2xl text-center">
+            <div className="w-14 h-14 mx-auto rounded-full bg-rose-500/10 text-rose-400 flex items-center justify-center mb-4 border border-rose-500/20">
+              <ShieldAlert className="w-8 h-8" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">403 - TRUY CẬP BỊ TỪ CHỐI</h3>
+            <p className="text-slate-300 text-sm mb-6 leading-relaxed">
+              Bạn không có quyền truy cập trang quản trị <code className="px-1 py-0.5 rounded bg-slate-800 text-rose-300 font-mono">/quan-tri</code>. Hệ thống yêu cầu tài khoản được cấp quyền quản trị (<code className="px-1 py-0.5 rounded bg-slate-800 text-rose-300 font-mono">USERS.ROLE = "ADMIN"</code>) trong cơ sở dữ liệu.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setAdminAccessDenied(false);
+                window.history.pushState({}, '', '/');
+              }}
+              className="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-semibold transition-colors cursor-pointer"
+            >
+              Quay lại Trang Chủ
+            </button>
           </div>
         </div>
       )}

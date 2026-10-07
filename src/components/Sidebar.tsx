@@ -15,9 +15,12 @@ import {
   BookOpen,
   ArrowRight,
   ArrowLeft,
-  Plus
+  Plus,
+  Shield,
+  Key
 } from 'lucide-react';
 import { SKKNAnalysisResult } from '../types';
+import { useAuth } from '../context/AuthContext';
 
 export type ActiveTab = 
   | 'dashboard'
@@ -247,6 +250,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   ];
 
+  const { role, quota, isAdmin, openAuthModal, openAdminModal } = useAuth();
   const currentNavItems = appMode === 'easy' ? easyNavItems : advancedNavItems;
 
   return (
@@ -271,19 +275,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
               PRO
             </div>
             <div className="min-w-0 flex flex-col justify-center">
-              <div className="flex items-center gap-1.5 leading-none">
-                <span className="font-[750] text-[16px] tracking-tight text-white">
+              {/* Dòng 1: Tên sản phẩm chính + Badge PRO cân baseline */}
+              <div className="flex items-baseline gap-1.5 leading-none">
+                <span className="font-[800] text-[15.5px] tracking-tight text-white whitespace-nowrap">
                   SKKN REVIEW
                 </span>
-                <span className="text-[11.5px] px-1.5 py-0.5 rounded bg-blue-500/25 text-blue-400 font-[700] border border-blue-400/30 leading-none shrink-0">
+                <span className="text-[11px] px-1.5 py-0.5 rounded bg-blue-500/25 text-blue-400 font-[700] border border-blue-400/30 leading-none shrink-0">
                   PRO
                 </span>
               </div>
-              <div className="text-[14px] font-[650] text-white/95 tracking-tight leading-tight mt-1.5">
-                GV.Hồ Nguyễn Đa Thiện
-              </div>
-              <div className="text-[13px] font-[500] text-slate-400 tracking-tight leading-tight mt-0.5">
+              {/* Dòng 2: Slogan mô tả sản phẩm */}
+              <div className="text-[12.5px] font-[500] text-slate-400 tracking-tight leading-snug mt-1 truncate">
                 Trợ lý Chấm & Phản biện
+              </div>
+              {/* Dòng 3: Tác giả phát triển (Dưới slogan) */}
+              <div className="text-[12px] font-[600] text-slate-300/90 tracking-tight leading-snug mt-0.5 truncate">
+                GV.Hồ Nguyễn Đa Thiện
               </div>
             </div>
           </div>
@@ -362,10 +369,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </button>
             );
           })}
+
+          {/* Nút QUẢN TRỊ trên sidebar chỉ hiển thị khi backend trả role = "ADMIN" */}
+          {isAdmin && (
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  openAdminModal();
+                  if (onCloseMobile) onCloseMobile();
+                }}
+                title="Mở cổng quản trị hệ thống"
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[15px] leading-[1.4] transition-all cursor-pointer text-left bg-purple-950/40 text-purple-200 hover:bg-purple-900/40 hover:text-white border border-purple-500/30 font-[700]"
+              >
+                <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-1">
+                  <Shield className="w-[18px] h-[18px] shrink-0 text-purple-400 mt-0.5" />
+                  <span className="leading-[1.4] whitespace-normal break-words">QUẢN TRỊ</span>
+                </div>
+                <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-purple-500/25 text-purple-300 border border-purple-400/30 shrink-0">
+                  ADMIN
+                </span>
+              </button>
+            </div>
+          )}
         </nav>
 
-        {/* Sidebar Footer: Switch [Dễ dùng] [Chuyên sâu] - Cố định ở đáy */}
-        <div className="p-3 border-t border-slate-800 bg-slate-950/90 shrink-0">
+        {/* Sidebar Footer: Switch [Dễ dùng] [Chuyên sâu] & Lượt dùng - Cố định ở đáy */}
+        <div className="p-3 border-t border-slate-800 bg-slate-950/90 shrink-0 space-y-2.5">
           <div className="bg-slate-900 p-1 rounded-xl border border-slate-800 flex items-center text-[13.5px] font-semibold gap-1">
             <button
               type="button"
@@ -389,6 +419,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
             >
               Chuyên sâu
             </button>
+          </div>
+
+          {/* Quota & License Info */}
+          <div className="px-1 text-[12.5px] flex items-center justify-between text-slate-400">
+            <span>
+              {role === 'LICENSED' || role === 'ADMIN' || role === 'FREE_ACCESS' ? (
+                <span className="text-emerald-400 font-bold">✨ Không giới hạn</span>
+              ) : (
+                <span>
+                  Còn <strong className="text-white">{quota[appMode] ?? 0}</strong> lượt ({appMode === 'easy' ? 'Dễ' : 'Sâu'})
+                </span>
+              )}
+            </span>
+
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={openAdminModal}
+                className="text-purple-400 hover:text-purple-300 font-bold flex items-center gap-1 cursor-pointer"
+              >
+                <Shield className="w-3.5 h-3.5" />
+                <span>QUẢN TRỊ</span>
+              </button>
+            )}
           </div>
         </div>
       </aside>

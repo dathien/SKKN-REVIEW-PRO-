@@ -164,14 +164,14 @@ export const AssistantMascot: React.FC<AssistantMascotProps> = ({
   const getBubbleContent = () => {
     if (temporaryGreeting) {
       return {
-        badge: 'TRỢ LÝ AI',
+        greeting: 'Xin chào Thầy/Cô!',
         text: temporaryGreeting
       };
     }
 
     if (state === 'error') {
       return {
-        badge: 'TRỢ LÝ AI',
+        greeting: 'Thông báo',
         text: 'Phân tích chưa hoàn tất. Hồ sơ của Thầy/Cô vẫn được giữ lại an toàn.'
       };
     }
@@ -179,7 +179,7 @@ export const AssistantMascot: React.FC<AssistantMascotProps> = ({
     if (isAnalyzing) {
       if (isRescoring) {
         return {
-          badge: 'TRỢ LÝ AI',
+          greeting: 'Đang đối chiếu & chấm lại...',
           text: 'Em đang đối chiếu phiên bản đã chỉnh sửa và chấm lại…'
         };
       }
@@ -190,21 +190,21 @@ export const AssistantMascot: React.FC<AssistantMascotProps> = ({
         'Em đang rà soát số liệu & logic...'
       ];
       return {
-        badge: 'TRỢ LÝ AI',
+        greeting: 'Đang tiến hành phân tích...',
         text: stages[analyzingStage] || 'Em đang đọc và đối chiếu hồ sơ...'
       };
     }
 
     if (state === 'all_resolved' || isAllResolved) {
       return {
-        badge: 'TRỢ LÝ AI',
+        greeting: 'Đã hoàn tất kiểm tra!',
         text: 'Các nội dung cần xử lý đã được kiểm tra.'
       };
     }
 
     if (state === 'rescore_done') {
       return {
-        badge: 'TRỢ LÝ AI',
+        greeting: 'Đã chấm lại xong!',
         text: 'Đã chấm lại xong. Thầy/Cô xem kết quả cải thiện điểm nhé!'
       };
     }
@@ -212,12 +212,12 @@ export const AssistantMascot: React.FC<AssistantMascotProps> = ({
     if (state === 'analysis_done') {
       if (remainingIssues > 0) {
         return {
-          badge: 'TRỢ LÝ AI',
+          greeting: 'Kết quả thẩm định',
           text: `Em phát hiện ${remainingIssues} nội dung Thầy/Cô nên kiểm tra.`
         };
       }
       return {
-        badge: 'TRỢ LÝ AI',
+        greeting: 'Hoàn tất phân tích!',
         text: 'Đã hoàn tất phân tích! Hồ sơ đạt yêu cầu tốt.'
       };
     }
@@ -225,20 +225,20 @@ export const AssistantMascot: React.FC<AssistantMascotProps> = ({
     if (state === 'skkn_loaded') {
       if (uploadMethod === 'paste') {
         return {
-          badge: 'TRỢ LÝ AI',
+          greeting: 'Đã nhận nội dung!',
           text: 'Em đã nhận nội dung. Sẵn sàng phân tích!'
         };
       }
       return {
-        badge: 'TRỢ LÝ AI',
+        greeting: 'Đã nhận tệp SKKN!',
         text: 'Em đã nhận SKKN. Thầy/Cô có thể bắt đầu chấm nhé!'
       };
     }
 
-    // Default idle state
+    // Default idle state (Mục 3)
     return {
-      badge: 'TRỢ LÝ AI',
-      text: 'Thầy/Cô hãy tải SKKN hoặc dán nội dung để bắt đầu nhé!'
+      greeting: 'Xin chào Thầy/Cô!',
+      text: 'Hãy tải SKKN hoặc dán nội dung để bắt đầu đánh giá.'
     };
   };
 
@@ -462,38 +462,31 @@ export const AssistantMascot: React.FC<AssistantMascotProps> = ({
             transform: isHovered ? 'translateY(-2px)' : undefined
           }}
         >
-          <div className="relative bg-white/95 backdrop-blur-md border border-slate-200/95 rounded-2xl p-3.5 shadow-xs">
+          <div className="relative bg-white/95 backdrop-blur-md border border-slate-200/95 rounded-2xl p-3.5 shadow-xs text-left">
             
-            {/* Header: TRỢ LÝ AI + dot trạng thái */}
-            <div className="flex items-center justify-between gap-1.5 mb-1.5">
-              <div className="flex items-center gap-2">
-                <span
-                  className={`w-2.5 h-2.5 rounded-full ${
-                    isAnalyzing
-                      ? 'bg-cyan-500 animate-pulse'
-                      : state === 'error'
-                      ? 'bg-rose-500'
-                      : state === 'skkn_loaded' || state === 'analysis_done' || isAllResolved
-                      ? 'bg-emerald-500'
-                      : 'bg-blue-600'
-                  }`}
-                />
-                <span className="text-[14px] font-bold uppercase tracking-wide text-slate-800">
-                  {bubble.badge}
-                </span>
-              </div>
-
-              {/* Tag số điểm cần kiểm tra (Dữ liệu thật remainingIssues) */}
-              {state === 'analysis_done' && remainingIssues > 0 && !isAllResolved && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[13px] font-bold">
+            {/* Tag số điểm cần kiểm tra (Dữ liệu thật remainingIssues) nếu có */}
+            {state === 'analysis_done' && remainingIssues > 0 && !isAllResolved && (
+              <div className="mb-2">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[12.5px] font-bold">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                   <span>{remainingIssues} điểm cần xem</span>
                 </span>
-              )}
-            </div>
+              </div>
+            )}
+
+            {/* Bubble Content:
+                Dòng 1: "Xin chào Thầy/Cô!" font-weight 700
+                Dòng 2: "Hãy tải SKKN hoặc dán nội dung để bắt đầu đánh giá." font-weight ~500, line-height 1.55–1.6
+                BỎ hoàn toàn nhãn ● TRỢ LÝ AI lặp lại
+            */}
+            {bubble.greeting && (
+              <div className="text-[14.5px] font-[700] text-slate-900 tracking-tight leading-snug mb-1">
+                {bubble.greeting}
+              </div>
+            )}
 
             {/* Bubble Text */}
-            <p className="text-[15px] text-slate-700 font-medium leading-[1.55]">
+            <p className="text-[13.5px] text-slate-600 font-[500] leading-[1.58]">
               {bubble.text}
             </p>
 

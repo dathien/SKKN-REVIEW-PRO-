@@ -1,10 +1,29 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+dotenv.config({ override: true });
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import { GoogleGenAI, Type } from '@google/genai';
 import mammoth from 'mammoth';
 import { extractGeminiOutput, parseAnalysisResponse, normalizeAnalysisResult } from './src/utils/analysisPipeline';
+import {
+  getOrCreateGuest,
+  findUserByEmailOrId,
+  getOrCreateUser,
+  consumeQuota,
+  activateLicenseKey,
+  getSystemStats,
+  getAllUsersAndGuests,
+  adminUpdateUser,
+  adminGenerateLicense,
+  getAllLicenses,
+  adminResetLicenseDevices,
+  adminToggleLicenseStatus,
+  adminDeleteLicense,
+  fetchUserFromLicenseApi,
+  getSystemSettings,
+  updateSystemSettings,
+} from './src/server/authStore';
 
 const app = express();
 const PORT = 3000;
@@ -85,10 +104,28 @@ app.post('/api/parse-docx', async (req, res) => {
 // Core Analysis Endpoint
 app.post('/api/analyze-skkn', async (req, res) => {
   try {
-    const { skknContent, rubricContent, evidenceFiles, promptNotes } = req.body;
+    const { skknContent, rubricContent, evidenceFiles, promptNotes, userContext } = req.body;
 
     if (!skknContent || typeof skknContent !== 'string' || skknContent.trim().length === 0) {
       return res.status(400).json({ error: 'Nội dung Sáng kiến kinh nghiệm (SKKN) không được để trống.' });
+    }
+
+    // Quota & Authorization check
+    const mode = userContext?.mode === 'advanced' ? 'advanced' : 'easy';
+    const quotaCheck = consumeQuota({
+      guestId: userContext?.guestId,
+      email: userContext?.email,
+      userId: userContext?.userId,
+      mode,
+    });
+
+    if (!quotaCheck.allowed) {
+      return res.status(403).json({
+        error: quotaCheck.message,
+        code: quotaCheck.code,
+        quota: quotaCheck.quota,
+        role: quotaCheck.role,
+      });
     }
 
     // 1. Log Input trong Development
@@ -245,7 +282,11 @@ ${promptNotes ? `=== GHI CHÚ BỔ SUNG CỦA NGƯỜI DÙNG ===\n${promptNotes}
     const normalizedResult = normalizeAnalysisResult(parsedData, skknContent, promptNotes);
 
     console.log('[STAGE: STATE] Analysis completed successfully. Issues found:', normalizedResult.redTeamCards.length);
-    return res.json(normalizedResult);
+    return res.json({
+      ...normalizedResult,
+      quota: quotaCheck.quota,
+      role: quotaCheck.role
+    });
   } catch (error: any) {
     console.error('Error in analyze-skkn:', error);
     const { status, code, message } = parseGeminiError(error);
@@ -496,14 +537,21 @@ Trả về JSON mảng các câu hỏi:
 
 // Rescore after revision endpoint
 app.post('/api/rescore-skkn', async (req, res) => {
+  let oldTotalScore: number | null = null;
   try {
     const { previousResult, revisedNotes, revisedText } = req.body;
     const contentToEvaluate = revisedNotes || revisedText || '';
     const oldIssues = previousResult?.redTeamCards || [];
     const oldCriteria = previousResult?.rubricCriteria || [];
-    const oldTotalScore = oldCriteria.length > 0 
-      ? oldCriteria.reduce((acc: number, c: any) => acc + (c.proposedScore || 0), 0)
-      : 70;
+    
+    // FACT SAFETY: Không được mặc định điểm cũ = 70. Nếu không xác định được: oldTotalScore = null
+    if (typeof previousResult?.evaluation?.score === 'number') {
+      oldTotalScore = previousResult.evaluation.score;
+    } else if (Array.isArray(oldCriteria) && oldCriteria.length > 0) {
+      oldTotalScore = oldCriteria.reduce((acc: number, c: any) => acc + (c.proposedScore || 0), 0);
+    } else {
+      oldTotalScore = null;
+    }
 
     const prompt = `
 Bạn là "SKKN REVIEW PRO – Chuyên gia Thẩm định lại sau chỉnh sửa (Rescore Engine)".
@@ -522,7 +570,7 @@ NGUYÊN TẮC THẨM ĐỊNH BẮT BUỘC:
    - Xác định rõ trạng thái: "ĐÃ KHẮC PHỤC", "CẢI THIỆN MỘT PHẦN", "CHƯA KHẮC PHỤC", "PHÁT SINH MÂU THUẪN MỚI", hoặc "KHÔNG XÁC ĐỊNH".
 
 DỮ LIỆU ĐÁNH GIÁ LẦN TRƯỚC:
-- Điểm tổng cũ: ${oldTotalScore}
+- Điểm tổng cũ: ${oldTotalScore !== null ? oldTotalScore : 'Chưa có điểm tổng'}
 - Tiêu chí Rubric cũ: ${JSON.stringify(oldCriteria.map((c: any) => ({ name: c.criterionName, score: c.proposedScore, max: c.maxScore, reason: c.deductionReason })))}
 - Danh sách vấn đề phản biện cũ (Issues): ${JSON.stringify(oldIssues.map((c: any) => ({ id: c.id, issue: c.issueDetected, quote: c.relatedQuote, location: c.location })))}
 
@@ -531,7 +579,7 @@ NỘI DUNG BẢN SKKN ĐÃ CHỈNH SỬA / MINH CHỨNG MỚI NỘP:
 
 Hãy phân tích kỹ lưỡng và trả về đúng JSON theo cấu trúc sau:
 {
-  "previousScore": ${oldTotalScore},
+  "previousScore": ${oldTotalScore !== null ? oldTotalScore : 'null'},
   "newScore": number,
   "scoreDifference": number,
   "fixedIssues": ["Tên vấn đề đã giải quyết triệt để"],
@@ -575,73 +623,38 @@ Hãy phân tích kỹ lưỡng và trả về đúng JSON theo cấu trúc sau:
         },
       });
     } catch {
-      try {
-        response = await ai.models.generateContent({
-          model: 'gemini-3.8-flash',
-          contents: prompt,
-          config: {
-            responseMimeType: 'application/json',
-            temperature: 0.2,
-          },
-        });
-      } catch (allErr) {
-        console.warn('All AI models failed in rescore-skkn, returning verified analytical fallback.');
-        const fallbackIssues = oldIssues.slice(0, 3).map((issue: any) => ({
-          issueTitle: issue.issueDetected || 'Khắc phục hạn chế phản biện',
-          originalQuote: issue.relatedQuote || 'Số liệu / nhận định trong bản ban đầu',
-          revisedQuote: 'Đã bổ sung minh chứng và đính chính số liệu đối sánh tại bản sửa',
-          status: 'ĐÃ KHẮC PHỤC' as const,
-          explanation: 'Tác giả đã tiếp thu phản biện, đính kèm số liệu thực nghiệm đối chứng và chuẩn hóa thuật ngữ.'
-        }));
-
-        const calculatedNewScore = Math.min(100, oldTotalScore + 6.0);
-        return res.json({
-          previousScore: oldTotalScore,
-          newScore: calculatedNewScore,
-          scoreDifference: calculatedNewScore - oldTotalScore,
-          fixedIssues: [
-            'Đồng nhất cỡ mẫu khảo sát N=82 xuyên suốt văn bản theo xác nhận của tác giả',
-            'Định vị lại tính mới vào quy trình sư phạm 3 bước thay vì đồng nhất với tên phần mềm công nghệ',
-            'Đính chính thuật ngữ thống kê: phân biệt rõ % và điểm phần trăm'
-          ],
-          remainingIssues: [
-            'Cần bổ sung thêm sản phẩm học tập đối chứng của học sinh tại Phụ lục'
-          ],
-          newIssuesArisen: [],
-          newEvidenceAdded: [
-            'Phụ lục 1: Biên bản kiểm phiếu khảo sát gốc (82/85 học sinh)',
-            'Phụ lục 3: Rubric quan sát hành vi trong 4 tiết thực nghiệm sư phạm'
-          ],
-          newFiguresAdded: [
-            'Cỡ mẫu thực nghiệm: N=82 (lớp 8A1: 42 em, lớp 8A2: 40 em)',
-            'Mức tăng học sinh Giỏi: Tăng 15 điểm phần trăm (từ 60% lên 75%)'
-          ],
-          justificationForChange: 'Điểm số được phục hồi dựa trên các minh chứng thực tế mới được cung cấp tại Phụ lục 1 và Phụ lục 3, đồng thời giải quyết triệt để sự mâu thuẫn cỡ mẫu khảo sát.',
-          issueComparisons: fallbackIssues,
-          updatedCriteria: oldCriteria.map((c: any) => {
-            const isTargetCriterion = c.criterionName.includes('Hiệu quả') || c.criterionName.includes('Khoa học') || c.criterionName.includes('Tính mới');
-            const boost = isTargetCriterion ? 2.0 : 0;
-            return {
-              criterionName: c.criterionName,
-              previousScore: c.proposedScore,
-              newScore: Math.min(c.maxScore, c.proposedScore + boost),
-              changeDifference: boost,
-              whatChanged: isTargetCriterion ? 'Đã bổ sung bảng đối chứng và rà soát số liệu thực tế' : 'Giữ nguyên hiện trạng',
-              evidenceFoundAt: isTargetCriterion ? 'Phụ lục 1 và Phụ lục 3' : 'Trong văn bản',
-              impactReason: isTargetCriterion ? 'Minh chứng định lượng đã được cung cấp đầy đủ, loại bỏ nguy cơ bị Hội đồng trừ điểm' : 'Không có thay đổi đáng kể',
-              rubricMetReason: isTargetCriterion ? 'Đáp ứng trọn vẹn mức Tốt của tiêu chuẩn đánh giá' : 'Duy trì mức đánh giá ban đầu'
-            };
-          })
-        });
-      }
+      response = await ai.models.generateContent({
+        model: 'gemini-3.8-flash',
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+          temperature: 0.2,
+        },
+      });
     }
 
     const parsed = JSON.parse(response.text || '{}');
-    return res.json(parsed);
+    return res.json({
+      success: true,
+      ...parsed,
+    });
   } catch (error: any) {
-    console.error('Error in rescore-skkn:', error);
-    const { status, code, message } = parseGeminiError(error);
-    return res.status(status).json({ error: message, code, status });
+    console.error('Error in rescore-skkn (AI models failed):', error);
+    const { status, message } = parseGeminiError(error);
+    const finalStatus: number = (status === 429 || status === 503 || status === 403) ? status : 503;
+    const isRetryable = finalStatus === 429 || finalStatus === 503;
+
+    // FACT SAFETY: Tuyệt đối KHÔNG tự tạo số liệu/minh chứng/điểm số giả khi AI thất bại.
+    return res.status(finalStatus).json({
+      success: false,
+      code: 'RESCORE_AI_UNAVAILABLE',
+      retryable: isRetryable,
+      message: 'Chưa thể chấm lại lúc này. Kết quả đánh giá hiện tại được giữ nguyên. Vui lòng thử lại.',
+      previousScore: oldTotalScore,
+      scoreChanged: false,
+      issuesChanged: false,
+      originalError: message,
+    });
   }
 });
 
@@ -724,6 +737,388 @@ app.post('/api/save-mascot', (req, res) => {
   } catch (error: any) {
     console.error('Error saving mascot asset:', error);
     return res.status(500).json({ error: error.message });
+  }
+});
+
+// ==========================================
+// ACCOUNT, GUEST, LICENSE & ADMIN ENDPOINTS
+// ==========================================
+
+// 1. Client Auth Configuration
+app.get('/api/auth/config', (_req, res) => {
+  return res.json({
+    googleClientId: process.env.GOOGLE_CLIENT_ID || '',
+    hasLicenseApi: Boolean(process.env.LICENSE_API_URL),
+  });
+});
+
+// 2. Google Sign-In & Verification
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    const { credential, email, name, picture, id } = req.body;
+    let userEmail = email;
+    let userName = name;
+    let userPicture = picture;
+    let userId = id;
+
+    // Backend xác minh Google ID Token để lấy sub/email thật
+    if (credential && typeof credential === 'string') {
+      try {
+        const tokenResp = await fetch(
+          `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`
+        );
+        if (tokenResp.ok) {
+          const gInfo = await tokenResp.json();
+          if (gInfo.email) userEmail = gInfo.email;
+          if (gInfo.name) userName = gInfo.name;
+          if (gInfo.picture) userPicture = gInfo.picture;
+          if (gInfo.sub) userId = gInfo.sub;
+        } else {
+          // Decode payload an toàn nếu không gọi được tokeninfo
+          const parts = credential.split('.');
+          if (parts.length === 3) {
+            const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
+            if (payload.email) userEmail = payload.email;
+            if (payload.name) userName = payload.name;
+            if (payload.picture) userPicture = payload.picture;
+            if (payload.sub) userId = payload.sub;
+          }
+        }
+      } catch (tokenErr) {
+        const parts = credential.split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
+          if (payload.email) userEmail = payload.email;
+          if (payload.name) userName = payload.name;
+          if (payload.picture) userPicture = payload.picture;
+          if (payload.sub) userId = payload.sub;
+        }
+      }
+    }
+
+    if (!userEmail) {
+      return res.status(400).json({ error: 'Thiếu thông tin email Google xác thực' });
+    }
+
+    // Đọc user từ License API / Google Sheets và đồng bộ vai trò USERS.ROLE
+    const user = await getOrCreateUser({
+      email: userEmail,
+      name: userName,
+      picture: userPicture,
+      id: userId,
+    });
+
+    return res.json({ success: true, user });
+  } catch (err: any) {
+    console.error('Error in google auth:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 3. User & Guest Status Check
+app.get('/api/user/status', (req, res) => {
+  try {
+    const { guestId, email, userId } = req.query as { guestId?: string; email?: string; userId?: string };
+
+    if (email || userId) {
+      const user = findUserByEmailOrId(email || userId || '');
+      if (user) {
+        return res.json({
+          isLoggedIn: true,
+          user,
+          role: user.role,
+          plan: user.plan,
+          quota: user.quota,
+        });
+      }
+    }
+
+    const guest = getOrCreateGuest(guestId || 'guest_default');
+    return res.json({
+      isLoggedIn: false,
+      guestId: guest.guestId,
+      role: 'GUEST' as const,
+      plan: 'GUEST' as const,
+      quota: guest.quota,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 4. Guest Initialization
+app.post('/api/user/guest-init', (req, res) => {
+  try {
+    const { guestId } = req.body;
+    const guest = getOrCreateGuest(guestId);
+    return res.json({ success: true, guest });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 5. Consume Quota
+app.post('/api/user/consume-quota', (req, res) => {
+  try {
+    const { guestId, email, userId, mode = 'easy' } = req.body;
+    const result = consumeQuota({ guestId, email, userId, mode });
+    if (!result.allowed) {
+      return res.status(403).json(result);
+    }
+    return res.json({ success: true, ...result });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 6. License Activation (Device Binding + Google Account)
+app.post('/api/license/activate', async (req, res) => {
+  try {
+    const { licenseKey, email, userId, guestId, deviceId, deviceName } = req.body;
+    const result = await activateLicenseKey({
+      licenseKey,
+      email,
+      userId,
+      guestId,
+      deviceId,
+      deviceName,
+    });
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Middleware kiểm tra quyền Quản trị bắt buộc từ Database (USERS.ROLE = "ADMIN")
+// Không hard-code Gmail quản trị. Không dùng process.env.ADMIN_EMAILS. Không fallback email.
+const requireAdminMiddleware = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  let identifier = (
+    req.headers['x-user-email'] ||
+    req.headers['x-user-id'] ||
+    req.body?.adminEmail ||
+    req.query?.adminEmail
+  ) as string;
+
+  const authHeader = req.headers['authorization'];
+  if (!identifier && authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7).trim();
+    try {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
+        if (payload.email) identifier = payload.email;
+        else if (payload.sub) identifier = payload.sub;
+      } else {
+        identifier = token;
+      }
+    } catch {
+      identifier = token;
+    }
+  }
+
+  if (!identifier) {
+    return res.status(403).json({
+      success: false,
+      error: 'Truy cập bị từ chối. Thiếu thông tin xác thực quản trị viên.',
+      code: 'FORBIDDEN',
+    });
+  }
+
+  let user = findUserByEmailOrId(identifier);
+
+  // Nếu trong store cục bộ chưa phải ADMIN, kiểm tra trực tiếp từ License API / Google Sheets
+  if ((!user || user.role !== 'ADMIN') && process.env.LICENSE_API_URL) {
+    const remote = await fetchUserFromLicenseApi(identifier);
+    if (remote?.role === 'ADMIN') {
+      user = await getOrCreateUser({ email: identifier });
+      user.role = 'ADMIN';
+    }
+  }
+
+  // Bắt buộc USERS.ROLE === 'ADMIN'. Nếu không phải ADMIN -> 403.
+  if (!user || user.role !== 'ADMIN') {
+    return res.status(403).json({
+      success: false,
+      error: 'Truy cập bị từ chối. Quyền quản trị (USERS.ROLE = ADMIN) bắt buộc.',
+      code: 'FORBIDDEN',
+    });
+  }
+
+  next();
+};
+
+// Kiểm tra quyền quản trị nhanh cho Frontend
+app.get('/api/admin/check-access', requireAdminMiddleware, (_req, res) => {
+  return res.json({ allowed: true, role: 'ADMIN' });
+});
+
+// 7. Admin: System Stats (Chỉ ROLE = ADMIN)
+app.get('/api/admin/stats', requireAdminMiddleware, (_req, res) => {
+  try {
+    const stats = getSystemStats();
+    return res.json(stats);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 8. Admin: Users and Guests List (Chỉ ROLE = ADMIN)
+app.get('/api/admin/users', requireAdminMiddleware, (_req, res) => {
+  try {
+    const data = getAllUsersAndGuests();
+    return res.json(data);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 9. Admin: Update User (Chỉ ROLE = ADMIN)
+app.post('/api/admin/update-user', requireAdminMiddleware, (req, res) => {
+  try {
+    const operatorEmail = (req.headers['x-user-email'] || req.headers['x-user-id'] || '') as string;
+    const { email, role, plan, quota, isBlocked, expiresAt } = req.body;
+    const result = adminUpdateUser({
+      operatorEmail,
+      email,
+      role,
+      plan,
+      quota,
+      isBlocked,
+      expiresAt,
+    });
+    if (!result.success) {
+      return res.status(400).json({ error: result.error || 'Cập nhật người dùng thất bại' });
+    }
+    return res.json({ success: true, user: result.user });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 10. Admin: Get System Settings (Chỉ ROLE = ADMIN)
+app.get('/api/admin/settings', requireAdminMiddleware, (_req, res) => {
+  try {
+    const settings = getSystemSettings();
+    return res.json({ success: true, settings });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 11. Admin: Update System Settings (Chỉ ROLE = ADMIN)
+app.post('/api/admin/settings', requireAdminMiddleware, async (req, res) => {
+  try {
+    const updated = updateSystemSettings(req.body);
+    let remoteSync = false;
+    let remoteStatus = 'LOCAL_STORED';
+
+    // Thử đồng bộ với Google Apps Script nếu có action updateSettings
+    if (process.env.LICENSE_API_URL) {
+      try {
+        const url = new URL(process.env.LICENSE_API_URL);
+        url.searchParams.set('action', 'updateSettings');
+        const resp = await fetch(url.toString(), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updated),
+        });
+        if (resp.ok) {
+          const rJson = await resp.json().catch(() => null);
+          if (rJson && rJson.success) {
+            remoteSync = true;
+            remoteStatus = 'SYNCED_GOOGLE_SHEETS';
+          } else {
+            remoteStatus = 'BACKEND_PENDING (Google Apps Script chưa hỗ trợ action updateSettings)';
+          }
+        } else {
+          remoteStatus = 'BACKEND_PENDING (Google Apps Script HTTP non-200)';
+        }
+      } catch (e: any) {
+        remoteStatus = `BACKEND_PENDING (${e.message})`;
+      }
+    }
+
+    return res.json({
+      success: true,
+      settings: updated,
+      remoteSync,
+      remoteStatus,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 12. Admin: Get all licenses (Chỉ ROLE = ADMIN)
+app.get('/api/admin/licenses', requireAdminMiddleware, (_req, res) => {
+  try {
+    const licenses = getAllLicenses();
+    return res.json({ success: true, licenses });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 13. Admin: Generate license (Chỉ ROLE = ADMIN)
+app.post('/api/admin/licenses/create', requireAdminMiddleware, (req, res) => {
+  try {
+    const { plan, durationMonths, maxDevices, assignedEmail, customerNote, reason } = req.body;
+    const license = adminGenerateLicense({
+      plan,
+      durationMonths: Number(durationMonths) || 0,
+      maxDevices: Number(maxDevices) || 1,
+      assignedEmail,
+      customerNote,
+      reason,
+    });
+    return res.json({ success: true, license });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 14. Admin: Reset bound devices (Chuyển thiết bị) (Chỉ ROLE = ADMIN)
+app.post('/api/admin/licenses/reset-devices', requireAdminMiddleware, (req, res) => {
+  try {
+    const { key, deviceId } = req.body;
+    const result = adminResetLicenseDevices({ key, deviceId });
+    if (!result.success) {
+      return res.status(400).json({ error: result.error || 'Reset thiết bị thất bại' });
+    }
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 15. Admin: Toggle license status (Chỉ ROLE = ADMIN)
+app.post('/api/admin/licenses/toggle-status', requireAdminMiddleware, (req, res) => {
+  try {
+    const { key, status } = req.body;
+    const result = adminToggleLicenseStatus({ key, status });
+    if (!result.success) {
+      return res.status(400).json({ error: result.error || 'Cập nhật trạng thái thất bại' });
+    }
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 16. Admin: Delete license (Chỉ ROLE = ADMIN)
+app.post('/api/admin/licenses/delete', requireAdminMiddleware, (req, res) => {
+  try {
+    const { key } = req.body;
+    const result = adminDeleteLicense(key);
+    if (!result.success) {
+      return res.status(400).json({ error: result.error || 'Xóa mã thất bại' });
+    }
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
   }
 });
 

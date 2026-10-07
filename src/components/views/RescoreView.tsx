@@ -24,13 +24,15 @@ interface RescoreViewProps {
   onRescore: (revisedNotes: string) => Promise<void>;
   isRescoring?: boolean;
   onNavigateTab?: (tab: ActiveTab) => void;
+  rescoreError?: { message: string; retryable?: boolean } | null;
 }
 
 export const RescoreView: React.FC<RescoreViewProps> = ({
   analysis,
   onRescore,
   isRescoring,
-  onNavigateTab
+  onNavigateTab,
+  rescoreError
 }) => {
   const [inputMode, setInputMode] = useState<'paste' | 'file'>('paste');
   const [revisedText, setRevisedText] = useState('');
@@ -146,6 +148,32 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
               Các vấn đề đã được đánh dấu xử lý ({resolvedCount}/{totalIssues} vấn đề), nhưng hệ thống chưa phát hiện phiên bản SKKN mới. Hệ thống tuyệt đối không dùng trạng thái "Đã xử lý" làm bằng chứng rằng nội dung đã thay đổi. Thầy/Cô vui lòng dán hoặc tải nội dung SKKN đã chỉnh sửa bên dưới để tiến hành thẩm định lại.
             </p>
           </div>
+        </div>
+      )}
+
+      {/* AI Unavailable / Rescore Error Alert with THỬ CHẤM LẠI button */}
+      {rescoreError && (
+        <div className="p-4.5 rounded-2xl bg-amber-50/90 border-2 border-amber-300 text-[14px] text-amber-950 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3.5 shadow-sm">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+            <div>
+              <strong className="block font-bold text-amber-950 text-[15px]">
+                Chưa thể chấm lại lúc này: Kết quả hiện tại được giữ nguyên
+              </strong>
+              <p className="text-[13.5px] text-amber-900 mt-0.5 leading-relaxed">
+                {rescoreError.message || 'Chưa thể chấm lại lúc này. Kết quả đánh giá hiện tại được giữ nguyên. Vui lòng thử lại.'}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => onRescore(revisedText)}
+            disabled={isRescoring || !revisedText.trim()}
+            className="px-4 py-2.5 bg-amber-700 hover:bg-amber-800 text-white font-bold text-[13.5px] rounded-xl shadow-xs transition-colors shrink-0 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRescoring ? 'animate-spin' : ''}`} />
+            <span>THỬ CHẤM LẠI</span>
+          </button>
         </div>
       )}
 

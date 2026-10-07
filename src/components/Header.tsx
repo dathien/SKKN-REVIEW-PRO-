@@ -1,6 +1,7 @@
 import React from 'react';
-import { ChevronDown, Menu, BookOpen } from 'lucide-react';
+import { ChevronDown, Menu, BookOpen, User, Key, Shield, Sparkles } from 'lucide-react';
 import { SKKNAnalysisResult } from '../types';
+import { useAuth } from '../context/AuthContext';
 
 interface HeaderProps {
   analysis: SKKNAnalysisResult;
@@ -23,8 +24,19 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenMobileMenu,
   isUploadWorkspace = false,
   onStartNewSKKN,
-  onExitDemo
+  onExitDemo,
 }) => {
+  const {
+    user,
+    role,
+    plan,
+    quota,
+    isLoggedIn,
+    isAdmin,
+    openAuthModal,
+    openAdminModal,
+  } = useAuth();
+
   const displayTitle = isDemoMode
     ? analysis.metadata.title || 'Hồ sơ sáng kiến mẫu'
     : hasActiveEvaluation
@@ -65,8 +77,91 @@ export const Header: React.FC<HeaderProps> = ({
         )}
       </div>
 
-      {/* Right: [Hồ sơ ▾] */}
+      {/* Right: Account & License indicators + [Hồ sơ ▾] */}
       <div className="flex items-center gap-2 shrink-0">
+        
+        {/* ADMIN PORTAL BUTTON */}
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={openAdminModal}
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-bold text-purple-800 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg transition-all cursor-pointer shadow-2xs"
+            title="Mở Trung tâm Quản trị Admin"
+          >
+            <Shield className="w-3.5 h-3.5 text-purple-700" />
+            <span>Quản trị</span>
+          </button>
+        )}
+
+        {/* QUOTA / LICENSE BADGE */}
+        {role === 'LICENSED' || role === 'ADMIN' ? (
+          <button
+            type="button"
+            onClick={() => openAuthModal('login')}
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-all cursor-pointer shadow-2xs"
+            title="Quyền sử dụng không giới hạn"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Không giới hạn</span>
+          </button>
+        ) : role === 'FREE_ACCESS' ? (
+          <button
+            type="button"
+            onClick={() => openAuthModal('login')}
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-bold text-cyan-800 bg-cyan-50 hover:bg-cyan-100 border border-cyan-200 rounded-lg transition-all cursor-pointer shadow-2xs"
+            title="Đang trong chương trình miễn phí"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-cyan-600" />
+            <span>Free Access</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => openAuthModal('login')}
+            className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[12.5px] font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg transition-all cursor-pointer"
+            title="Xem số lượt hoặc kiểm tra quyền sử dụng"
+          >
+            <Key className="w-3.5 h-3.5 text-amber-600" />
+            <span>
+              {role === 'GUEST' ? 'Trải nghiệm' : 'Trial'}: Dễ {quota.easy ?? 0} | Sâu {quota.advanced ?? 0}
+            </span>
+          </button>
+        )}
+
+        {/* USER ACCOUNT BUTTON / LOGIN BUTTON (Mục L) */}
+        {isLoggedIn ? (
+          <button
+            type="button"
+            onClick={() => openAuthModal('login')}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] font-semibold text-slate-800 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-all cursor-pointer shadow-2xs max-w-[140px] truncate"
+            title={`Tài khoản: ${user?.email}`}
+          >
+            {user?.picture ? (
+              <img
+                src={user.picture}
+                alt={user.name}
+                className="w-5 h-5 rounded-full object-cover shrink-0"
+              />
+            ) : (
+              <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                {user?.name?.slice(0, 1).toUpperCase() || 'GV'}
+              </div>
+            )}
+            <span className="truncate text-[13px]">{user?.name || user?.email?.split('@')[0]}</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => openAuthModal('login')}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13.5px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-all cursor-pointer shadow-2xs"
+            title="Đăng nhập tài khoản Google"
+          >
+            <User className="w-3.5 h-3.5 text-blue-600" />
+            <span>Đăng nhập</span>
+          </button>
+        )}
+
+        {/* HỒ SƠ BUTTON */}
         <button
           type="button"
           onClick={onOpenProfileDrawer}

@@ -615,16 +615,19 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
         {/* ======================================================================= */}
         {/* CỘT PHẢI – 32%: TRỢ LÝ SKKN (MASCOT 3D + SPEECH BUBBLE THEO STATE)      */}
         {/* ======================================================================= */}
-        <div className="w-full lg:w-[32%] flex flex-col items-center justify-start bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 lg:p-5 relative">
+        <div className="w-full lg:w-[32%] flex flex-col items-center justify-start bg-slate-50/70 border border-slate-200/80 rounded-2xl p-3.5 sm:p-4 relative">
           
-          <div className="w-full flex items-center justify-between pb-2.5 border-b border-slate-200/80 mb-3.5 shrink-0">
-            <span className="text-[15px] font-bold text-slate-800 uppercase tracking-wide flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block" />
-              <span>TRỢ LÝ SKKN</span>
-            </span>
-            <span className="text-[13.5px] text-slate-500 font-medium">
-              Đồng hành chấm & sửa
-            </span>
+          {/* Khối tiêu đề Trợ lý: 1 khối dọc căn trái chuẩn nhận diện */}
+          <div className="w-full text-left pb-2.5 border-b border-slate-200/80 mb-3 shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block shrink-0" />
+              <h3 className="text-[15px] font-[700] text-slate-800 uppercase tracking-wide whitespace-nowrap leading-none">
+                TRỢ LÝ SKKN
+              </h3>
+            </div>
+            <p className="text-[13px] font-[500] text-slate-500 mt-[3px] leading-relaxed">
+              Đồng hành chấm, phản biện & hoàn thiện
+            </p>
           </div>
 
           {/* Mascot Component with dynamic state */}

@@ -1,0 +1,130 @@
+{
+  "users": {
+    "dathien2412@gmail.com": {
+      "id": "admin_6461746869",
+      "email": "dathien2412@gmail.com",
+      "name": "Đa Thiện Hồ Nguyễn",
+      "role": "ADMIN",
+      "plan": "PRO",
+      "quota": {
+        "easy": 9999,
+        "advanced": 9999
+      },
+      "licenseKey": "SKKN-ADMIN-SYSTEM",
+      "licenseExpiresAt": null,
+      "createdAt": "2026-10-07T00:29:18.129Z",
+      "lastActiveAt": "2026-10-07T05:01:59.372Z",
+      "isBlocked": false,
+      "picture": "https://lh3.googleusercontent.com/a/ACg8ocJ_uW-RC5IuVcgYYhb8i9A16OPkteLCs4CLI63kdGbWptuEgXbj=s96-c"
+    },
+    "teacher1@gmail.com": {
+      "id": "usr_1791332976299_ra51d",
+      "email": "teacher1@gmail.com",
+      "name": "teacher1",
+      "role": "LICENSED",
+      "plan": "PRO",
+      "quota": {
+        "easy": 9999,
+        "advanced": 9999
+      },
+      "licenseKey": "SKKN-PRO-2025-VIP",
+      "licenseExpiresAt": null,
+      "createdAt": "2026-10-07T00:29:36.299Z",
+      "lastActiveAt": "2026-10-07T00:29:36.299Z",
+      "isBlocked": false
+    },
+    "giaovien.test@gmail.com": {
+      "id": "usr_1791361588777_veinc",
+      "email": "giaovien.test@gmail.com",
+      "name": "giaovien.test",
+      "role": "LICENSED",
+      "plan": "PRO",
+      "quota": {
+        "easy": 9999,
+        "advanced": 9999
+      },
+      "licenseKey": "SKKN-PRO-G34Q-P844",
+      "licenseExpiresAt": null,
+      "freeAccess": false,
+      "createdAt": "2026-10-07T08:26:28.778Z",
+      "lastActiveAt": "2026-10-07T08:26:28.778Z",
+      "isBlocked": false
+    }
+  },
+  "guests": {
+    "test_guest_123": {
+      "guestId": "test_guest_123",
+      "quota": {
+        "easy": 3,
+        "advanced": 1
+      },
+      "createdAt": "2026-10-07T00:29:26.783Z",
+      "lastActiveAt": "2026-10-07T00:29:26.783Z",
+      "analysisCount": 0
+    },
+    "guest_1791333056465_0p006fupp9hulllf": {
+      "guestId": "guest_1791333056465_0p006fupp9hulllf",
+      "quota": {
+        "easy": 3,
+        "advanced": 1
+      },
+      "createdAt": "2026-10-07T00:30:56.839Z",
+      "lastActiveAt": "2026-10-07T04:47:24.998Z",
+      "analysisCount": 0
+    },
+    "guest_test123": {
+      "guestId": "guest_test123",
+      "quota": {
+        "easy": 3,
+        "advanced": 1
+      },
+      "createdAt": "2026-10-07T03:40:11.189Z",
+      "lastActiveAt": "2026-10-07T03:40:11.189Z",
+      "analysisCount": 0
+    },
+    "guest_default": {
+      "guestId": "guest_default",
+      "quota": {
+        "easy": 3,
+        "advanced": 1
+      },
+      "createdAt": "2026-10-07T08:25:54.173Z",
+      "lastActiveAt": "2026-10-07T08:25:54.173Z",
+      "analysisCount": 0
+    }
+  },
+  "licenses": {
+    "SKKN-PRO-2025-VIP": {
+      "key": "SKKN-PRO-2025-VIP",
+      "plan": "PRO",
+      "maxDevices": 3,
+      "status": "ACTIVE",
+      "expiresAt": null,
+      "createdReason": "Mã kích hoạt VIP 2025",
+      "assignedEmail": "teacher1@gmail.com",
+      "activatedAt": "2026-10-07T00:29:36.299Z",
+      "boundDevices": []
+    },
+    "SKKN-PRO-GIAO-VIEN": {
+      "key": "SKKN-PRO-GIAO-VIEN",
+      "plan": "PRO",
+      "maxDevices": 2,
+      "status": "ACTIVE",
+      "expiresAt": null,
+      "createdReason": "Mã kích hoạt ưu đãi Giáo viên",
+      "boundDevices": []
+    },
+    "SKKN-PREMIUM-SCHOOL": {
+      "key": "SKKN-PREMIUM-SCHOOL",
+      "plan": "SCHOOL",
+      "maxDevices": 10,
+      "status": "ACTIVE",
+      "expiresAt": null,
+      "createdReason": "Gói Bản quyền Trường học",
+      "boundDevices": []
+    }
+  },
+  "stats": {
+    "totalAnalyses": 0
+  }
+}
