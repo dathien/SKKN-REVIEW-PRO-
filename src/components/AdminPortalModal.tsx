@@ -888,7 +888,7 @@ export const AdminPortalModal: React.FC = () => {
                                   </div>
                                 ) : (
                                   <span className="font-semibold text-slate-800">
-                                    Dễ: {u.quota?.easy ?? 0} | Sâu: {u.quota?.advanced ?? 0}
+                                    Cơ bản: {u.quota?.easy ?? 0} | Chuyên sâu: {u.quota?.advanced ?? 0}
                                   </span>
                                 )}
                               </td>
@@ -1309,7 +1309,7 @@ export const AdminPortalModal: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4 pt-1">
                   <div>
                     <label className="block text-[12.5px] font-semibold text-slate-700 mb-1">
-                      Chế độ Dễ dùng:
+                      Chế độ Cơ bản:
                     </label>
                     <input
                       type="number"
@@ -1349,7 +1349,7 @@ export const AdminPortalModal: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4 pt-1">
                   <div>
                     <label className="block text-[12.5px] font-semibold text-slate-700 mb-1">
-                      Chế độ Dễ dùng:
+                      Chế độ Cơ bản:
                     </label>
                     <input
                       type="number"
@@ -1490,7 +1490,7 @@ export const AdminPortalModal: React.FC = () => {
                 <div className="space-y-3">
                   <div>
                     <label className="block text-[12.5px] font-semibold text-slate-700 mb-1">
-                      Chế độ Dễ dùng:
+                      Chế độ Cơ bản:
                     </label>
                     <div className="flex items-center gap-2">
                       <button

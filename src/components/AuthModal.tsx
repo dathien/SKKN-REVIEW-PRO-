@@ -264,7 +264,7 @@ export const AuthModal: React.FC = () => {
                     <span className="text-[13.5px] font-bold text-blue-950 block">Gói trải nghiệm</span>
                     <div className="grid grid-cols-2 gap-2.5">
                       <div className="p-2.5 bg-white rounded-lg border border-blue-100">
-                        <span className="text-[11.5px] text-slate-500 block">Dễ dùng:</span>
+                        <span className="text-[11.5px] text-slate-500 block">Cơ bản:</span>
                         <span className="text-[15.5px] font-bold text-blue-900">
                           còn {quota.easy ?? 0} lượt
                         </span>
@@ -424,7 +424,7 @@ export const AuthModal: React.FC = () => {
                 <div className="pt-1.5 border-t border-slate-200/80 flex items-center justify-between text-[12.5px] text-slate-600">
                   <span>Lượt trải nghiệm hiện tại:</span>
                   <span className="font-bold text-slate-800">
-                    Dễ dùng: {quota.easy ?? 0} • Chuyên sâu: {quota.advanced ?? 0}
+                    Cơ bản: {quota.easy ?? 0} • Chuyên sâu: {quota.advanced ?? 0}
                   </span>
                 </div>
               </div>

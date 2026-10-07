@@ -117,7 +117,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // CHẤM LẠI: đã chấm lại thành công
   const rescoreBadge = isShowBadges && analysis.rescoreHistory ? '✓' : undefined;
 
-  // 1. CHẾ ĐỘ DỄ DÙNG: CỰC GỌN (5 mục luồng thao tác)
+  // 1. CHẾ ĐỘ CƠ BẢN: CỰC GỌN (5 mục luồng thao tác)
   const easyNavItems: NavItemConfig[] = [
     {
       id: 'dashboard',
@@ -394,7 +394,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </nav>
 
-        {/* Sidebar Footer: Switch [Dễ dùng] [Chuyên sâu] & Lượt dùng - Cố định ở đáy */}
+        {/* Sidebar Footer: Switch [Cơ bản] [Chuyên sâu] & Lượt dùng - Cố định ở đáy */}
         <div className="p-3 border-t border-slate-800 bg-slate-950/90 shrink-0 space-y-2.5">
           <div className="bg-slate-900 p-1 rounded-xl border border-slate-800 flex items-center text-[13.5px] font-semibold gap-1">
             <button
@@ -406,7 +406,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              Dễ dùng
+              Cơ bản
             </button>
             <button
               type="button"
@@ -428,7 +428,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span className="text-emerald-400 font-bold">✨ Không giới hạn</span>
               ) : (
                 <span>
-                  Còn <strong className="text-white">{quota[appMode] ?? 0}</strong> lượt ({appMode === 'easy' ? 'Dễ' : 'Sâu'})
+                  Còn <strong className="text-white">{quota[appMode] ?? 0}</strong> lượt {appMode === 'easy' ? 'Cơ bản' : 'Chuyên sâu'}
                 </span>
               )}
             </span>

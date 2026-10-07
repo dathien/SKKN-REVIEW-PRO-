@@ -328,7 +328,7 @@ export function consumeQuota(params: {
         return {
           allowed: false,
           code: 'TRIAL_QUOTA_EXCEEDED',
-          message: `Thầy/Cô đã dùng hết lượt dùng thử cho chế độ ${mode === 'easy' ? 'Dễ dùng' : 'Chuyên sâu'}. Vui lòng kích hoạt Bản quyền để tiếp tục không giới hạn.`,
+          message: `Thầy/Cô đã dùng hết lượt dùng thử cho chế độ ${mode === 'easy' ? 'Cơ bản' : 'Chuyên sâu'}. Vui lòng kích hoạt Bản quyền để tiếp tục không giới hạn.`,
           role: 'TRIAL',
           quota: user.quota,
         };
@@ -354,7 +354,7 @@ export function consumeQuota(params: {
     return {
       allowed: false,
       code: 'GUEST_QUOTA_EXCEEDED',
-      message: `Quý Thầy/Cô đã dùng hết lượt trải nghiệm miễn phí cho chế độ ${mode === 'easy' ? 'Dễ dùng' : 'Chuyên sâu'}. Vui lòng đăng nhập Google để nhận thêm lượt Trial hoặc nhập Mã bản quyền.`,
+      message: `Quý Thầy/Cô đã dùng hết lượt trải nghiệm miễn phí cho chế độ ${mode === 'easy' ? 'Cơ bản' : 'Chuyên sâu'}. Vui lòng đăng nhập Google để nhận thêm lượt Trial hoặc nhập Mã bản quyền.`,
       role: 'GUEST',
       quota: guest.quota,
     };

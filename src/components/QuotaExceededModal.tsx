@@ -14,7 +14,7 @@ export const QuotaExceededModal: React.FC = () => {
 
   if (!isQuotaModalOpen) return null;
 
-  const modeName = quotaExceededMode === 'easy' ? 'Dễ dùng' : 'Chuyên sâu';
+  const modeName = quotaExceededMode === 'easy' ? 'Cơ bản' : 'Chuyên sâu';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs select-none animate-in fade-in duration-150">

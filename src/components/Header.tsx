@@ -123,7 +123,7 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Key className="w-3.5 h-3.5 text-amber-600" />
             <span>
-              {role === 'GUEST' ? 'Trải nghiệm' : 'Trial'}: Dễ {quota.easy ?? 0} | Sâu {quota.advanced ?? 0}
+              {role === 'GUEST' ? 'Trải nghiệm' : 'Trial'}: Cơ bản {quota.easy ?? 0} | Chuyên sâu {quota.advanced ?? 0}
             </span>
           </button>
         )}
