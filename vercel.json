@@ -1,6 +1,11 @@
 {
   "buildCommand": "vite build",
   "outputDirectory": "dist",
+  "functions": {
+    "api/**/*.ts": {
+      "includeFiles": "api/_lib/**"
+    }
+  },
   "headers": [
     {
       "source": "/(.*)",

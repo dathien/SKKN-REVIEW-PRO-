@@ -1,4 +1,4 @@
-import { getAllLicenses } from '../../src/server/authStore';
+import { getAllLicenses } from '../_lib/authStore';
 
 export default function handler(req: any, res: any) {
   res.setHeader('Content-Type', 'application/json');

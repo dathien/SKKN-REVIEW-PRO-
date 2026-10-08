@@ -1,4 +1,4 @@
-import { getOrCreateUser } from '../../src/server/authStore';
+import { getOrCreateUser } from '../_lib/authStore';
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Content-Type', 'application/json');

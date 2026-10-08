@@ -1,4 +1,4 @@
-import { getSystemSettings, updateSystemSettings } from '../../src/server/authStore';
+import { getSystemSettings, updateSystemSettings } from '../_lib/authStore';
 
 export default function handler(req: any, res: any) {
   res.setHeader('Content-Type', 'application/json');
