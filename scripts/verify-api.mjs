@@ -22,6 +22,12 @@ if (jsFiles.length === 0) {
   process.exit(1);
 }
 
+if (jsFiles.length > 12) {
+  console.error(`[verify-api] ✗ Error: Found ${jsFiles.length} serverless functions. Vercel Hobby plan limit is maximum 12!`);
+  process.exit(1);
+}
+console.log(`[verify-api] Function count check passed: ${jsFiles.length} serverless functions (within Vercel Hobby plan limit <= 12).`);
+
 for (const file of jsFiles) {
   const fileUrl = new URL(path.resolve(file), 'file://').href;
   try {

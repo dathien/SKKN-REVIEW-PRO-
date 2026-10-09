@@ -403,27 +403,95 @@ async function activateLicenseKey(params) {
 }
 loadStore();
 
-// server/api/license/activate.ts
-async function handler(req, res) {
-  res.setHeader("Content-Type", "application/json");
-  if (req.method !== "POST") return res.status(405).json({ error: "Method Not Allowed" });
-  try {
-    const { licenseKey, email, userId, guestId, deviceId, deviceName } = req.body || {};
-    const result = await activateLicenseKey({
-      licenseKey,
-      email,
-      userId,
-      guestId,
-      deviceId,
-      deviceName
-    });
-    if (!result.success) {
-      return res.status(400).json(result);
-    }
-    return res.status(200).json(result);
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+// server/api/_lib/routeHelper.ts
+function extractSubpath(req, basePath) {
+  const querySubpath = req.query?.__subpath ?? req.query?.subpath ?? req.query?.path ?? req.query?.route;
+  if (querySubpath !== void 0 && querySubpath !== null && querySubpath !== "") {
+    const raw = Array.isArray(querySubpath) ? querySubpath.join("/") : String(querySubpath);
+    const cleaned = raw.replace(/^\/+|\/+$/g, "");
+    if (cleaned) return cleaned;
   }
+  const prefix = basePath.endsWith("/") ? basePath : `${basePath}/`;
+  if (typeof req.url === "string") {
+    const pathname = req.url.split("?")[0];
+    if (pathname.startsWith(prefix)) {
+      const sub = pathname.slice(prefix.length).replace(/^\/+|\/+$/g, "");
+      if (sub) return sub;
+    }
+  }
+  if (typeof req.originalUrl === "string") {
+    const pathname = req.originalUrl.split("?")[0];
+    if (pathname.startsWith(prefix)) {
+      const sub = pathname.slice(prefix.length).replace(/^\/+|\/+$/g, "");
+      if (sub) return sub;
+    }
+  }
+  const headerKeys = ["x-matched-path", "x-forwarded-uri", "x-original-uri", "x-rewrite-url"];
+  for (const key of headerKeys) {
+    const val = req.headers?.[key];
+    if (typeof val === "string") {
+      const pathname = val.split("?")[0];
+      if (pathname.startsWith(prefix)) {
+        const sub = pathname.slice(prefix.length).replace(/^\/+|\/+$/g, "");
+        if (sub) return sub;
+      }
+    }
+  }
+  return "";
+}
+function getRequestBody(req) {
+  if (req.body && typeof req.body === "object") {
+    return req.body;
+  }
+  if (typeof req.body === "string" && req.body.trim().length > 0) {
+    try {
+      return JSON.parse(req.body);
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+function handleCors(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-user-email, x-user-id");
+  if (req.method === "OPTIONS") {
+    res.status(204).end();
+    return true;
+  }
+  return false;
+}
+
+// server/api/license.ts
+async function handler(req, res) {
+  if (handleCors(req, res)) return;
+  res.setHeader("Content-Type", "application/json");
+  const subpath = extractSubpath(req, "/api/license");
+  if (subpath === "activate" || subpath === "") {
+    if (req.method !== "POST") {
+      return res.status(405).json({ error: "Method Not Allowed" });
+    }
+    try {
+      const body = getRequestBody(req);
+      const { licenseKey, email, userId, guestId, deviceId, deviceName } = body || {};
+      const result = await activateLicenseKey({
+        licenseKey,
+        email,
+        userId,
+        guestId,
+        deviceId,
+        deviceName
+      });
+      if (!result.success) {
+        return res.status(400).json(result);
+      }
+      return res.status(200).json(result);
+    } catch (err) {
+      return res.status(500).json({ success: false, message: err.message });
+    }
+  }
+  return res.status(404).json({ error: `Tuy\u1EBFn \u0111\u01B0\u1EDDng gi\u1EA5y ph\xE9p kh\xF4ng t\u1ED3n t\u1EA1i: /api/license/${subpath}` });
 }
 export {
   handler as default

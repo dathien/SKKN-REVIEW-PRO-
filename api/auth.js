@@ -232,44 +232,118 @@ async function getOrCreateUser(profile) {
 }
 loadStore();
 
-// server/api/auth/google.ts
-async function handler(req, res) {
-  res.setHeader("Content-Type", "application/json");
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method Not Allowed" });
+// server/api/_lib/routeHelper.ts
+function extractSubpath(req, basePath) {
+  const querySubpath = req.query?.__subpath ?? req.query?.subpath ?? req.query?.path ?? req.query?.route;
+  if (querySubpath !== void 0 && querySubpath !== null && querySubpath !== "") {
+    const raw = Array.isArray(querySubpath) ? querySubpath.join("/") : String(querySubpath);
+    const cleaned = raw.replace(/^\/+|\/+$/g, "");
+    if (cleaned) return cleaned;
   }
-  try {
-    const { credential, email, name, picture, id } = req.body || {};
-    let userEmail = email ? String(email).trim().toLowerCase() : "";
-    let userName = name ? String(name).trim() : "";
-    let userPicture = picture;
-    let userId = id;
-    if (credential && typeof credential === "string") {
-      try {
-        const parts = credential.split(".");
-        if (parts.length >= 2) {
-          const decoded = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf-8"));
-          if (!userEmail && decoded.email) userEmail = decoded.email.trim().toLowerCase();
-          if (!userName && decoded.name) userName = decoded.name;
-          if (!userPicture && decoded.picture) userPicture = decoded.picture;
-          if (!userId && decoded.sub) userId = decoded.sub;
-        }
-      } catch {
+  const prefix = basePath.endsWith("/") ? basePath : `${basePath}/`;
+  if (typeof req.url === "string") {
+    const pathname = req.url.split("?")[0];
+    if (pathname.startsWith(prefix)) {
+      const sub = pathname.slice(prefix.length).replace(/^\/+|\/+$/g, "");
+      if (sub) return sub;
+    }
+  }
+  if (typeof req.originalUrl === "string") {
+    const pathname = req.originalUrl.split("?")[0];
+    if (pathname.startsWith(prefix)) {
+      const sub = pathname.slice(prefix.length).replace(/^\/+|\/+$/g, "");
+      if (sub) return sub;
+    }
+  }
+  const headerKeys = ["x-matched-path", "x-forwarded-uri", "x-original-uri", "x-rewrite-url"];
+  for (const key of headerKeys) {
+    const val = req.headers?.[key];
+    if (typeof val === "string") {
+      const pathname = val.split("?")[0];
+      if (pathname.startsWith(prefix)) {
+        const sub = pathname.slice(prefix.length).replace(/^\/+|\/+$/g, "");
+        if (sub) return sub;
       }
     }
-    if (!userEmail) {
-      return res.status(400).json({ error: "Kh\xF4ng th\u1EC3 x\xE1c \u0111\u1ECBnh email Google" });
-    }
-    const user = await getOrCreateUser({
-      email: userEmail,
-      name: userName,
-      picture: userPicture,
-      id: userId
-    });
-    return res.status(200).json({ success: true, user });
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
   }
+  return "";
+}
+function getRequestBody(req) {
+  if (req.body && typeof req.body === "object") {
+    return req.body;
+  }
+  if (typeof req.body === "string" && req.body.trim().length > 0) {
+    try {
+      return JSON.parse(req.body);
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+function handleCors(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-user-email, x-user-id");
+  if (req.method === "OPTIONS") {
+    res.status(204).end();
+    return true;
+  }
+  return false;
+}
+
+// server/api/auth.ts
+async function handler(req, res) {
+  if (handleCors(req, res)) return;
+  res.setHeader("Content-Type", "application/json");
+  const subpath = extractSubpath(req, "/api/auth");
+  const body = getRequestBody(req);
+  if (subpath === "config") {
+    const rawClientId = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || "";
+    const cleanClientId = rawClientId.replace(/^["']|["']$/g, "").trim();
+    return res.status(200).json({
+      googleClientId: cleanClientId,
+      hasLicenseApi: Boolean(process.env.LICENSE_API_URL)
+    });
+  }
+  if (subpath === "google") {
+    if (req.method !== "POST") {
+      return res.status(405).json({ error: "Method Not Allowed" });
+    }
+    try {
+      const { credential, email, name, picture, id } = body || {};
+      let userEmail = email ? String(email).trim().toLowerCase() : "";
+      let userName = name ? String(name).trim() : "";
+      let userPicture = picture;
+      let userId = id;
+      if (credential && typeof credential === "string") {
+        try {
+          const parts = credential.split(".");
+          if (parts.length >= 2) {
+            const decoded = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf-8"));
+            if (!userEmail && decoded.email) userEmail = decoded.email.trim().toLowerCase();
+            if (!userName && decoded.name) userName = decoded.name;
+            if (!userPicture && decoded.picture) userPicture = decoded.picture;
+            if (!userId && decoded.sub) userId = decoded.sub;
+          }
+        } catch {
+        }
+      }
+      if (!userEmail) {
+        return res.status(400).json({ error: "Kh\xF4ng th\u1EC3 x\xE1c \u0111\u1ECBnh email Google" });
+      }
+      const user = await getOrCreateUser({
+        email: userEmail,
+        name: userName,
+        picture: userPicture,
+        id: userId
+      });
+      return res.status(200).json({ success: true, user });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+  return res.status(404).json({ error: `Tuy\u1EBFn \u0111\u01B0\u1EDDng x\xE1c th\u1EF1c kh\xF4ng t\u1ED3n t\u1EA1i: /api/auth/${subpath}` });
 }
 export {
   handler as default

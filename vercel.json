@@ -11,5 +11,23 @@
         }
       ]
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/auth/:path*",
+      "destination": "/api/auth?__subpath=:path*"
+    },
+    {
+      "source": "/api/user/:path*",
+      "destination": "/api/user?__subpath=:path*"
+    },
+    {
+      "source": "/api/license/:path*",
+      "destination": "/api/license?__subpath=:path*"
+    },
+    {
+      "source": "/api/admin/:path*",
+      "destination": "/api/admin?__subpath=:path*"
+    }
   ]
 }

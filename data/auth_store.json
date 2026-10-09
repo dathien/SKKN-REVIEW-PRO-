@@ -80,6 +80,38 @@
       "createdAt": "2026-10-07T15:07:30.532Z",
       "lastActiveAt": "2026-10-07T15:07:30.532Z",
       "isBlocked": false
+    },
+    "test_user@gmail.com": {
+      "id": "usr_1791558290633_y9u7w",
+      "email": "test_user@gmail.com",
+      "name": "test_user",
+      "role": "LICENSED",
+      "plan": "PRO",
+      "quota": {
+        "easy": 9999,
+        "advanced": 9999
+      },
+      "licenseKey": "INVALID-KEY-123",
+      "licenseExpiresAt": null,
+      "freeAccess": false,
+      "createdAt": "2026-10-09T15:04:50.633Z",
+      "lastActiveAt": "2026-10-09T15:04:50.634Z",
+      "isBlocked": false
+    },
+    "new_teacher@school.edu.vn": {
+      "id": "usr_1791558317128_02tl8",
+      "email": "new_teacher@school.edu.vn",
+      "name": "New Teacher",
+      "role": "USER",
+      "plan": "PRO",
+      "quota": {
+        "easy": 3,
+        "advanced": 1
+      },
+      "licenseExpiresAt": null,
+      "createdAt": "2026-10-09T15:05:17.128Z",
+      "lastActiveAt": "2026-10-09T15:14:49.590Z",
+      "isBlocked": false
     }
   },
   "guests": {
@@ -183,9 +215,39 @@
       "expiresAt": null,
       "createdReason": "Gói Bản quyền Trường học",
       "boundDevices": []
+    },
+    "INVALID-KEY-123": {
+      "key": "INVALID-KEY-123",
+      "plan": "PRO",
+      "maxDevices": 1,
+      "boundDevices": [
+        {
+          "deviceId": "dev_1",
+          "deviceName": "Thiết bị người dùng",
+          "boundAt": "2026-10-09T15:04:48.554Z",
+          "lastActiveAt": "2026-10-09T15:05:22.685Z"
+        }
+      ],
+      "status": "ACTIVE",
+      "expiresAt": null,
+      "createdReason": "Xác thực từ Google Apps Script License API",
+      "createdAt": "2026-10-09T15:04:48.554Z",
+      "assignedEmail": "test_user@gmail.com",
+      "activatedAt": "2026-10-09T15:04:48.554Z"
     }
   },
   "stats": {
     "totalAnalyses": 0
+  },
+  "settings": {
+    "guestEasyLimit": 3,
+    "guestAdvancedLimit": 1,
+    "trialEasyLimit": 3,
+    "trialAdvancedLimit": 1,
+    "freeAccessEnabled": false,
+    "freeAccessName": "Chương trình Trải nghiệm Giáo dục",
+    "freeAccessStart": "",
+    "freeAccessEnd": "",
+    "defaultTrialDays": 14
   }
 }
