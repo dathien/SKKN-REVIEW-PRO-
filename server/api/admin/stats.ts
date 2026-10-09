@@ -1,4 +1,4 @@
-import { getSystemSettings, updateSystemSettings } from '../_lib/authStore';
+import { getSystemStats, isUserAdmin, ROOT_ADMIN_EMAILS } from '../../../src/server/authStore';
 
 export default function handler(req: any, res: any) {
   res.setHeader('Content-Type', 'application/json');
@@ -7,8 +7,8 @@ export default function handler(req: any, res: any) {
     req.headers['x-user-email'] || req.headers['x-user-id'] || req.query?.adminEmail || ''
   ).toLowerCase().trim();
 
-  const ROOT_ADMIN_EMAILS = ['dathien2412@gmail.com'];
-  if (!ROOT_ADMIN_EMAILS.includes(operatorEmail)) {
+  const isAllowed = ROOT_ADMIN_EMAILS.includes(operatorEmail) || isUserAdmin(operatorEmail);
+  if (!isAllowed) {
     return res.status(403).json({
       error: 'Truy cập bị từ chối. Quyền quản trị (USERS.ROLE = ADMIN) bắt buộc.',
       code: 'FORBIDDEN',
@@ -16,12 +16,8 @@ export default function handler(req: any, res: any) {
   }
 
   try {
-    if (req.method === 'POST') {
-      const updated = updateSystemSettings(req.body || {});
-      return res.status(200).json({ success: true, settings: updated });
-    }
-    const settings = getSystemSettings();
-    return res.status(200).json({ success: true, settings });
+    const stats = getSystemStats();
+    return res.status(200).json(stats);
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }

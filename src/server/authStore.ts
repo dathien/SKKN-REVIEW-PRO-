@@ -208,12 +208,12 @@ export async function fetchUserFromLicenseApi(
         const rawRole = (data.role || data.userRole || '').toUpperCase();
         const role: UserRole | undefined = 
           rawRole === 'ADMIN' ? 'ADMIN' :
-          rawRole === 'LICENSED' ? 'LICENSED' :
+          rawRole === 'LICENSED' || rawRole === 'PRO' ? 'LICENSED' :
           rawRole === 'FREE_ACCESS' || rawRole === 'FREE' || Boolean(data.freeAccess) ? 'FREE_ACCESS' :
           rawRole === 'BLOCKED' ? 'BLOCKED' :
           rawRole === 'TRIAL' ? 'TRIAL' : undefined;
 
-        const rawPlan = (data.plan || '').toUpperCase();
+        const rawPlan = (data.plan || (rawRole === 'PRO' ? 'PRO' : '')).toUpperCase();
         const plan: LicensePlan | undefined =
           rawPlan === 'SCHOOL' ? 'SCHOOL' :
           rawPlan === 'PREMIUM' ? 'PREMIUM' :
@@ -655,7 +655,45 @@ export function getSystemStats(): SystemStats {
   };
 }
 
-export function getAllUsersAndGuests() {
+export async function getAllUsersAndGuests() {
+  if (process.env.LICENSE_API_URL) {
+    try {
+      const url = new URL(process.env.LICENSE_API_URL);
+      url.searchParams.set('action', 'getUsers');
+      const resp = await fetch(url.toString(), { method: 'GET', signal: AbortSignal.timeout(3000) });
+      if (resp.ok) {
+        const data = await resp.json().catch(() => null);
+        const list = Array.isArray(data?.users) ? data.users : (Array.isArray(data) ? data : []);
+        list.forEach((u: any) => {
+          if (u && u.email) {
+            const email = String(u.email).toLowerCase().trim();
+            const existing = store.users[email];
+            if (!existing) {
+              const role: UserRole = u.role === 'ADMIN' ? 'ADMIN' : (u.role === 'LICENSED' ? 'LICENSED' : (u.role === 'FREE_ACCESS' ? 'FREE_ACCESS' : (u.role === 'BLOCKED' ? 'BLOCKED' : 'TRIAL')));
+              const plan: LicensePlan = u.plan === 'SCHOOL' ? 'SCHOOL' : (u.plan === 'PREMIUM' ? 'PREMIUM' : (u.plan === 'PRO' ? 'PRO' : 'TRIAL'));
+              const isUnlimited = role === 'ADMIN' || role === 'LICENSED' || role === 'FREE_ACCESS';
+              store.users[email] = {
+                id: u.id || `usr_sheet_${email.split('@')[0]}`,
+                email,
+                name: u.name || email.split('@')[0],
+                role,
+                plan,
+                quota: isUnlimited ? { easy: 9999, advanced: 9999 } : (u.quota || { easy: 3, advanced: 1 }),
+                licenseKey: u.licenseKey,
+                licenseExpiresAt: u.licenseExpiresAt || null,
+                createdAt: u.createdAt || new Date().toISOString(),
+                lastActiveAt: u.lastActiveAt || new Date().toISOString(),
+                isBlocked: Boolean(u.isBlocked),
+              };
+            }
+          }
+        });
+      }
+    } catch (_) {
+      // Silently continue if LICENSE_API_URL is unavailable or offline
+    }
+  }
+
   return {
     users: Object.values(store.users),
     guests: Object.values(store.guests),
@@ -788,8 +826,8 @@ export function getSystemSettings(): SystemSettings {
     store.settings = {
       guestEasyLimit: 3,
       guestAdvancedLimit: 1,
-      trialEasyLimit: 5,
-      trialAdvancedLimit: 2,
+      trialEasyLimit: 3,
+      trialAdvancedLimit: 1,
       freeAccessEnabled: false,
       freeAccessName: 'Chương trình Trải nghiệm Giáo dục',
       freeAccessStart: '',
@@ -823,6 +861,7 @@ export function getAllLicenses(): LicenseItem[] {
 export function adminGenerateLicense(params: {
   plan?: LicensePlan;
   durationMonths?: number; // 0 or undefined = lifetime
+  durationDays?: number;
   maxDevices?: number;
   assignedEmail?: string;
   customerNote?: string;
@@ -837,6 +876,10 @@ export function adminGenerateLicense(params: {
   if (params.durationMonths && params.durationMonths > 0) {
     const d = new Date();
     d.setMonth(d.getMonth() + params.durationMonths);
+    expiresAt = d.toISOString();
+  } else if (params.durationDays && params.durationDays > 0) {
+    const d = new Date();
+    d.setDate(d.getDate() + params.durationDays);
     expiresAt = d.toISOString();
   }
 

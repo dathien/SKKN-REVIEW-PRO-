@@ -136,36 +136,37 @@ function isUserAdmin(identifier) {
   const user = findUserByEmailOrId(identifier);
   return user?.role === "ADMIN";
 }
-function getAllLicenses() {
-  const list = Object.values(store.licenses);
-  return list.map((l) => ({
-    ...l,
-    boundDevices: l.boundDevices || [],
-    status: l.status || (l.assignedEmail ? "ACTIVE" : "UNUSED")
-  })).sort((a, b) => {
-    const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-    const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-    return timeB - timeA;
-  });
+function adminResetLicenseDevices(params) {
+  const lic = store.licenses[params.key];
+  if (!lic) {
+    return { success: false, error: "Kh\xF4ng t\xECm th\u1EA5y m\xE3 b\u1EA3n quy\u1EC1n tr\xEAn h\u1EC7 th\u1ED1ng." };
+  }
+  lic.boundDevices = lic.boundDevices || [];
+  if (params.deviceId) {
+    lic.boundDevices = lic.boundDevices.filter((d) => d.deviceId !== params.deviceId);
+  } else {
+    lic.boundDevices = [];
+  }
+  saveStore();
+  return { success: true, license: lic };
 }
 loadStore();
 
-// server/api/admin/licenses.ts
+// server/api/admin/licenses/reset-devices.ts
 function handler(req, res) {
   res.setHeader("Content-Type", "application/json");
+  if (req.method !== "POST") return res.status(405).json({ error: "Method Not Allowed" });
   const operatorEmail = String(
-    req.headers["x-user-email"] || req.headers["x-user-id"] || req.query?.adminEmail || ""
+    req.headers["x-user-email"] || req.headers["x-user-id"] || req.query?.adminEmail || req.body?.operatorEmail || ""
   ).toLowerCase().trim();
   const isAllowed = ROOT_ADMIN_EMAILS.includes(operatorEmail) || isUserAdmin(operatorEmail);
   if (!isAllowed) {
-    return res.status(403).json({
-      error: "Truy c\u1EADp b\u1ECB t\u1EEB ch\u1ED1i. Quy\u1EC1n qu\u1EA3n tr\u1ECB (USERS.ROLE = ADMIN) b\u1EAFt bu\u1ED9c.",
-      code: "FORBIDDEN"
-    });
+    return res.status(403).json({ error: "Truy c\u1EADp b\u1ECB t\u1EEB ch\u1ED1i. Quy\u1EC1n qu\u1EA3n tr\u1ECB b\u1EAFt bu\u1ED9c.", code: "FORBIDDEN" });
   }
   try {
-    const licenses = getAllLicenses();
-    return res.status(200).json({ success: true, licenses });
+    const { key } = req.body || {};
+    const result = adminResetLicenseDevices(key);
+    return res.status(result.success ? 200 : 400).json(result);
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }

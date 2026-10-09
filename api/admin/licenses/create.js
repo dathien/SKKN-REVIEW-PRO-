@@ -136,36 +136,63 @@ function isUserAdmin(identifier) {
   const user = findUserByEmailOrId(identifier);
   return user?.role === "ADMIN";
 }
-function getAllLicenses() {
-  const list = Object.values(store.licenses);
-  return list.map((l) => ({
-    ...l,
-    boundDevices: l.boundDevices || [],
-    status: l.status || (l.assignedEmail ? "ACTIVE" : "UNUSED")
-  })).sort((a, b) => {
-    const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-    const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-    return timeB - timeA;
-  });
+function adminGenerateLicense(params) {
+  const plan = params.plan || "PRO";
+  const randPart1 = Math.random().toString(36).substring(2, 6).toUpperCase();
+  const randPart2 = Math.random().toString(36).substring(2, 6).toUpperCase();
+  const key = `SKKN-${plan === "SCHOOL" ? "SCHOOL" : "PRO"}-${randPart1}-${randPart2}`;
+  let expiresAt = null;
+  if (params.durationMonths && params.durationMonths > 0) {
+    const d = /* @__PURE__ */ new Date();
+    d.setMonth(d.getMonth() + params.durationMonths);
+    expiresAt = d.toISOString();
+  } else if (params.durationDays && params.durationDays > 0) {
+    const d = /* @__PURE__ */ new Date();
+    d.setDate(d.getDate() + params.durationDays);
+    expiresAt = d.toISOString();
+  }
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const lic = {
+    key,
+    plan,
+    maxDevices: params.maxDevices && params.maxDevices > 0 ? params.maxDevices : plan === "SCHOOL" ? 5 : 1,
+    boundDevices: [],
+    assignedEmail: params.assignedEmail || void 0,
+    status: params.assignedEmail ? "ACTIVE" : "UNUSED",
+    expiresAt,
+    customerNote: params.customerNote || params.reason || "",
+    createdReason: params.reason || `M\xE3 t\u1EA1o b\u1EDFi Qu\u1EA3n tr\u1ECB vi\xEAn (${params.durationMonths ? `${params.durationMonths} th\xE1ng` : "V\u0129nh vi\u1EC5n"})`,
+    createdAt: now
+  };
+  store.licenses[key] = lic;
+  saveStore();
+  return lic;
 }
 loadStore();
 
-// server/api/admin/licenses.ts
+// server/api/admin/licenses/create.ts
 function handler(req, res) {
   res.setHeader("Content-Type", "application/json");
+  if (req.method !== "POST") return res.status(405).json({ error: "Method Not Allowed" });
   const operatorEmail = String(
-    req.headers["x-user-email"] || req.headers["x-user-id"] || req.query?.adminEmail || ""
+    req.headers["x-user-email"] || req.headers["x-user-id"] || req.query?.adminEmail || req.body?.operatorEmail || ""
   ).toLowerCase().trim();
   const isAllowed = ROOT_ADMIN_EMAILS.includes(operatorEmail) || isUserAdmin(operatorEmail);
   if (!isAllowed) {
-    return res.status(403).json({
-      error: "Truy c\u1EADp b\u1ECB t\u1EEB ch\u1ED1i. Quy\u1EC1n qu\u1EA3n tr\u1ECB (USERS.ROLE = ADMIN) b\u1EAFt bu\u1ED9c.",
-      code: "FORBIDDEN"
-    });
+    return res.status(403).json({ error: "Truy c\u1EADp b\u1ECB t\u1EEB ch\u1ED1i. Quy\u1EC1n qu\u1EA3n tr\u1ECB b\u1EAFt bu\u1ED9c.", code: "FORBIDDEN" });
   }
   try {
-    const licenses = getAllLicenses();
-    return res.status(200).json({ success: true, licenses });
+    const { plan, durationMonths, durationDays, maxDevices, assignedEmail, customerNote, reason } = req.body || {};
+    const item = adminGenerateLicense({
+      plan,
+      durationMonths: durationMonths !== void 0 ? Number(durationMonths) : void 0,
+      durationDays: durationDays !== void 0 ? Number(durationDays) : void 0,
+      maxDevices: Number(maxDevices) || 1,
+      assignedEmail,
+      customerNote,
+      reason
+    });
+    return res.status(200).json({ success: true, license: item });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }

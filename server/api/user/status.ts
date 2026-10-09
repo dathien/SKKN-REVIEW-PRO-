@@ -1,4 +1,4 @@
-import { findUserByEmailOrId, getOrCreateGuest } from '../_lib/authStore';
+import { findUserByEmailOrId, getOrCreateGuest } from '../../../src/server/authStore';
 
 export default function handler(req: any, res: any) {
   const { guestId, email, userId } = req.query || {};

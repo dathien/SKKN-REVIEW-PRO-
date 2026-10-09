@@ -993,9 +993,9 @@ app.get('/api/admin/stats', requireAdminMiddleware, (_req, res) => {
 });
 
 // 8. Admin: Users and Guests List (Chỉ ROLE = ADMIN)
-app.get('/api/admin/users', requireAdminMiddleware, (_req, res) => {
+app.get('/api/admin/users', requireAdminMiddleware, async (_req, res) => {
   try {
-    const data = getAllUsersAndGuests();
+    const data = await getAllUsersAndGuests();
     return res.json(data);
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -1116,10 +1116,11 @@ app.get('/api/admin/licenses', requireAdminMiddleware, (_req, res) => {
 // 13. Admin: Generate license (Chỉ ROLE = ADMIN)
 app.post('/api/admin/licenses/create', requireAdminMiddleware, (req, res) => {
   try {
-    const { plan, durationMonths, maxDevices, assignedEmail, customerNote, reason } = req.body;
+    const { plan, durationMonths, durationDays, maxDevices, assignedEmail, customerNote, reason } = req.body;
     const license = adminGenerateLicense({
       plan,
-      durationMonths: Number(durationMonths) || 0,
+      durationMonths: durationMonths !== undefined ? Number(durationMonths) : undefined,
+      durationDays: durationDays !== undefined ? Number(durationDays) : undefined,
       maxDevices: Number(maxDevices) || 1,
       assignedEmail,
       customerNote,

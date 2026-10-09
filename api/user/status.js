@@ -1,4 +1,4 @@
-// api/_lib/authStore.ts
+// src/server/authStore.ts
 import fs from "fs";
 import path from "path";
 var DATA_DIR = path.resolve("data");
@@ -84,6 +84,9 @@ function initDefaultData() {
 }
 function loadStore() {
   try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
     if (fs.existsSync(STORE_FILE)) {
       const content = fs.readFileSync(STORE_FILE, "utf-8");
       const parsed = JSON.parse(content);
@@ -102,6 +105,7 @@ function loadStore() {
       });
     }
   } catch (err) {
+    console.error("Could not load auth store, using in-memory store:", err);
   }
   initDefaultData();
   saveStore();
@@ -113,6 +117,7 @@ function saveStore() {
     }
     fs.writeFileSync(STORE_FILE, JSON.stringify(store, null, 2), "utf-8");
   } catch (err) {
+    console.error("Could not save auth store to disk:", err);
   }
 }
 function getOrCreateGuest(guestId) {
@@ -151,7 +156,7 @@ function findUserByEmailOrId(identifier) {
 }
 loadStore();
 
-// api/user/status.ts
+// server/api/user/status.ts
 function handler(req, res) {
   const { guestId, email, userId } = req.query || {};
   res.setHeader("Content-Type", "application/json");

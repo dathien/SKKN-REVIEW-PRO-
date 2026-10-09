@@ -1,4 +1,4 @@
-// api/_lib/authStore.ts
+// src/server/authStore.ts
 import fs from "fs";
 import path from "path";
 var DATA_DIR = path.resolve("data");
@@ -84,6 +84,9 @@ function initDefaultData() {
 }
 function loadStore() {
   try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
     if (fs.existsSync(STORE_FILE)) {
       const content = fs.readFileSync(STORE_FILE, "utf-8");
       const parsed = JSON.parse(content);
@@ -102,6 +105,7 @@ function loadStore() {
       });
     }
   } catch (err) {
+    console.error("Could not load auth store, using in-memory store:", err);
   }
   initDefaultData();
   saveStore();
@@ -113,9 +117,62 @@ function saveStore() {
     }
     fs.writeFileSync(STORE_FILE, JSON.stringify(store, null, 2), "utf-8");
   } catch (err) {
+    console.error("Could not save auth store to disk:", err);
   }
 }
-function getAllUsersAndGuests() {
+function findUserByEmailOrId(identifier) {
+  if (!identifier) return null;
+  const lower = identifier.toLowerCase();
+  for (const key of Object.keys(store.users)) {
+    const u = store.users[key];
+    if (u.email.toLowerCase() === lower || u.id === identifier) {
+      return u;
+    }
+  }
+  return null;
+}
+function isUserAdmin(identifier) {
+  if (!identifier) return false;
+  const user = findUserByEmailOrId(identifier);
+  return user?.role === "ADMIN";
+}
+async function getAllUsersAndGuests() {
+  if (process.env.LICENSE_API_URL) {
+    try {
+      const url = new URL(process.env.LICENSE_API_URL);
+      url.searchParams.set("action", "getUsers");
+      const resp = await fetch(url.toString(), { method: "GET", signal: AbortSignal.timeout(3e3) });
+      if (resp.ok) {
+        const data = await resp.json().catch(() => null);
+        const list = Array.isArray(data?.users) ? data.users : Array.isArray(data) ? data : [];
+        list.forEach((u) => {
+          if (u && u.email) {
+            const email = String(u.email).toLowerCase().trim();
+            const existing = store.users[email];
+            if (!existing) {
+              const role = u.role === "ADMIN" ? "ADMIN" : u.role === "LICENSED" ? "LICENSED" : u.role === "FREE_ACCESS" ? "FREE_ACCESS" : u.role === "BLOCKED" ? "BLOCKED" : "TRIAL";
+              const plan = u.plan === "SCHOOL" ? "SCHOOL" : u.plan === "PREMIUM" ? "PREMIUM" : u.plan === "PRO" ? "PRO" : "TRIAL";
+              const isUnlimited = role === "ADMIN" || role === "LICENSED" || role === "FREE_ACCESS";
+              store.users[email] = {
+                id: u.id || `usr_sheet_${email.split("@")[0]}`,
+                email,
+                name: u.name || email.split("@")[0],
+                role,
+                plan,
+                quota: isUnlimited ? { easy: 9999, advanced: 9999 } : u.quota || { easy: 3, advanced: 1 },
+                licenseKey: u.licenseKey,
+                licenseExpiresAt: u.licenseExpiresAt || null,
+                createdAt: u.createdAt || (/* @__PURE__ */ new Date()).toISOString(),
+                lastActiveAt: u.lastActiveAt || (/* @__PURE__ */ new Date()).toISOString(),
+                isBlocked: Boolean(u.isBlocked)
+              };
+            }
+          }
+        });
+      }
+    } catch (_) {
+    }
+  }
   return {
     users: Object.values(store.users),
     guests: Object.values(store.guests),
@@ -124,21 +181,21 @@ function getAllUsersAndGuests() {
 }
 loadStore();
 
-// api/admin/users.ts
-function handler(req, res) {
+// server/api/admin/users.ts
+async function handler(req, res) {
   res.setHeader("Content-Type", "application/json");
   const operatorEmail = String(
     req.headers["x-user-email"] || req.headers["x-user-id"] || req.query?.adminEmail || ""
   ).toLowerCase().trim();
-  const ROOT_ADMIN_EMAILS2 = ["dathien2412@gmail.com"];
-  if (!ROOT_ADMIN_EMAILS2.includes(operatorEmail)) {
+  const isAllowed = ROOT_ADMIN_EMAILS.includes(operatorEmail) || isUserAdmin(operatorEmail);
+  if (!isAllowed) {
     return res.status(403).json({
       error: "Truy c\u1EADp b\u1ECB t\u1EEB ch\u1ED1i. Quy\u1EC1n qu\u1EA3n tr\u1ECB (USERS.ROLE = ADMIN) b\u1EAFt bu\u1ED9c.",
       code: "FORBIDDEN"
     });
   }
   try {
-    const data = getAllUsersAndGuests();
+    const data = await getAllUsersAndGuests();
     return res.status(200).json(data);
   } catch (err) {
     return res.status(500).json({ error: err.message });
