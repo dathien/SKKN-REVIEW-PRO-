@@ -1,19 +1,27 @@
 import {
   adminCreateUser,
   adminDeleteLicense,
+  adminDeleteUser,
   adminGenerateLicense,
   adminResetLicenseDevices,
+  adminSyncGoogleSheets,
   adminToggleLicenseStatus,
   adminUpdateUser,
+  checkSheetCompatibility,
+  fetchUserFromLicenseApi,
   getAllLicenses,
   getAllUsersAndGuests,
+  getOrCreateUser,
   getSystemSettings,
   getSystemStats,
   isUserAdmin,
+  mapRawSheetUserToAccount,
   ROOT_ADMIN_EMAILS,
   updateSystemSettings,
 } from '../../src/server/authStore';
 import { extractSubpath, getRequestBody, handleCors } from './_lib/routeHelper';
+
+export { mapRawSheetUserToAccount };
 
 export default async function handler(req: any, res: any) {
   if (handleCors(req, res)) return;
@@ -30,7 +38,18 @@ export default async function handler(req: any, res: any) {
     ''
   ).toLowerCase().trim();
 
-  const isAllowed = ROOT_ADMIN_EMAILS.includes(operatorEmail) || isUserAdmin(operatorEmail);
+  let isAllowed = ROOT_ADMIN_EMAILS.includes(operatorEmail) || isUserAdmin(operatorEmail);
+  if (!isAllowed && process.env.LICENSE_API_URL && operatorEmail) {
+    try {
+      const remote = await fetchUserFromLicenseApi(operatorEmail);
+      if (remote?.role === 'ADMIN') {
+        const u = await getOrCreateUser({ email: operatorEmail });
+        u.role = 'ADMIN';
+        isAllowed = true;
+      }
+    } catch {}
+  }
+
   if (!isAllowed) {
     return res.status(403).json({
       error: 'Truy cập bị từ chối. Quyền quản trị (USERS.ROLE = ADMIN) bắt buộc.',
@@ -42,6 +61,12 @@ export default async function handler(req: any, res: any) {
     // GET /api/admin/check-access
     if (subpath === 'check-access') {
       return res.status(200).json({ allowed: true, role: 'ADMIN' });
+    }
+
+    // GET /api/admin/check-sheet-schema
+    if (subpath === 'check-sheet-schema') {
+      const checkResult = await checkSheetCompatibility();
+      return res.status(200).json(checkResult);
     }
 
     // GET /api/admin/stats
@@ -63,7 +88,7 @@ export default async function handler(req: any, res: any) {
       if (!email) {
         return res.status(400).json({ error: 'Email người dùng là bắt buộc' });
       }
-      const result = adminCreateUser({
+      const result = await adminCreateUser({
         email,
         name,
         role,
@@ -74,14 +99,20 @@ export default async function handler(req: any, res: any) {
       if (!result.success) {
         return res.status(400).json({ error: result.error || 'Thêm người dùng thất bại' });
       }
-      return res.status(200).json({ success: true, user: result.user });
+      return res.status(200).json({
+        success: true,
+        user: result.user,
+        sheetSynced: result.sheetSynced,
+        warning: (result as any).warning,
+        message: (result as any).message,
+      });
     }
 
     // POST /api/admin/update-user
     if (subpath === 'update-user') {
       if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
       const { email, role, plan, quota, isBlocked, expiresAt } = body || {};
-      const result = adminUpdateUser({
+      const result = await adminUpdateUser({
         operatorEmail,
         email,
         role,
@@ -93,7 +124,34 @@ export default async function handler(req: any, res: any) {
       if (!result.success) {
         return res.status(400).json({ error: result.error || 'Cập nhật người dùng thất bại' });
       }
-      return res.status(200).json({ success: true, user: result.user });
+      return res.status(200).json({
+        success: true,
+        user: result.user,
+        sheetSynced: result.sheetSynced,
+        warning: (result as any).warning,
+        message: (result as any).message,
+      });
+    }
+
+    // POST /api/admin/delete-user
+    if (subpath === 'delete-user') {
+      if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
+      const { email } = body || {};
+      if (!email) {
+        return res.status(400).json({ error: 'Email người dùng là bắt buộc' });
+      }
+      const result = await adminDeleteUser({ operatorEmail, email });
+      if (!result.success) {
+        return res.status(400).json({ error: result.error || 'Xóa người dùng thất bại' });
+      }
+      return res.status(200).json({ success: true });
+    }
+
+    // POST /api/admin/sync-sheet
+    if (subpath === 'sync-sheet') {
+      if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
+      const result = await adminSyncGoogleSheets(body);
+      return res.status(200).json(result);
     }
 
     // GET / POST /api/admin/settings

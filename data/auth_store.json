@@ -7,8 +7,8 @@
       "role": "ADMIN",
       "plan": "PRO",
       "quota": {
-        "easy": 9999,
-        "advanced": 9999
+        "easy": 3,
+        "advanced": 1
       },
       "licenseKey": "SKKN-ADMIN-SYSTEM",
       "licenseExpiresAt": null,
@@ -24,8 +24,8 @@
       "role": "LICENSED",
       "plan": "PRO",
       "quota": {
-        "easy": 9999,
-        "advanced": 9999
+        "easy": 3,
+        "advanced": 1
       },
       "licenseKey": "SKKN-PRO-2025-VIP",
       "licenseExpiresAt": null,
@@ -40,8 +40,8 @@
       "role": "LICENSED",
       "plan": "PRO",
       "quota": {
-        "easy": 9999,
-        "advanced": 9999
+        "easy": 3,
+        "advanced": 1
       },
       "licenseKey": "SKKN-PRO-G34Q-P844",
       "licenseExpiresAt": null,
@@ -88,8 +88,8 @@
       "role": "LICENSED",
       "plan": "PRO",
       "quota": {
-        "easy": 9999,
-        "advanced": 9999
+        "easy": 3,
+        "advanced": 1
       },
       "licenseKey": "INVALID-KEY-123",
       "licenseExpiresAt": null,
@@ -110,7 +110,24 @@
       },
       "licenseExpiresAt": null,
       "createdAt": "2026-10-09T15:05:17.128Z",
-      "lastActiveAt": "2026-10-09T15:14:49.590Z",
+      "lastActiveAt": "2026-10-11T14:37:44.924Z",
+      "isBlocked": false
+    },
+    "nguyenthithanhtam3410@gmail.com": {
+      "id": "usr_thanhtam_3410",
+      "email": "nguyenthithanhtam3410@gmail.com",
+      "name": "Nguyễn Thị Thanh Tâm",
+      "role": "LICENSED",
+      "plan": "PRO",
+      "quota": {
+        "easy": 3,
+        "advanced": 1
+      },
+      "licenseKey": "SKKN-PRO-THANHTAM-VIP",
+      "licenseExpiresAt": null,
+      "freeAccess": false,
+      "createdAt": "2026-10-09T12:00:00.000Z",
+      "lastActiveAt": "2026-10-09T12:00:00.000Z",
       "isBlocked": false
     }
   },
@@ -234,6 +251,18 @@
       "createdAt": "2026-10-09T15:04:48.554Z",
       "assignedEmail": "test_user@gmail.com",
       "activatedAt": "2026-10-09T15:04:48.554Z"
+    },
+    "SKKN-PRO-THANHTAM-VIP": {
+      "key": "SKKN-PRO-THANHTAM-VIP",
+      "plan": "PRO",
+      "maxDevices": 3,
+      "boundDevices": [],
+      "status": "ACTIVE",
+      "expiresAt": null,
+      "createdReason": "Cấp quyền PRO vĩnh viễn cho Nguyễn Thị Thanh Tâm",
+      "assignedEmail": "nguyenthithanhtam3410@gmail.com",
+      "activatedAt": "2026-10-09T12:00:00.000Z",
+      "createdAt": "2026-10-09T12:00:00.000Z"
     }
   },
   "stats": {

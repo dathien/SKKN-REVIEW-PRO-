@@ -86,7 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ...parsed,
             role: 'ADMIN',
             plan: 'PRO',
-            quota: { easy: 9999, advanced: 9999 },
+            quota: { easy: 3, advanced: 1 },
             isBlocked: false,
           };
         }
@@ -105,7 +105,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed?.email && parsed.email.toLowerCase() === 'dathien2412@gmail.com') {
-          return { easy: 9999, advanced: 9999 };
+          return { easy: 3, advanced: 1 };
         }
         if (parsed?.quota) return parsed.quota;
       }
@@ -286,7 +286,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             picture: payload.picture,
             role: isRootAdmin ? 'ADMIN' : 'TRIAL',
             plan: isRootAdmin ? 'PRO' : 'TRIAL',
-            quota: isRootAdmin ? { easy: 9999, advanced: 9999 } : { easy: 3, advanced: 1 },
+            quota: { easy: 3, advanced: 1 },
             createdAt: new Date().toISOString(),
             lastActiveAt: new Date().toISOString(),
             isBlocked: false,
@@ -329,7 +329,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             picture: payload.picture,
             role: isRootAdmin ? 'ADMIN' : 'TRIAL',
             plan: isRootAdmin ? 'PRO' : 'TRIAL',
-            quota: isRootAdmin ? { easy: 9999, advanced: 9999 } : { easy: 3, advanced: 1 },
+            quota: { easy: 3, advanced: 1 },
             createdAt: new Date().toISOString(),
             lastActiveAt: new Date().toISOString(),
             isBlocked: false,
@@ -461,7 +461,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Guest activated without login
           setRole('LICENSED');
           setPlan(data.license?.plan || 'PRO');
-          setQuota({ easy: 9999, advanced: 9999 });
         }
         return { success: true, message: data.message };
       }
@@ -482,7 +481,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const hasQuotaForMode = (mode: 'easy' | 'advanced'): boolean => {
-    if (role === 'LICENSED' || role === 'ADMIN' || role === 'FREE_ACCESS' || Boolean(user?.freeAccess)) return true;
+    if (
+      role === 'LICENSED' ||
+      role === 'ADMIN' ||
+      role === 'FREE_ACCESS' ||
+      Boolean(user?.freeAccess) ||
+      plan === 'PRO' ||
+      plan === 'SCHOOL' ||
+      plan === 'PREMIUM'
+    ) return true;
     if (role === 'BLOCKED') return false;
     return (quota[mode] ?? 0) > 0;
   };

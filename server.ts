@@ -16,6 +16,8 @@ import {
   getAllUsersAndGuests,
   adminUpdateUser,
   adminCreateUser,
+  adminDeleteUser,
+  adminSyncGoogleSheets,
   adminGenerateLicense,
   getAllLicenses,
   adminResetLicenseDevices,
@@ -1003,11 +1005,11 @@ app.get('/api/admin/users', requireAdminMiddleware, async (_req, res) => {
 });
 
 // 9. Admin: Update User (Chỉ ROLE = ADMIN)
-app.post('/api/admin/update-user', requireAdminMiddleware, (req, res) => {
+app.post('/api/admin/update-user', requireAdminMiddleware, async (req, res) => {
   try {
     const operatorEmail = (req.headers['x-user-email'] || req.headers['x-user-id'] || '') as string;
     const { email, role, plan, quota, isBlocked, expiresAt } = req.body;
-    const result = adminUpdateUser({
+    const result = await adminUpdateUser({
       operatorEmail,
       email,
       role,
@@ -1019,20 +1021,20 @@ app.post('/api/admin/update-user', requireAdminMiddleware, (req, res) => {
     if (!result.success) {
       return res.status(400).json({ error: result.error || 'Cập nhật người dùng thất bại' });
     }
-    return res.json({ success: true, user: result.user });
+    return res.json({ success: true, user: result.user, sheetSynced: result.sheetSynced });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
 });
 
 // 9B. Admin: Create User (Chỉ ROLE = ADMIN - Thêm người dùng trực tiếp)
-app.post('/api/admin/create-user', requireAdminMiddleware, (req, res) => {
+app.post('/api/admin/create-user', requireAdminMiddleware, async (req, res) => {
   try {
     const { email, name, role, plan, quota, expiresAt } = req.body;
     if (!email) {
       return res.status(400).json({ error: 'Email người dùng là bắt buộc' });
     }
-    const result = adminCreateUser({
+    const result = await adminCreateUser({
       email,
       name,
       role,
@@ -1043,7 +1045,35 @@ app.post('/api/admin/create-user', requireAdminMiddleware, (req, res) => {
     if (!result.success) {
       return res.status(400).json({ error: result.error || 'Thêm người dùng thất bại' });
     }
-    return res.json({ success: true, user: result.user });
+    return res.json({ success: true, user: result.user, sheetSynced: result.sheetSynced });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 9C. Admin: Delete User (Chỉ ROLE = ADMIN)
+app.post('/api/admin/delete-user', requireAdminMiddleware, async (req, res) => {
+  try {
+    const operatorEmail = (req.headers['x-user-email'] || req.headers['x-user-id'] || '') as string;
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Email người dùng là bắt buộc' });
+    }
+    const result = await adminDeleteUser({ operatorEmail, email });
+    if (!result.success) {
+      return res.status(400).json({ error: result.error || 'Xóa người dùng thất bại' });
+    }
+    return res.json({ success: true });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 9D. Admin: Sync with Google Sheets (Chỉ ROLE = ADMIN)
+app.post('/api/admin/sync-sheet', requireAdminMiddleware, async (req, res) => {
+  try {
+    const result = await adminSyncGoogleSheets(req.body);
+    return res.json(result);
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }

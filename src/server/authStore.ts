@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { UserAccount, GuestSession, LicenseItem, LicenseStatus, SystemStats, UserRole, LicensePlan, SystemSettings } from '../types';
+import { UserAccount, GuestSession, LicenseItem, LicenseStatus, SystemStats, UserRole, LicensePlan, SystemSettings } from '../types/index';
 
 const DATA_DIR = path.resolve('data');
 const STORE_FILE = path.join(DATA_DIR, 'auth_store.json');
@@ -39,7 +39,7 @@ function initDefaultData() {
         name: 'Đa Thiện Hồ Nguyễn',
         role: 'ADMIN',
         plan: 'PRO',
-        quota: { easy: 9999, advanced: 9999 },
+        quota: { easy: 3, advanced: 1 },
         licenseKey: 'SKKN-ADMIN-SYSTEM',
         licenseExpiresAt: null,
         createdAt: now,
@@ -50,7 +50,6 @@ function initDefaultData() {
       // Đảm bảo không bị mất quyền ADMIN
       store.users[adminEmail].role = 'ADMIN';
       store.users[adminEmail].plan = 'PRO';
-      store.users[adminEmail].quota = { easy: 9999, advanced: 9999 };
       store.users[adminEmail].isBlocked = false;
     }
   });
@@ -183,55 +182,152 @@ export function findUserByEmailOrId(identifier: string): UserAccount | null {
 }
 
 // ----------------- LICENSE API / GOOGLE SHEETS ROLE INTEGRATION -----------------
-export async function fetchUserFromLicenseApi(
-  email: string,
-  sub?: string
-): Promise<{
+export interface MappedUserData {
+  id?: string;
+  email?: string;
+  name?: string;
   role?: UserRole;
   plan?: LicensePlan;
-  name?: string;
+  quota?: { easy: number; advanced: number };
+  licenseKey?: string;
+  licenseExpiresAt?: string | null;
+  isBlocked?: boolean;
   freeAccess?: boolean;
   freeAccessName?: string;
   freeAccessExpiresAt?: string | null;
-} | null> {
+}
+
+export function mapRawSheetUserToAccount(raw: any): MappedUserData | null {
+  if (!raw) return null;
+
+  const id = raw.id || raw.ID || raw.userId || raw.USER_ID || '';
+  const email = String(raw.email || raw.EMAIL || raw.userEmail || raw.USER_EMAIL || '').toLowerCase().trim();
+  if (!email && !raw.role && !raw.plan) return null;
+
+  const name = raw.name || raw.NAME || raw.fullName || raw.FULL_NAME || '';
+
+  // Plan
+  const rawPlan = String(raw.plan || raw.PLAN || raw.package || raw.PACKAGE || '').toUpperCase().trim();
+  const plan: LicensePlan | undefined =
+    rawPlan === 'SCHOOL' ? 'SCHOOL' :
+    rawPlan === 'PREMIUM' ? 'PREMIUM' :
+    (rawPlan === 'PRO' || rawPlan === 'PRO_MAX') ? 'PRO' :
+    (rawPlan === 'TRIAL' ? 'TRIAL' : undefined);
+
+  // Role
+  const rawRole = String(raw.role || raw.ROLE || raw.userRole || raw.USER_ROLE || '').toUpperCase().trim();
+  let role: UserRole | undefined;
+  if (rawRole) {
+    role =
+      rawRole === 'ADMIN' ? 'ADMIN' :
+      (rawRole === 'LICENSED' || rawRole === 'PRO') ? 'LICENSED' :
+      (rawRole === 'FREE_ACCESS' || rawRole === 'FREE') ? 'FREE_ACCESS' :
+      rawRole === 'BLOCKED' ? 'BLOCKED' :
+      rawRole === 'TRIAL' ? 'TRIAL' : undefined;
+  } else if (plan) {
+    // Trường hợp schema 13 cột cũ (không có cột ROLE)
+    // Nếu PLAN là Pro / School / Premium thì giữ đúng nghiệp vụ là LICENSED
+    role = (plan === 'PRO' || plan === 'SCHOOL' || plan === 'PREMIUM') ? 'LICENSED' : 'TRIAL';
+  }
+
+  // Quotas
+  let easyQuota = 3;
+  let advancedQuota = 1;
+
+  if (raw.quota?.easy !== undefined) easyQuota = Number(raw.quota.easy);
+  else if (raw.quotaEasy !== undefined) easyQuota = Number(raw.quotaEasy);
+  else if (raw.QUOTA_EASY !== undefined) easyQuota = Number(raw.QUOTA_EASY);
+  else if (raw.easyLimit !== undefined || raw.EASY_LIMIT !== undefined) {
+    // Schema 13 cột cũ
+    const limit = Number(raw.easyLimit !== undefined ? raw.easyLimit : raw.EASY_LIMIT);
+    const used = Number(raw.easyUsed !== undefined ? raw.easyUsed : (raw.EASY_USED || 0));
+    if (!isNaN(limit)) {
+      easyQuota = Math.max(0, limit - used);
+    }
+  }
+
+  if (raw.quota?.advanced !== undefined) advancedQuota = Number(raw.quota.advanced);
+  else if (raw.quotaAdvanced !== undefined) advancedQuota = Number(raw.quotaAdvanced);
+  else if (raw.QUOTA_ADVANCED !== undefined) advancedQuota = Number(raw.QUOTA_ADVANCED);
+  else if (raw.advancedLimit !== undefined || raw.ADVANCED_LIMIT !== undefined) {
+    // Schema 13 cột cũ
+    const limit = Number(raw.advancedLimit !== undefined ? raw.advancedLimit : raw.ADVANCED_LIMIT);
+    const used = Number(raw.advancedUsed !== undefined ? raw.advancedUsed : (raw.ADVANCED_USED || 0));
+    if (!isNaN(limit)) {
+      advancedQuota = Math.max(0, limit - used);
+    }
+  }
+
+  // Status & Blocked
+  const statusStr = String(raw.status || raw.STATUS || '').toUpperCase().trim();
+  const isBlocked = statusStr === 'BLOCKED' || raw.isBlocked === true || role === 'BLOCKED';
+
+  const licenseKey = raw.licenseKey || raw.LICENSE_KEY || raw.key || raw.KEY || undefined;
+  const licenseExpiresAt = raw.licenseExpiresAt || raw.expiresAt || raw.EXPIRES_AT || null;
+
+  return {
+    id: id || undefined,
+    email: email || undefined,
+    name: name || undefined,
+    role,
+    plan,
+    quota: { easy: easyQuota, advanced: advancedQuota },
+    licenseKey: licenseKey ? String(licenseKey) : undefined,
+    licenseExpiresAt: licenseExpiresAt ? String(licenseExpiresAt) : null,
+    isBlocked,
+    freeAccess: Boolean(raw.freeAccess || role === 'FREE_ACCESS'),
+    freeAccessName: raw.freeAccessName || raw.campaignName,
+    freeAccessExpiresAt: raw.freeAccessExpiresAt || licenseExpiresAt,
+  };
+}
+
+export async function fetchUserFromLicenseApi(
+  email: string,
+  sub?: string
+): Promise<MappedUserData | null> {
   if (!process.env.LICENSE_API_URL) return null;
+  const targetEmail = email.toLowerCase().trim();
+
+  // 1. Thử gọi GET trước
   try {
     const url = new URL(process.env.LICENSE_API_URL);
     url.searchParams.set('action', 'getUser');
-    url.searchParams.set('email', email);
+    url.searchParams.set('email', targetEmail);
     if (sub) url.searchParams.set('sub', sub);
 
-    const resp = await fetch(url.toString(), { method: 'GET' });
+    const resp = await fetch(url.toString(), { method: 'GET', signal: AbortSignal.timeout(4000) });
     if (resp.ok) {
       const data = await resp.json().catch(() => null);
-      if (data && (data.role || data.plan || data.userRole || data.freeAccess)) {
-        const rawRole = (data.role || data.userRole || '').toUpperCase();
-        const role: UserRole | undefined = 
-          rawRole === 'ADMIN' ? 'ADMIN' :
-          rawRole === 'LICENSED' || rawRole === 'PRO' ? 'LICENSED' :
-          rawRole === 'FREE_ACCESS' || rawRole === 'FREE' || Boolean(data.freeAccess) ? 'FREE_ACCESS' :
-          rawRole === 'BLOCKED' ? 'BLOCKED' :
-          rawRole === 'TRIAL' ? 'TRIAL' : undefined;
+      const rawUser = data?.user || (data?.email || data?.role || data?.plan ? data : null);
+      if (rawUser) {
+        const mapped = mapRawSheetUserToAccount(rawUser);
+        if (mapped) return mapped;
+      }
+    }
+  } catch (_) {}
 
-        const rawPlan = (data.plan || (rawRole === 'PRO' ? 'PRO' : '')).toUpperCase();
-        const plan: LicensePlan | undefined =
-          rawPlan === 'SCHOOL' ? 'SCHOOL' :
-          rawPlan === 'PREMIUM' ? 'PREMIUM' :
-          rawPlan === 'PRO' ? 'PRO' : undefined;
-
-        return {
-          role,
-          plan,
-          name: data.name,
-          freeAccess: Boolean(data.freeAccess || role === 'FREE_ACCESS'),
-          freeAccessName: data.freeAccessName || data.campaignName,
-          freeAccessExpiresAt: data.freeAccessExpiresAt || data.expiresAt,
-        };
+  // 2. Thử gọi POST fallback (tương thích các phiên bản script Apps Script cũ và mới)
+  try {
+    const resp = await fetch(process.env.LICENSE_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'getUser', email: targetEmail }),
+      signal: AbortSignal.timeout(4000),
+    });
+    if (resp.ok) {
+      const data = await resp.json().catch(() => null);
+      if (data?.found && data?.user) {
+        const mapped = mapRawSheetUserToAccount(data.user);
+        if (mapped) return mapped;
+      } else if (data?.email || data?.role || data?.plan) {
+        const mapped = mapRawSheetUserToAccount(data);
+        if (mapped) return mapped;
       }
     }
   } catch (err) {
-    console.warn('Could not query user role from LICENSE_API_URL:', err);
+    console.warn('Could not query user role from LICENSE_API_URL via POST fallback:', err);
   }
+
   return null;
 }
 
@@ -258,7 +354,6 @@ export async function getOrCreateUser(profile: {
     const userId = profile.id || `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const role: UserRole = isRootAdmin ? 'ADMIN' : (remoteData?.role || 'TRIAL');
     const plan: LicensePlan = isRootAdmin ? 'PRO' : (remoteData?.plan || (role === 'ADMIN' ? 'PRO' : 'TRIAL'));
-    const isUnlimited = role === 'ADMIN' || role === 'LICENSED' || role === 'FREE_ACCESS';
 
     const defaultTrialEasy = store.settings?.trialEasyLimit ?? 3;
     const defaultTrialAdvanced = store.settings?.trialAdvancedLimit ?? 1;
@@ -270,7 +365,7 @@ export async function getOrCreateUser(profile: {
       picture: profile.picture,
       role,
       plan,
-      quota: isUnlimited ? { easy: 9999, advanced: 9999 } : { easy: defaultTrialEasy, advanced: defaultTrialAdvanced },
+      quota: { easy: defaultTrialEasy, advanced: defaultTrialAdvanced },
       licenseKey: isRootAdmin ? 'SKKN-ADMIN-SYSTEM' : (role === 'ADMIN' ? 'SKKN-ADMIN-SYSTEM' : undefined),
       licenseExpiresAt: null,
       freeAccess: remoteData?.freeAccess || role === 'FREE_ACCESS',
@@ -287,16 +382,12 @@ export async function getOrCreateUser(profile: {
     if (isRootAdmin) {
       user.role = 'ADMIN';
       user.plan = 'PRO';
-      user.quota = { easy: 9999, advanced: 9999 };
       user.isBlocked = false;
       user.licenseKey = 'SKKN-ADMIN-SYSTEM';
     } else {
       // Nếu có phân quyền cập nhật từ Google Sheets / License API thì đồng bộ
       if (remoteData?.role) {
         user.role = remoteData.role;
-        if (remoteData.role === 'ADMIN' || remoteData.role === 'LICENSED' || remoteData.role === 'FREE_ACCESS') {
-          user.quota = { easy: 9999, advanced: 9999 };
-        }
       }
       if (remoteData?.freeAccess !== undefined) {
         user.freeAccess = remoteData.freeAccess;
@@ -355,8 +446,16 @@ export function consumeQuota(params: {
         };
       }
 
-      // LICENSED, ADMIN or FREE ACCESS -> Unlimited (không trừ lượt)
-      if (user.role === 'LICENSED' || user.role === 'ADMIN' || user.role === 'FREE_ACCESS' || user.freeAccess) {
+      // LICENSED, ADMIN or FREE ACCESS or PRO plan -> Unlimited (không trừ lượt thực tế)
+      if (
+        user.role === 'LICENSED' ||
+        user.role === 'ADMIN' ||
+        user.role === 'FREE_ACCESS' ||
+        Boolean(user.freeAccess) ||
+        user.plan === 'PRO' ||
+        user.plan === 'SCHOOL' ||
+        user.plan === 'PREMIUM'
+      ) {
         store.stats.totalAnalyses += 1;
         saveStore();
         return {
@@ -544,7 +643,6 @@ export async function activateLicenseKey(params: {
     user.plan = lic.plan || 'LICENSED';
     user.licenseKey = key;
     user.licenseExpiresAt = lic.expiresAt;
-    user.quota = { easy: 9999, advanced: 9999 };
 
     saveStore();
     return {
@@ -582,7 +680,6 @@ export async function activateLicenseKey(params: {
         user.plan = lic.plan || 'LICENSED';
         user.licenseKey = key;
         user.licenseExpiresAt = lic.expiresAt;
-        user.quota = { easy: 9999, advanced: 9999 };
       }
       saveStore();
       return {
@@ -618,7 +715,6 @@ export async function activateLicenseKey(params: {
       user.plan = lic.plan || 'LICENSED';
       user.licenseKey = key;
       user.licenseExpiresAt = lic.expiresAt;
-      user.quota = { easy: 9999, advanced: 9999 };
     }
 
     saveStore();
@@ -655,6 +751,76 @@ export function getSystemStats(): SystemStats {
   };
 }
 
+export async function checkSheetCompatibility(): Promise<{
+  success: boolean;
+  compatible: boolean;
+  version?: string;
+  schemaType?: string;
+  columnCount?: number;
+  headers?: string[];
+  message: string;
+  error?: string;
+}> {
+  if (!process.env.LICENSE_API_URL) {
+    return {
+      success: false,
+      compatible: true,
+      message: 'LICENSE_API_URL chưa cấu hình trên môi trường này (sử dụng cơ sở dữ liệu cục bộ).',
+    };
+  }
+
+  try {
+    const url = new URL(process.env.LICENSE_API_URL);
+    // 1. Thử gọi action inspectSchema (Code.gs v2.6+)
+    url.searchParams.set('action', 'inspectSchema');
+    const resp = await fetch(url.toString(), { method: 'GET', signal: AbortSignal.timeout(4000) });
+    if (resp.ok) {
+      const data = await resp.json().catch(() => null);
+      if (data && data.usersSchema) {
+        return {
+          success: true,
+          compatible: Boolean(data.usersSchema.compatible),
+          version: data.version || '2.6',
+          schemaType: data.usersSchema.type,
+          columnCount: data.usersSchema.columnCount,
+          headers: data.usersSchema.headers,
+          message: `Cấu trúc Google Sheets hoàn toàn tương thích (${data.usersSchema.type}, ${data.usersSchema.columnCount} cột).`,
+        };
+      }
+    }
+
+    // 2. Fallback: Kiểm tra bằng ping hoặc getUser
+    const pingUrl = new URL(process.env.LICENSE_API_URL);
+    pingUrl.searchParams.set('action', 'ping');
+    const pingResp = await fetch(pingUrl.toString(), { method: 'GET', signal: AbortSignal.timeout(4000) });
+    if (pingResp.ok) {
+      const pingData = await pingResp.json().catch(() => null);
+      if (pingData?.success) {
+        return {
+          success: true,
+          compatible: true,
+          version: pingData.version || 'v2.x',
+          schemaType: 'COMPATIBLE_FALLBACK',
+          message: 'Kết nối Apps Script thành công. Lớp tương thích ngược tự động nhận diện schema 13 cột hoặc 12 cột.',
+        };
+      }
+    }
+
+    return {
+      success: false,
+      compatible: false,
+      message: 'Apps Script phản hồi không đúng định dạng. Cần kiểm tra lại mã nguồn triển khai.',
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      compatible: false,
+      message: `Không thể kết nối đến Google Sheets Apps Script: ${err.message}`,
+      error: err.message,
+    };
+  }
+}
+
 export async function getAllUsersAndGuests() {
   if (process.env.LICENSE_API_URL) {
     try {
@@ -665,26 +831,29 @@ export async function getAllUsersAndGuests() {
         const data = await resp.json().catch(() => null);
         const list = Array.isArray(data?.users) ? data.users : (Array.isArray(data) ? data : []);
         list.forEach((u: any) => {
-          if (u && u.email) {
-            const email = String(u.email).toLowerCase().trim();
-            const existing = store.users[email];
-            if (!existing) {
-              const role: UserRole = u.role === 'ADMIN' ? 'ADMIN' : (u.role === 'LICENSED' ? 'LICENSED' : (u.role === 'FREE_ACCESS' ? 'FREE_ACCESS' : (u.role === 'BLOCKED' ? 'BLOCKED' : 'TRIAL')));
-              const plan: LicensePlan = u.plan === 'SCHOOL' ? 'SCHOOL' : (u.plan === 'PREMIUM' ? 'PREMIUM' : (u.plan === 'PRO' ? 'PRO' : 'TRIAL'));
-              const isUnlimited = role === 'ADMIN' || role === 'LICENSED' || role === 'FREE_ACCESS';
-              store.users[email] = {
-                id: u.id || `usr_sheet_${email.split('@')[0]}`,
-                email,
-                name: u.name || email.split('@')[0],
-                role,
-                plan,
-                quota: isUnlimited ? { easy: 9999, advanced: 9999 } : (u.quota || { easy: 3, advanced: 1 }),
-                licenseKey: u.licenseKey,
-                licenseExpiresAt: u.licenseExpiresAt || null,
-                createdAt: u.createdAt || new Date().toISOString(),
-                lastActiveAt: u.lastActiveAt || new Date().toISOString(),
-                isBlocked: Boolean(u.isBlocked),
-              };
+          if (u) {
+            const mapped = mapRawSheetUserToAccount(u);
+            if (mapped && mapped.email) {
+              const email = mapped.email;
+              const existing = store.users[email];
+              if (!existing) {
+                const isRootAdmin = ROOT_ADMIN_EMAILS.includes(email);
+                const role: UserRole = isRootAdmin ? 'ADMIN' : (mapped.role || 'TRIAL');
+                const plan: LicensePlan = isRootAdmin ? 'PRO' : (mapped.plan || (role === 'ADMIN' ? 'PRO' : 'TRIAL'));
+                store.users[email] = {
+                  id: mapped.id || `usr_sheet_${email.split('@')[0]}`,
+                  email,
+                  name: mapped.name || (isRootAdmin ? 'Đa Thiện Hồ Nguyễn' : email.split('@')[0]),
+                  role,
+                  plan,
+                  quota: mapped.quota || { easy: 3, advanced: 1 },
+                  licenseKey: mapped.licenseKey || (isRootAdmin ? 'SKKN-ADMIN-SYSTEM' : undefined),
+                  licenseExpiresAt: mapped.licenseExpiresAt || null,
+                  createdAt: new Date().toISOString(),
+                  lastActiveAt: new Date().toISOString(),
+                  isBlocked: isRootAdmin ? false : Boolean(mapped.isBlocked),
+                };
+              }
             }
           }
         });
@@ -701,7 +870,7 @@ export async function getAllUsersAndGuests() {
   };
 }
 
-export function adminUpdateUser(params: {
+export async function adminUpdateUser(params: {
   operatorEmail?: string;
   email: string;
   role?: UserRole;
@@ -709,7 +878,7 @@ export function adminUpdateUser(params: {
   quota?: { easy: number; advanced: number };
   isBlocked?: boolean;
   expiresAt?: string | null;
-}): { success: boolean; user?: UserAccount; error?: string } {
+}): Promise<{ success: boolean; user?: UserAccount; error?: string; sheetSynced?: boolean; warning?: string; message?: string }> {
   const user = findUserByEmailOrId(params.email);
   if (!user) {
     return { success: false, error: 'Không tìm thấy người dùng' };
@@ -736,7 +905,6 @@ export function adminUpdateUser(params: {
     user.plan = params.plan;
     if (params.plan === 'LICENSED') {
       if (user.role !== 'ADMIN') user.role = 'LICENSED';
-      user.quota = { easy: 9999, advanced: 9999 };
       user.licenseExpiresAt = params.expiresAt !== undefined ? params.expiresAt : user.licenseExpiresAt;
     } else if (params.plan === 'TRIAL') {
       if (user.role !== 'ADMIN') user.role = 'TRIAL';
@@ -757,17 +925,32 @@ export function adminUpdateUser(params: {
   }
 
   saveStore();
-  return { success: true, user };
+
+  // Xác nhận đồng bộ lưu thành công từ Apps Script nếu có LICENSE_API_URL
+  if (process.env.LICENSE_API_URL) {
+    const sheetRes = await syncUserToGoogleSheet(user);
+    if (!sheetRes.success) {
+      return {
+        success: true,
+        user,
+        sheetSynced: false,
+        warning: 'Cập nhật thành công vào cơ sở dữ liệu ứng dụng. Lưu ý: Google Sheets chưa ghi nhận (DEPLOY REQUIRED: Cần cập nhật Code.gs v2.5).',
+      };
+    }
+    return { success: true, user, sheetSynced: true, message: 'Đã cập nhật và xác nhận lưu thành công xuống Google Sheets USERS.' };
+  }
+
+  return { success: true, user, sheetSynced: false };
 }
 
-export function adminCreateUser(params: {
+export async function adminCreateUser(params: {
   email: string;
   name?: string;
   role?: UserRole;
   plan?: LicensePlan;
   quota?: { easy: number; advanced: number };
   expiresAt?: string | null;
-}): { success: boolean; user?: UserAccount; error?: string } {
+}): Promise<{ success: boolean; user?: UserAccount; error?: string; sheetSynced?: boolean; warning?: string; message?: string }> {
   const email = params.email.trim().toLowerCase();
   if (!email || !email.includes('@')) {
     return { success: false, error: 'Email không hợp lệ' };
@@ -786,21 +969,33 @@ export function adminCreateUser(params: {
     if (params.expiresAt !== undefined) user.licenseExpiresAt = params.expiresAt;
     if (user.plan === 'LICENSED') {
       if (user.role !== 'ADMIN') user.role = 'LICENSED';
-      user.quota = { easy: 9999, advanced: 9999 };
     }
     user.lastActiveAt = now;
     saveStore();
-    return { success: true, user };
+
+    if (process.env.LICENSE_API_URL) {
+      const sheetRes = await syncUserToGoogleSheet(user);
+      if (!sheetRes.success) {
+        return {
+          success: true,
+          user,
+          sheetSynced: false,
+          warning: 'Cập nhật thành công vào cơ sở dữ liệu ứng dụng. Lưu ý: Google Sheets chưa ghi nhận (DEPLOY REQUIRED: Cần cập nhật Code.gs v2.5).',
+        };
+      }
+      return { success: true, user, sheetSynced: true, message: 'Đã cập nhật và xác nhận lưu thành công xuống Google Sheets USERS.' };
+    }
+
+    return { success: true, user, sheetSynced: false };
   }
 
   const role: UserRole = isRootAdmin ? 'ADMIN' : (params.role || 'TRIAL');
   const plan: LicensePlan = isRootAdmin ? 'PRO' : (params.plan || (role === 'ADMIN' ? 'PRO' : 'TRIAL'));
-  const isUnlimited = role === 'ADMIN' || role === 'LICENSED' || role === 'FREE_ACCESS';
 
   const defaultTrialEasy = store.settings?.trialEasyLimit ?? 3;
   const defaultTrialAdvanced = store.settings?.trialAdvancedLimit ?? 1;
 
-  const quota = params.quota || (isUnlimited ? { easy: 9999, advanced: 9999 } : { easy: defaultTrialEasy, advanced: defaultTrialAdvanced });
+  const quota = params.quota || { easy: defaultTrialEasy, advanced: defaultTrialAdvanced };
 
   user = {
     id: `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -818,7 +1013,306 @@ export function adminCreateUser(params: {
 
   store.users[email] = user;
   saveStore();
-  return { success: true, user };
+
+  if (process.env.LICENSE_API_URL) {
+    const sheetRes = await syncUserToGoogleSheet(user);
+    if (!sheetRes.success) {
+      return {
+        success: true,
+        user,
+        sheetSynced: false,
+        warning: 'Tạo tài khoản thành công vào cơ sở dữ liệu ứng dụng. Lưu ý: Google Sheets chưa ghi nhận (DEPLOY REQUIRED: Cần cập nhật Code.gs v2.5).',
+      };
+    }
+    return { success: true, user, sheetSynced: true, message: 'Đã tạo và xác nhận lưu thành công xuống Google Sheets USERS.' };
+  }
+
+  return { success: true, user, sheetSynced: false };
+}
+
+// ----------------- GOOGLE SHEETS USERS SYNCHRONIZATION -----------------
+export async function syncUserToGoogleSheet(user: UserAccount): Promise<{ success: boolean; error?: string }> {
+  if (!process.env.LICENSE_API_URL) return { success: false, error: 'Chưa cấu hình LICENSE_API_URL' };
+  try {
+    const url = new URL(process.env.LICENSE_API_URL);
+    url.searchParams.set('action', 'saveUser');
+    const resp = await fetch(url.toString(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        plan: user.plan,
+        quotaEasy: user.quota?.easy ?? 3,
+        quotaAdvanced: user.quota?.advanced ?? 1,
+        licenseKey: user.licenseKey || '',
+        licenseExpiresAt: user.licenseExpiresAt || '',
+        isBlocked: Boolean(user.isBlocked),
+        createdAt: user.createdAt,
+        lastActiveAt: user.lastActiveAt,
+      }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (resp.ok) {
+      const data = await resp.json().catch(() => null);
+      return { success: Boolean(data?.success ?? true) };
+    }
+    return { success: false, error: `HTTP ${resp.status}` };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function deleteUserFromGoogleSheet(email: string): Promise<{ success: boolean; error?: string }> {
+  if (!process.env.LICENSE_API_URL) return { success: false, error: 'Chưa cấu hình LICENSE_API_URL' };
+  try {
+    const url = new URL(process.env.LICENSE_API_URL);
+    url.searchParams.set('action', 'deleteUser');
+    const resp = await fetch(url.toString(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (resp.ok) {
+      const data = await resp.json().catch(() => null);
+      return { success: Boolean(data?.success ?? true) };
+    }
+    return { success: false, error: `HTTP ${resp.status}` };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function syncAllUsersToGoogleSheet(): Promise<{
+  success: boolean;
+  syncedCount: number;
+  totalCount: number;
+  error?: string;
+}> {
+  const users = Object.values(store.users);
+  if (!process.env.LICENSE_API_URL) {
+    return { success: false, syncedCount: 0, totalCount: users.length, error: 'Chưa cấu hình LICENSE_API_URL' };
+  }
+
+  try {
+    const url = new URL(process.env.LICENSE_API_URL);
+    url.searchParams.set('action', 'syncUsers');
+    const resp = await fetch(url.toString(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ users }),
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (resp.ok) {
+      const data = await resp.json().catch(() => null);
+      return {
+        success: true,
+        syncedCount: data?.syncedCount ?? users.length,
+        totalCount: users.length,
+      };
+    }
+
+    // Fallback: Sync individually
+    let synced = 0;
+    for (const u of users) {
+      const res = await syncUserToGoogleSheet(u);
+      if (res.success) synced++;
+    }
+    return { success: synced > 0, syncedCount: synced, totalCount: users.length };
+  } catch (err: any) {
+    return { success: false, syncedCount: 0, totalCount: users.length, error: err.message };
+  }
+}
+
+export interface UserConflict {
+  email: string;
+  name: string;
+  field: string;
+  localValue: string;
+  remoteValue: string;
+}
+
+export async function adminSyncGoogleSheets(params?: {
+  previewOnly?: boolean;
+  resolveStrategy?: 'keep_remote' | 'keep_local';
+  confirmConflicts?: boolean;
+}): Promise<{
+  success: boolean;
+  hasConflicts?: boolean;
+  conflicts?: UserConflict[];
+  localUsersCount: number;
+  remoteUsersCount: number;
+  syncedToRemoteCount: number;
+  message: string;
+  error?: string;
+}> {
+  let remoteUsersCount = 0;
+  const conflicts: UserConflict[] = [];
+
+  // 1. Pull latest from Google Sheets
+  if (process.env.LICENSE_API_URL) {
+    try {
+      const url = new URL(process.env.LICENSE_API_URL);
+      url.searchParams.set('action', 'getUsers');
+      const resp = await fetch(url.toString(), { method: 'GET', signal: AbortSignal.timeout(6000) });
+      if (resp.ok) {
+        const data = await resp.json().catch(() => null);
+        const list = Array.isArray(data?.users) ? data.users : (Array.isArray(data) ? data : []);
+        remoteUsersCount = list.length;
+
+        // Check conflicts
+        list.forEach((u: any) => {
+          if (u) {
+            const mapped = mapRawSheetUserToAccount(u);
+            if (mapped && mapped.email) {
+              const email = mapped.email;
+              const existing = store.users[email];
+              if (existing) {
+                const isRootAdmin = ROOT_ADMIN_EMAILS.includes(email);
+                const remoteRole = isRootAdmin ? 'ADMIN' : (mapped.role || 'TRIAL');
+                const remotePlan = isRootAdmin ? 'PRO' : (mapped.plan || 'TRIAL');
+                const remoteBlocked = isRootAdmin ? false : Boolean(mapped.isBlocked);
+
+                if (existing.role !== remoteRole) {
+                  conflicts.push({
+                    email,
+                    name: existing.name || mapped.name || email,
+                    field: 'Vai trò (Role)',
+                    localValue: existing.role,
+                    remoteValue: remoteRole,
+                  });
+                }
+                if (existing.plan !== remotePlan) {
+                  conflicts.push({
+                    email,
+                    name: existing.name || mapped.name || email,
+                    field: 'Gói (Plan)',
+                    localValue: existing.plan,
+                    remoteValue: remotePlan,
+                  });
+                }
+                if (Boolean(existing.isBlocked) !== remoteBlocked) {
+                  conflicts.push({
+                    email,
+                    name: existing.name || mapped.name || email,
+                    field: 'Trạng thái khóa',
+                    localValue: existing.isBlocked ? 'Đang khóa' : 'Hoạt động',
+                    remoteValue: remoteBlocked ? 'Đang khóa' : 'Hoạt động',
+                  });
+                }
+              }
+            }
+          }
+        });
+
+        // Nếu có xung đột và chưa được Admin xác nhận phương án xử lý
+        if (conflicts.length > 0 && !params?.confirmConflicts && !params?.resolveStrategy) {
+          return {
+            success: true,
+            hasConflicts: true,
+            conflicts,
+            localUsersCount: Object.keys(store.users).length,
+            remoteUsersCount,
+            syncedToRemoteCount: 0,
+            message: `Phát hiện ${conflicts.length} xung đột dữ liệu giữa Web App và Google Sheets. Vui lòng xem trước và chọn phương án giải quyết.`,
+          };
+        }
+
+        // Áp dụng dữ liệu theo phương án
+        list.forEach((u: any) => {
+          if (u) {
+            const mapped = mapRawSheetUserToAccount(u);
+            if (mapped && mapped.email) {
+              const email = mapped.email;
+              const existing = store.users[email];
+              const isRootAdmin = ROOT_ADMIN_EMAILS.includes(email);
+              const role: UserRole = isRootAdmin ? 'ADMIN' : (mapped.role || 'TRIAL');
+              const plan: LicensePlan = isRootAdmin ? 'PRO' : (mapped.plan || 'TRIAL');
+
+              if (!existing) {
+                store.users[email] = {
+                  id: mapped.id || `usr_sheet_${email.split('@')[0]}`,
+                  email,
+                  name: mapped.name || (isRootAdmin ? 'Đa Thiện Hồ Nguyễn' : email.split('@')[0]),
+                  role,
+                  plan,
+                  quota: mapped.quota || { easy: 3, advanced: 1 },
+                  licenseKey: mapped.licenseKey || (isRootAdmin ? 'SKKN-ADMIN-SYSTEM' : undefined),
+                  licenseExpiresAt: mapped.licenseExpiresAt || null,
+                  createdAt: new Date().toISOString(),
+                  lastActiveAt: new Date().toISOString(),
+                  isBlocked: isRootAdmin ? false : Boolean(mapped.isBlocked),
+                };
+              } else if (params?.resolveStrategy === 'keep_remote') {
+                // Cập nhật theo Google Sheets (an toàn không ghi đè quyền Root Admin)
+                if (!isRootAdmin) {
+                  existing.role = role;
+                  existing.plan = plan;
+                  existing.isBlocked = Boolean(mapped.isBlocked);
+                }
+                if (mapped.name) existing.name = mapped.name;
+                if (mapped.licenseKey) existing.licenseKey = mapped.licenseKey;
+                if (mapped.licenseExpiresAt !== undefined) existing.licenseExpiresAt = mapped.licenseExpiresAt;
+              }
+            }
+          }
+        });
+
+        saveStore();
+      }
+    } catch (err: any) {
+      console.warn('Could not pull from Google Sheets during admin sync:', err);
+    }
+  }
+
+  // 2. Push all local users to Google Sheets (trừ khi resolveStrategy là keep_remote)
+  let pushSynced = 0;
+  if (params?.resolveStrategy !== 'keep_remote') {
+    const pushRes = await syncAllUsersToGoogleSheet();
+    pushSynced = pushRes.syncedCount;
+  }
+
+  return {
+    success: true,
+    hasConflicts: false,
+    localUsersCount: Object.keys(store.users).length,
+    remoteUsersCount,
+    syncedToRemoteCount: pushSynced,
+    message: process.env.LICENSE_API_URL
+      ? `Đồng bộ hoàn tất: ${Object.keys(store.users).length} người dùng đã cập nhật bền vững với Google Sheets.`
+      : 'Đã cập nhật dữ liệu cục bộ. LICENSE_API_URL chưa cấu hình trên môi trường này.',
+  };
+}
+
+export async function adminDeleteUser(params: {
+  operatorEmail?: string;
+  email: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const email = params.email.trim().toLowerCase();
+  const user = findUserByEmailOrId(email);
+  if (!user) {
+    return { success: false, error: 'Không tìm thấy người dùng để xóa.' };
+  }
+
+  if (ROOT_ADMIN_EMAILS.includes(email) || user.role === 'ADMIN') {
+    return {
+      success: false,
+      error: 'Quy tắc an toàn Quản trị: Không thể xóa tài khoản Quản trị viên (ADMIN).',
+    };
+  }
+
+  delete store.users[email];
+  saveStore();
+
+  if (process.env.LICENSE_API_URL) {
+    await deleteUserFromGoogleSheet(email).catch(() => {});
+  }
+
+  return { success: true };
 }
 
 export function getSystemSettings(): SystemSettings {
@@ -950,7 +1444,6 @@ export function adminToggleLicenseStatus(params: {
       user.plan = lic.plan || 'LICENSED';
       user.licenseKey = params.key;
       user.licenseExpiresAt = lic.expiresAt;
-      user.quota = { easy: 9999, advanced: 9999 };
     }
   }
 

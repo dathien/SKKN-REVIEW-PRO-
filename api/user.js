@@ -22,7 +22,7 @@ function initDefaultData() {
         name: "\u0110a Thi\u1EC7n H\u1ED3 Nguy\u1EC5n",
         role: "ADMIN",
         plan: "PRO",
-        quota: { easy: 9999, advanced: 9999 },
+        quota: { easy: 3, advanced: 1 },
         licenseKey: "SKKN-ADMIN-SYSTEM",
         licenseExpiresAt: null,
         createdAt: now,
@@ -32,7 +32,6 @@ function initDefaultData() {
     } else {
       store.users[adminEmail].role = "ADMIN";
       store.users[adminEmail].plan = "PRO";
-      store.users[adminEmail].quota = { easy: 9999, advanced: 9999 };
       store.users[adminEmail].isBlocked = false;
     }
   });
@@ -168,7 +167,7 @@ function consumeQuota(params) {
           quota: user.quota
         };
       }
-      if (user.role === "LICENSED" || user.role === "ADMIN" || user.role === "FREE_ACCESS" || user.freeAccess) {
+      if (user.role === "LICENSED" || user.role === "ADMIN" || user.role === "FREE_ACCESS" || Boolean(user.freeAccess) || user.plan === "PRO" || user.plan === "SCHOOL" || user.plan === "PREMIUM") {
         store.stats.totalAnalyses += 1;
         saveStore();
         return {

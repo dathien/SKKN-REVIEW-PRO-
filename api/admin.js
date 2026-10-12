@@ -22,7 +22,7 @@ function initDefaultData() {
         name: "\u0110a Thi\u1EC7n H\u1ED3 Nguy\u1EC5n",
         role: "ADMIN",
         plan: "PRO",
-        quota: { easy: 9999, advanced: 9999 },
+        quota: { easy: 3, advanced: 1 },
         licenseKey: "SKKN-ADMIN-SYSTEM",
         licenseExpiresAt: null,
         createdAt: now,
@@ -32,7 +32,6 @@ function initDefaultData() {
     } else {
       store.users[adminEmail].role = "ADMIN";
       store.users[adminEmail].plan = "PRO";
-      store.users[adminEmail].quota = { easy: 9999, advanced: 9999 };
       store.users[adminEmail].isBlocked = false;
     }
   });
@@ -131,10 +130,171 @@ function findUserByEmailOrId(identifier) {
   }
   return null;
 }
+function mapRawSheetUserToAccount(raw) {
+  if (!raw) return null;
+  const id = raw.id || raw.ID || raw.userId || raw.USER_ID || "";
+  const email = String(raw.email || raw.EMAIL || raw.userEmail || raw.USER_EMAIL || "").toLowerCase().trim();
+  if (!email && !raw.role && !raw.plan) return null;
+  const name = raw.name || raw.NAME || raw.fullName || raw.FULL_NAME || "";
+  const rawPlan = String(raw.plan || raw.PLAN || raw.package || raw.PACKAGE || "").toUpperCase().trim();
+  const plan = rawPlan === "SCHOOL" ? "SCHOOL" : rawPlan === "PREMIUM" ? "PREMIUM" : rawPlan === "PRO" || rawPlan === "PRO_MAX" ? "PRO" : rawPlan === "TRIAL" ? "TRIAL" : void 0;
+  const rawRole = String(raw.role || raw.ROLE || raw.userRole || raw.USER_ROLE || "").toUpperCase().trim();
+  let role;
+  if (rawRole) {
+    role = rawRole === "ADMIN" ? "ADMIN" : rawRole === "LICENSED" || rawRole === "PRO" ? "LICENSED" : rawRole === "FREE_ACCESS" || rawRole === "FREE" ? "FREE_ACCESS" : rawRole === "BLOCKED" ? "BLOCKED" : rawRole === "TRIAL" ? "TRIAL" : void 0;
+  } else if (plan) {
+    role = plan === "PRO" || plan === "SCHOOL" || plan === "PREMIUM" ? "LICENSED" : "TRIAL";
+  }
+  let easyQuota = 3;
+  let advancedQuota = 1;
+  if (raw.quota?.easy !== void 0) easyQuota = Number(raw.quota.easy);
+  else if (raw.quotaEasy !== void 0) easyQuota = Number(raw.quotaEasy);
+  else if (raw.QUOTA_EASY !== void 0) easyQuota = Number(raw.QUOTA_EASY);
+  else if (raw.easyLimit !== void 0 || raw.EASY_LIMIT !== void 0) {
+    const limit = Number(raw.easyLimit !== void 0 ? raw.easyLimit : raw.EASY_LIMIT);
+    const used = Number(raw.easyUsed !== void 0 ? raw.easyUsed : raw.EASY_USED || 0);
+    if (!isNaN(limit)) {
+      easyQuota = Math.max(0, limit - used);
+    }
+  }
+  if (raw.quota?.advanced !== void 0) advancedQuota = Number(raw.quota.advanced);
+  else if (raw.quotaAdvanced !== void 0) advancedQuota = Number(raw.quotaAdvanced);
+  else if (raw.QUOTA_ADVANCED !== void 0) advancedQuota = Number(raw.QUOTA_ADVANCED);
+  else if (raw.advancedLimit !== void 0 || raw.ADVANCED_LIMIT !== void 0) {
+    const limit = Number(raw.advancedLimit !== void 0 ? raw.advancedLimit : raw.ADVANCED_LIMIT);
+    const used = Number(raw.advancedUsed !== void 0 ? raw.advancedUsed : raw.ADVANCED_USED || 0);
+    if (!isNaN(limit)) {
+      advancedQuota = Math.max(0, limit - used);
+    }
+  }
+  const statusStr = String(raw.status || raw.STATUS || "").toUpperCase().trim();
+  const isBlocked = statusStr === "BLOCKED" || raw.isBlocked === true || role === "BLOCKED";
+  const licenseKey = raw.licenseKey || raw.LICENSE_KEY || raw.key || raw.KEY || void 0;
+  const licenseExpiresAt = raw.licenseExpiresAt || raw.expiresAt || raw.EXPIRES_AT || null;
+  return {
+    id: id || void 0,
+    email: email || void 0,
+    name: name || void 0,
+    role,
+    plan,
+    quota: { easy: easyQuota, advanced: advancedQuota },
+    licenseKey: licenseKey ? String(licenseKey) : void 0,
+    licenseExpiresAt: licenseExpiresAt ? String(licenseExpiresAt) : null,
+    isBlocked,
+    freeAccess: Boolean(raw.freeAccess || role === "FREE_ACCESS"),
+    freeAccessName: raw.freeAccessName || raw.campaignName,
+    freeAccessExpiresAt: raw.freeAccessExpiresAt || licenseExpiresAt
+  };
+}
+async function fetchUserFromLicenseApi(email, sub) {
+  if (!process.env.LICENSE_API_URL) return null;
+  const targetEmail = email.toLowerCase().trim();
+  try {
+    const url = new URL(process.env.LICENSE_API_URL);
+    url.searchParams.set("action", "getUser");
+    url.searchParams.set("email", targetEmail);
+    if (sub) url.searchParams.set("sub", sub);
+    const resp = await fetch(url.toString(), { method: "GET", signal: AbortSignal.timeout(4e3) });
+    if (resp.ok) {
+      const data = await resp.json().catch(() => null);
+      const rawUser = data?.user || (data?.email || data?.role || data?.plan ? data : null);
+      if (rawUser) {
+        const mapped = mapRawSheetUserToAccount(rawUser);
+        if (mapped) return mapped;
+      }
+    }
+  } catch (_) {
+  }
+  try {
+    const resp = await fetch(process.env.LICENSE_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "getUser", email: targetEmail }),
+      signal: AbortSignal.timeout(4e3)
+    });
+    if (resp.ok) {
+      const data = await resp.json().catch(() => null);
+      if (data?.found && data?.user) {
+        const mapped = mapRawSheetUserToAccount(data.user);
+        if (mapped) return mapped;
+      } else if (data?.email || data?.role || data?.plan) {
+        const mapped = mapRawSheetUserToAccount(data);
+        if (mapped) return mapped;
+      }
+    }
+  } catch (err) {
+    console.warn("Could not query user role from LICENSE_API_URL via POST fallback:", err);
+  }
+  return null;
+}
 function isUserAdmin(identifier) {
   if (!identifier) return false;
   const user = findUserByEmailOrId(identifier);
   return user?.role === "ADMIN";
+}
+async function getOrCreateUser(profile) {
+  const email = profile.email.toLowerCase();
+  let user = findUserByEmailOrId(email);
+  const remoteData = await fetchUserFromLicenseApi(email, profile.id);
+  const isRootAdmin = ROOT_ADMIN_EMAILS.includes(email);
+  if (!user) {
+    const userId = profile.id || `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const role = isRootAdmin ? "ADMIN" : remoteData?.role || "TRIAL";
+    const plan = isRootAdmin ? "PRO" : remoteData?.plan || (role === "ADMIN" ? "PRO" : "TRIAL");
+    const defaultTrialEasy = store.settings?.trialEasyLimit ?? 3;
+    const defaultTrialAdvanced = store.settings?.trialAdvancedLimit ?? 1;
+    user = {
+      id: userId,
+      email,
+      name: isRootAdmin ? profile.name || "\u0110a Thi\u1EC7n H\u1ED3 Nguy\u1EC5n" : remoteData?.name || profile.name || email.split("@")[0],
+      picture: profile.picture,
+      role,
+      plan,
+      quota: { easy: defaultTrialEasy, advanced: defaultTrialAdvanced },
+      licenseKey: isRootAdmin ? "SKKN-ADMIN-SYSTEM" : role === "ADMIN" ? "SKKN-ADMIN-SYSTEM" : void 0,
+      licenseExpiresAt: null,
+      freeAccess: remoteData?.freeAccess || role === "FREE_ACCESS",
+      freeAccessName: remoteData?.freeAccessName,
+      freeAccessExpiresAt: remoteData?.freeAccessExpiresAt,
+      createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+      lastActiveAt: (/* @__PURE__ */ new Date()).toISOString(),
+      isBlocked: isRootAdmin ? false : role === "BLOCKED"
+    };
+    store.users[email] = user;
+    saveStore();
+  } else {
+    if (isRootAdmin) {
+      user.role = "ADMIN";
+      user.plan = "PRO";
+      user.isBlocked = false;
+      user.licenseKey = "SKKN-ADMIN-SYSTEM";
+    } else {
+      if (remoteData?.role) {
+        user.role = remoteData.role;
+      }
+      if (remoteData?.freeAccess !== void 0) {
+        user.freeAccess = remoteData.freeAccess;
+      }
+      if (remoteData?.freeAccessName) {
+        user.freeAccessName = remoteData.freeAccessName;
+      }
+      if (remoteData?.freeAccessExpiresAt) {
+        user.freeAccessExpiresAt = remoteData.freeAccessExpiresAt;
+      }
+      if (remoteData?.plan) {
+        user.plan = remoteData.plan;
+      }
+      if (remoteData?.name) {
+        user.name = remoteData.name;
+      } else if (profile.name) {
+        user.name = profile.name;
+      }
+    }
+    if (profile.picture) user.picture = profile.picture;
+    user.lastActiveAt = (/* @__PURE__ */ new Date()).toISOString();
+    saveStore();
+  }
+  return user;
 }
 function getSystemStats() {
   const usersList = Object.values(store.users);
@@ -152,6 +312,61 @@ function getSystemStats() {
     licenseApiStatus: process.env.LICENSE_API_URL ? "CONNECTED" : "LOCAL_FALLBACK"
   };
 }
+async function checkSheetCompatibility() {
+  if (!process.env.LICENSE_API_URL) {
+    return {
+      success: false,
+      compatible: true,
+      message: "LICENSE_API_URL ch\u01B0a c\u1EA5u h\xECnh tr\xEAn m\xF4i tr\u01B0\u1EDDng n\xE0y (s\u1EED d\u1EE5ng c\u01A1 s\u1EDF d\u1EEF li\u1EC7u c\u1EE5c b\u1ED9)."
+    };
+  }
+  try {
+    const url = new URL(process.env.LICENSE_API_URL);
+    url.searchParams.set("action", "inspectSchema");
+    const resp = await fetch(url.toString(), { method: "GET", signal: AbortSignal.timeout(4e3) });
+    if (resp.ok) {
+      const data = await resp.json().catch(() => null);
+      if (data && data.usersSchema) {
+        return {
+          success: true,
+          compatible: Boolean(data.usersSchema.compatible),
+          version: data.version || "2.6",
+          schemaType: data.usersSchema.type,
+          columnCount: data.usersSchema.columnCount,
+          headers: data.usersSchema.headers,
+          message: `C\u1EA5u tr\xFAc Google Sheets ho\xE0n to\xE0n t\u01B0\u01A1ng th\xEDch (${data.usersSchema.type}, ${data.usersSchema.columnCount} c\u1ED9t).`
+        };
+      }
+    }
+    const pingUrl = new URL(process.env.LICENSE_API_URL);
+    pingUrl.searchParams.set("action", "ping");
+    const pingResp = await fetch(pingUrl.toString(), { method: "GET", signal: AbortSignal.timeout(4e3) });
+    if (pingResp.ok) {
+      const pingData = await pingResp.json().catch(() => null);
+      if (pingData?.success) {
+        return {
+          success: true,
+          compatible: true,
+          version: pingData.version || "v2.x",
+          schemaType: "COMPATIBLE_FALLBACK",
+          message: "K\u1EBFt n\u1ED1i Apps Script th\xE0nh c\xF4ng. L\u1EDBp t\u01B0\u01A1ng th\xEDch ng\u01B0\u1EE3c t\u1EF1 \u0111\u1ED9ng nh\u1EADn di\u1EC7n schema 13 c\u1ED9t ho\u1EB7c 12 c\u1ED9t."
+        };
+      }
+    }
+    return {
+      success: false,
+      compatible: false,
+      message: "Apps Script ph\u1EA3n h\u1ED3i kh\xF4ng \u0111\xFAng \u0111\u1ECBnh d\u1EA1ng. C\u1EA7n ki\u1EC3m tra l\u1EA1i m\xE3 ngu\u1ED3n tri\u1EC3n khai."
+    };
+  } catch (err) {
+    return {
+      success: false,
+      compatible: false,
+      message: `Kh\xF4ng th\u1EC3 k\u1EBFt n\u1ED1i \u0111\u1EBFn Google Sheets Apps Script: ${err.message}`,
+      error: err.message
+    };
+  }
+}
 async function getAllUsersAndGuests() {
   if (process.env.LICENSE_API_URL) {
     try {
@@ -162,26 +377,29 @@ async function getAllUsersAndGuests() {
         const data = await resp.json().catch(() => null);
         const list = Array.isArray(data?.users) ? data.users : Array.isArray(data) ? data : [];
         list.forEach((u) => {
-          if (u && u.email) {
-            const email = String(u.email).toLowerCase().trim();
-            const existing = store.users[email];
-            if (!existing) {
-              const role = u.role === "ADMIN" ? "ADMIN" : u.role === "LICENSED" ? "LICENSED" : u.role === "FREE_ACCESS" ? "FREE_ACCESS" : u.role === "BLOCKED" ? "BLOCKED" : "TRIAL";
-              const plan = u.plan === "SCHOOL" ? "SCHOOL" : u.plan === "PREMIUM" ? "PREMIUM" : u.plan === "PRO" ? "PRO" : "TRIAL";
-              const isUnlimited = role === "ADMIN" || role === "LICENSED" || role === "FREE_ACCESS";
-              store.users[email] = {
-                id: u.id || `usr_sheet_${email.split("@")[0]}`,
-                email,
-                name: u.name || email.split("@")[0],
-                role,
-                plan,
-                quota: isUnlimited ? { easy: 9999, advanced: 9999 } : u.quota || { easy: 3, advanced: 1 },
-                licenseKey: u.licenseKey,
-                licenseExpiresAt: u.licenseExpiresAt || null,
-                createdAt: u.createdAt || (/* @__PURE__ */ new Date()).toISOString(),
-                lastActiveAt: u.lastActiveAt || (/* @__PURE__ */ new Date()).toISOString(),
-                isBlocked: Boolean(u.isBlocked)
-              };
+          if (u) {
+            const mapped = mapRawSheetUserToAccount(u);
+            if (mapped && mapped.email) {
+              const email = mapped.email;
+              const existing = store.users[email];
+              if (!existing) {
+                const isRootAdmin = ROOT_ADMIN_EMAILS.includes(email);
+                const role = isRootAdmin ? "ADMIN" : mapped.role || "TRIAL";
+                const plan = isRootAdmin ? "PRO" : mapped.plan || (role === "ADMIN" ? "PRO" : "TRIAL");
+                store.users[email] = {
+                  id: mapped.id || `usr_sheet_${email.split("@")[0]}`,
+                  email,
+                  name: mapped.name || (isRootAdmin ? "\u0110a Thi\u1EC7n H\u1ED3 Nguy\u1EC5n" : email.split("@")[0]),
+                  role,
+                  plan,
+                  quota: mapped.quota || { easy: 3, advanced: 1 },
+                  licenseKey: mapped.licenseKey || (isRootAdmin ? "SKKN-ADMIN-SYSTEM" : void 0),
+                  licenseExpiresAt: mapped.licenseExpiresAt || null,
+                  createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+                  lastActiveAt: (/* @__PURE__ */ new Date()).toISOString(),
+                  isBlocked: isRootAdmin ? false : Boolean(mapped.isBlocked)
+                };
+              }
             }
           }
         });
@@ -195,7 +413,7 @@ async function getAllUsersAndGuests() {
     licenses: Object.values(store.licenses)
   };
 }
-function adminUpdateUser(params) {
+async function adminUpdateUser(params) {
   const user = findUserByEmailOrId(params.email);
   if (!user) {
     return { success: false, error: "Kh\xF4ng t\xECm th\u1EA5y ng\u01B0\u1EDDi d\xF9ng" };
@@ -219,7 +437,6 @@ function adminUpdateUser(params) {
     user.plan = params.plan;
     if (params.plan === "LICENSED") {
       if (user.role !== "ADMIN") user.role = "LICENSED";
-      user.quota = { easy: 9999, advanced: 9999 };
       user.licenseExpiresAt = params.expiresAt !== void 0 ? params.expiresAt : user.licenseExpiresAt;
     } else if (params.plan === "TRIAL") {
       if (user.role !== "ADMIN") user.role = "TRIAL";
@@ -239,9 +456,21 @@ function adminUpdateUser(params) {
     }
   }
   saveStore();
-  return { success: true, user };
+  if (process.env.LICENSE_API_URL) {
+    const sheetRes = await syncUserToGoogleSheet(user);
+    if (!sheetRes.success) {
+      return {
+        success: true,
+        user,
+        sheetSynced: false,
+        warning: "C\u1EADp nh\u1EADt th\xE0nh c\xF4ng v\xE0o c\u01A1 s\u1EDF d\u1EEF li\u1EC7u \u1EE9ng d\u1EE5ng. L\u01B0u \xFD: Google Sheets ch\u01B0a ghi nh\u1EADn (DEPLOY REQUIRED: C\u1EA7n c\u1EADp nh\u1EADt Code.gs v2.5)."
+      };
+    }
+    return { success: true, user, sheetSynced: true, message: "\u0110\xE3 c\u1EADp nh\u1EADt v\xE0 x\xE1c nh\u1EADn l\u01B0u th\xE0nh c\xF4ng xu\u1ED1ng Google Sheets USERS." };
+  }
+  return { success: true, user, sheetSynced: false };
 }
-function adminCreateUser(params) {
+async function adminCreateUser(params) {
   const email = params.email.trim().toLowerCase();
   if (!email || !email.includes("@")) {
     return { success: false, error: "Email kh\xF4ng h\u1EE3p l\u1EC7" };
@@ -257,18 +486,28 @@ function adminCreateUser(params) {
     if (params.expiresAt !== void 0) user.licenseExpiresAt = params.expiresAt;
     if (user.plan === "LICENSED") {
       if (user.role !== "ADMIN") user.role = "LICENSED";
-      user.quota = { easy: 9999, advanced: 9999 };
     }
     user.lastActiveAt = now;
     saveStore();
-    return { success: true, user };
+    if (process.env.LICENSE_API_URL) {
+      const sheetRes = await syncUserToGoogleSheet(user);
+      if (!sheetRes.success) {
+        return {
+          success: true,
+          user,
+          sheetSynced: false,
+          warning: "C\u1EADp nh\u1EADt th\xE0nh c\xF4ng v\xE0o c\u01A1 s\u1EDF d\u1EEF li\u1EC7u \u1EE9ng d\u1EE5ng. L\u01B0u \xFD: Google Sheets ch\u01B0a ghi nh\u1EADn (DEPLOY REQUIRED: C\u1EA7n c\u1EADp nh\u1EADt Code.gs v2.5)."
+        };
+      }
+      return { success: true, user, sheetSynced: true, message: "\u0110\xE3 c\u1EADp nh\u1EADt v\xE0 x\xE1c nh\u1EADn l\u01B0u th\xE0nh c\xF4ng xu\u1ED1ng Google Sheets USERS." };
+    }
+    return { success: true, user, sheetSynced: false };
   }
   const role = isRootAdmin ? "ADMIN" : params.role || "TRIAL";
   const plan = isRootAdmin ? "PRO" : params.plan || (role === "ADMIN" ? "PRO" : "TRIAL");
-  const isUnlimited = role === "ADMIN" || role === "LICENSED" || role === "FREE_ACCESS";
   const defaultTrialEasy = store.settings?.trialEasyLimit ?? 3;
   const defaultTrialAdvanced = store.settings?.trialAdvancedLimit ?? 1;
-  const quota = params.quota || (isUnlimited ? { easy: 9999, advanced: 9999 } : { easy: defaultTrialEasy, advanced: defaultTrialAdvanced });
+  const quota = params.quota || { easy: defaultTrialEasy, advanced: defaultTrialAdvanced };
   user = {
     id: `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     email,
@@ -284,7 +523,245 @@ function adminCreateUser(params) {
   };
   store.users[email] = user;
   saveStore();
-  return { success: true, user };
+  if (process.env.LICENSE_API_URL) {
+    const sheetRes = await syncUserToGoogleSheet(user);
+    if (!sheetRes.success) {
+      return {
+        success: true,
+        user,
+        sheetSynced: false,
+        warning: "T\u1EA1o t\xE0i kho\u1EA3n th\xE0nh c\xF4ng v\xE0o c\u01A1 s\u1EDF d\u1EEF li\u1EC7u \u1EE9ng d\u1EE5ng. L\u01B0u \xFD: Google Sheets ch\u01B0a ghi nh\u1EADn (DEPLOY REQUIRED: C\u1EA7n c\u1EADp nh\u1EADt Code.gs v2.5)."
+      };
+    }
+    return { success: true, user, sheetSynced: true, message: "\u0110\xE3 t\u1EA1o v\xE0 x\xE1c nh\u1EADn l\u01B0u th\xE0nh c\xF4ng xu\u1ED1ng Google Sheets USERS." };
+  }
+  return { success: true, user, sheetSynced: false };
+}
+async function syncUserToGoogleSheet(user) {
+  if (!process.env.LICENSE_API_URL) return { success: false, error: "Ch\u01B0a c\u1EA5u h\xECnh LICENSE_API_URL" };
+  try {
+    const url = new URL(process.env.LICENSE_API_URL);
+    url.searchParams.set("action", "saveUser");
+    const resp = await fetch(url.toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        plan: user.plan,
+        quotaEasy: user.quota?.easy ?? 3,
+        quotaAdvanced: user.quota?.advanced ?? 1,
+        licenseKey: user.licenseKey || "",
+        licenseExpiresAt: user.licenseExpiresAt || "",
+        isBlocked: Boolean(user.isBlocked),
+        createdAt: user.createdAt,
+        lastActiveAt: user.lastActiveAt
+      }),
+      signal: AbortSignal.timeout(5e3)
+    });
+    if (resp.ok) {
+      const data = await resp.json().catch(() => null);
+      return { success: Boolean(data?.success ?? true) };
+    }
+    return { success: false, error: `HTTP ${resp.status}` };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+async function deleteUserFromGoogleSheet(email) {
+  if (!process.env.LICENSE_API_URL) return { success: false, error: "Ch\u01B0a c\u1EA5u h\xECnh LICENSE_API_URL" };
+  try {
+    const url = new URL(process.env.LICENSE_API_URL);
+    url.searchParams.set("action", "deleteUser");
+    const resp = await fetch(url.toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+      signal: AbortSignal.timeout(5e3)
+    });
+    if (resp.ok) {
+      const data = await resp.json().catch(() => null);
+      return { success: Boolean(data?.success ?? true) };
+    }
+    return { success: false, error: `HTTP ${resp.status}` };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+async function syncAllUsersToGoogleSheet() {
+  const users = Object.values(store.users);
+  if (!process.env.LICENSE_API_URL) {
+    return { success: false, syncedCount: 0, totalCount: users.length, error: "Ch\u01B0a c\u1EA5u h\xECnh LICENSE_API_URL" };
+  }
+  try {
+    const url = new URL(process.env.LICENSE_API_URL);
+    url.searchParams.set("action", "syncUsers");
+    const resp = await fetch(url.toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ users }),
+      signal: AbortSignal.timeout(1e4)
+    });
+    if (resp.ok) {
+      const data = await resp.json().catch(() => null);
+      return {
+        success: true,
+        syncedCount: data?.syncedCount ?? users.length,
+        totalCount: users.length
+      };
+    }
+    let synced = 0;
+    for (const u of users) {
+      const res = await syncUserToGoogleSheet(u);
+      if (res.success) synced++;
+    }
+    return { success: synced > 0, syncedCount: synced, totalCount: users.length };
+  } catch (err) {
+    return { success: false, syncedCount: 0, totalCount: users.length, error: err.message };
+  }
+}
+async function adminSyncGoogleSheets(params) {
+  let remoteUsersCount = 0;
+  const conflicts = [];
+  if (process.env.LICENSE_API_URL) {
+    try {
+      const url = new URL(process.env.LICENSE_API_URL);
+      url.searchParams.set("action", "getUsers");
+      const resp = await fetch(url.toString(), { method: "GET", signal: AbortSignal.timeout(6e3) });
+      if (resp.ok) {
+        const data = await resp.json().catch(() => null);
+        const list = Array.isArray(data?.users) ? data.users : Array.isArray(data) ? data : [];
+        remoteUsersCount = list.length;
+        list.forEach((u) => {
+          if (u) {
+            const mapped = mapRawSheetUserToAccount(u);
+            if (mapped && mapped.email) {
+              const email = mapped.email;
+              const existing = store.users[email];
+              if (existing) {
+                const isRootAdmin = ROOT_ADMIN_EMAILS.includes(email);
+                const remoteRole = isRootAdmin ? "ADMIN" : mapped.role || "TRIAL";
+                const remotePlan = isRootAdmin ? "PRO" : mapped.plan || "TRIAL";
+                const remoteBlocked = isRootAdmin ? false : Boolean(mapped.isBlocked);
+                if (existing.role !== remoteRole) {
+                  conflicts.push({
+                    email,
+                    name: existing.name || mapped.name || email,
+                    field: "Vai tr\xF2 (Role)",
+                    localValue: existing.role,
+                    remoteValue: remoteRole
+                  });
+                }
+                if (existing.plan !== remotePlan) {
+                  conflicts.push({
+                    email,
+                    name: existing.name || mapped.name || email,
+                    field: "G\xF3i (Plan)",
+                    localValue: existing.plan,
+                    remoteValue: remotePlan
+                  });
+                }
+                if (Boolean(existing.isBlocked) !== remoteBlocked) {
+                  conflicts.push({
+                    email,
+                    name: existing.name || mapped.name || email,
+                    field: "Tr\u1EA1ng th\xE1i kh\xF3a",
+                    localValue: existing.isBlocked ? "\u0110ang kh\xF3a" : "Ho\u1EA1t \u0111\u1ED9ng",
+                    remoteValue: remoteBlocked ? "\u0110ang kh\xF3a" : "Ho\u1EA1t \u0111\u1ED9ng"
+                  });
+                }
+              }
+            }
+          }
+        });
+        if (conflicts.length > 0 && !params?.confirmConflicts && !params?.resolveStrategy) {
+          return {
+            success: true,
+            hasConflicts: true,
+            conflicts,
+            localUsersCount: Object.keys(store.users).length,
+            remoteUsersCount,
+            syncedToRemoteCount: 0,
+            message: `Ph\xE1t hi\u1EC7n ${conflicts.length} xung \u0111\u1ED9t d\u1EEF li\u1EC7u gi\u1EEFa Web App v\xE0 Google Sheets. Vui l\xF2ng xem tr\u01B0\u1EDBc v\xE0 ch\u1ECDn ph\u01B0\u01A1ng \xE1n gi\u1EA3i quy\u1EBFt.`
+          };
+        }
+        list.forEach((u) => {
+          if (u) {
+            const mapped = mapRawSheetUserToAccount(u);
+            if (mapped && mapped.email) {
+              const email = mapped.email;
+              const existing = store.users[email];
+              const isRootAdmin = ROOT_ADMIN_EMAILS.includes(email);
+              const role = isRootAdmin ? "ADMIN" : mapped.role || "TRIAL";
+              const plan = isRootAdmin ? "PRO" : mapped.plan || "TRIAL";
+              if (!existing) {
+                store.users[email] = {
+                  id: mapped.id || `usr_sheet_${email.split("@")[0]}`,
+                  email,
+                  name: mapped.name || (isRootAdmin ? "\u0110a Thi\u1EC7n H\u1ED3 Nguy\u1EC5n" : email.split("@")[0]),
+                  role,
+                  plan,
+                  quota: mapped.quota || { easy: 3, advanced: 1 },
+                  licenseKey: mapped.licenseKey || (isRootAdmin ? "SKKN-ADMIN-SYSTEM" : void 0),
+                  licenseExpiresAt: mapped.licenseExpiresAt || null,
+                  createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+                  lastActiveAt: (/* @__PURE__ */ new Date()).toISOString(),
+                  isBlocked: isRootAdmin ? false : Boolean(mapped.isBlocked)
+                };
+              } else if (params?.resolveStrategy === "keep_remote") {
+                if (!isRootAdmin) {
+                  existing.role = role;
+                  existing.plan = plan;
+                  existing.isBlocked = Boolean(mapped.isBlocked);
+                }
+                if (mapped.name) existing.name = mapped.name;
+                if (mapped.licenseKey) existing.licenseKey = mapped.licenseKey;
+                if (mapped.licenseExpiresAt !== void 0) existing.licenseExpiresAt = mapped.licenseExpiresAt;
+              }
+            }
+          }
+        });
+        saveStore();
+      }
+    } catch (err) {
+      console.warn("Could not pull from Google Sheets during admin sync:", err);
+    }
+  }
+  let pushSynced = 0;
+  if (params?.resolveStrategy !== "keep_remote") {
+    const pushRes = await syncAllUsersToGoogleSheet();
+    pushSynced = pushRes.syncedCount;
+  }
+  return {
+    success: true,
+    hasConflicts: false,
+    localUsersCount: Object.keys(store.users).length,
+    remoteUsersCount,
+    syncedToRemoteCount: pushSynced,
+    message: process.env.LICENSE_API_URL ? `\u0110\u1ED3ng b\u1ED9 ho\xE0n t\u1EA5t: ${Object.keys(store.users).length} ng\u01B0\u1EDDi d\xF9ng \u0111\xE3 c\u1EADp nh\u1EADt b\u1EC1n v\u1EEFng v\u1EDBi Google Sheets.` : "\u0110\xE3 c\u1EADp nh\u1EADt d\u1EEF li\u1EC7u c\u1EE5c b\u1ED9. LICENSE_API_URL ch\u01B0a c\u1EA5u h\xECnh tr\xEAn m\xF4i tr\u01B0\u1EDDng n\xE0y."
+  };
+}
+async function adminDeleteUser(params) {
+  const email = params.email.trim().toLowerCase();
+  const user = findUserByEmailOrId(email);
+  if (!user) {
+    return { success: false, error: "Kh\xF4ng t\xECm th\u1EA5y ng\u01B0\u1EDDi d\xF9ng \u0111\u1EC3 x\xF3a." };
+  }
+  if (ROOT_ADMIN_EMAILS.includes(email) || user.role === "ADMIN") {
+    return {
+      success: false,
+      error: "Quy t\u1EAFc an to\xE0n Qu\u1EA3n tr\u1ECB: Kh\xF4ng th\u1EC3 x\xF3a t\xE0i kho\u1EA3n Qu\u1EA3n tr\u1ECB vi\xEAn (ADMIN)."
+    };
+  }
+  delete store.users[email];
+  saveStore();
+  if (process.env.LICENSE_API_URL) {
+    await deleteUserFromGoogleSheet(email).catch(() => {
+    });
+  }
+  return { success: true };
 }
 function getSystemSettings() {
   if (!store.settings) {
@@ -386,7 +863,6 @@ function adminToggleLicenseStatus(params) {
       user.plan = lic.plan || "LICENSED";
       user.licenseKey = params.key;
       user.licenseExpiresAt = lic.expiresAt;
-      user.quota = { easy: 9999, advanced: 9999 };
     }
   }
   saveStore();
@@ -471,7 +947,18 @@ async function handler(req, res) {
   const operatorEmail = String(
     req.headers["x-user-email"] || req.headers["x-user-id"] || req.query?.adminEmail || body?.operatorEmail || ""
   ).toLowerCase().trim();
-  const isAllowed = ROOT_ADMIN_EMAILS.includes(operatorEmail) || isUserAdmin(operatorEmail);
+  let isAllowed = ROOT_ADMIN_EMAILS.includes(operatorEmail) || isUserAdmin(operatorEmail);
+  if (!isAllowed && process.env.LICENSE_API_URL && operatorEmail) {
+    try {
+      const remote = await fetchUserFromLicenseApi(operatorEmail);
+      if (remote?.role === "ADMIN") {
+        const u = await getOrCreateUser({ email: operatorEmail });
+        u.role = "ADMIN";
+        isAllowed = true;
+      }
+    } catch {
+    }
+  }
   if (!isAllowed) {
     return res.status(403).json({
       error: "Truy c\u1EADp b\u1ECB t\u1EEB ch\u1ED1i. Quy\u1EC1n qu\u1EA3n tr\u1ECB (USERS.ROLE = ADMIN) b\u1EAFt bu\u1ED9c.",
@@ -481,6 +968,10 @@ async function handler(req, res) {
   try {
     if (subpath === "check-access") {
       return res.status(200).json({ allowed: true, role: "ADMIN" });
+    }
+    if (subpath === "check-sheet-schema") {
+      const checkResult = await checkSheetCompatibility();
+      return res.status(200).json(checkResult);
     }
     if (subpath === "stats") {
       const stats = getSystemStats();
@@ -496,7 +987,7 @@ async function handler(req, res) {
       if (!email) {
         return res.status(400).json({ error: "Email ng\u01B0\u1EDDi d\xF9ng l\xE0 b\u1EAFt bu\u1ED9c" });
       }
-      const result = adminCreateUser({
+      const result = await adminCreateUser({
         email,
         name,
         role,
@@ -507,12 +998,18 @@ async function handler(req, res) {
       if (!result.success) {
         return res.status(400).json({ error: result.error || "Th\xEAm ng\u01B0\u1EDDi d\xF9ng th\u1EA5t b\u1EA1i" });
       }
-      return res.status(200).json({ success: true, user: result.user });
+      return res.status(200).json({
+        success: true,
+        user: result.user,
+        sheetSynced: result.sheetSynced,
+        warning: result.warning,
+        message: result.message
+      });
     }
     if (subpath === "update-user") {
       if (req.method !== "POST") return res.status(405).json({ error: "Method Not Allowed" });
       const { email, role, plan, quota, isBlocked, expiresAt } = body || {};
-      const result = adminUpdateUser({
+      const result = await adminUpdateUser({
         operatorEmail,
         email,
         role,
@@ -524,7 +1021,30 @@ async function handler(req, res) {
       if (!result.success) {
         return res.status(400).json({ error: result.error || "C\u1EADp nh\u1EADt ng\u01B0\u1EDDi d\xF9ng th\u1EA5t b\u1EA1i" });
       }
-      return res.status(200).json({ success: true, user: result.user });
+      return res.status(200).json({
+        success: true,
+        user: result.user,
+        sheetSynced: result.sheetSynced,
+        warning: result.warning,
+        message: result.message
+      });
+    }
+    if (subpath === "delete-user") {
+      if (req.method !== "POST") return res.status(405).json({ error: "Method Not Allowed" });
+      const { email } = body || {};
+      if (!email) {
+        return res.status(400).json({ error: "Email ng\u01B0\u1EDDi d\xF9ng l\xE0 b\u1EAFt bu\u1ED9c" });
+      }
+      const result = await adminDeleteUser({ operatorEmail, email });
+      if (!result.success) {
+        return res.status(400).json({ error: result.error || "X\xF3a ng\u01B0\u1EDDi d\xF9ng th\u1EA5t b\u1EA1i" });
+      }
+      return res.status(200).json({ success: true });
+    }
+    if (subpath === "sync-sheet") {
+      if (req.method !== "POST") return res.status(405).json({ error: "Method Not Allowed" });
+      const result = await adminSyncGoogleSheets(body);
+      return res.status(200).json(result);
     }
     if (subpath === "settings") {
       if (req.method === "POST") {
@@ -576,5 +1096,6 @@ async function handler(req, res) {
   }
 }
 export {
-  handler as default
+  handler as default,
+  mapRawSheetUserToAccount
 };

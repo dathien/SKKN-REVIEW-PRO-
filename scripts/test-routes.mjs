@@ -235,6 +235,29 @@ console.log('\n--- 5. Testing Authorized Admin Endpoints (/api/admin) ---');
     res.getStatusCode() === 200 && res.getData()?.success === true);
 }
 {
+  // Test POST /api/admin/sync-sheet
+  const { req, res } = createMockContext({
+    method: 'POST',
+    url: '/api/admin/sync-sheet',
+    headers: adminHeaders,
+  });
+  await adminHandler(req, res);
+  assert('POST /api/admin/sync-sheet returns 200 with sync status',
+    res.getStatusCode() === 200 && res.getData()?.success === true && res.getData()?.localUsersCount >= 8);
+}
+{
+  // Test POST /api/admin/delete-user (cannot delete root admin)
+  const { req, res } = createMockContext({
+    method: 'POST',
+    url: '/api/admin/delete-user',
+    headers: adminHeaders,
+    body: { email: 'dathien2412@gmail.com' },
+  });
+  await adminHandler(req, res);
+  assert('POST /api/admin/delete-user safely prevents deleting root admin (400)',
+    res.getStatusCode() === 400);
+}
+{
   // Test GET & POST /api/admin/settings
   const { req: getReq, res: getRes } = createMockContext({
     method: 'GET',
@@ -313,6 +336,179 @@ console.log('\n--- 5. Testing Authorized Admin Endpoints (/api/admin) ---');
     assert('POST /api/admin/licenses/delete deletes license',
       delRes.getStatusCode() === 200 && delRes.getData()?.success === true);
   }
+}
+
+console.log('\n--- 6. Testing Data Persistence, Read/Write & PRO Unlimited ---');
+{
+  // Test reading all users and verifying Nguyễn Thị Thanh Tâm is present with PRO plan and not duplicated
+  const { req, res } = createMockContext({
+    method: 'GET',
+    url: '/api/admin/users',
+    headers: adminHeaders,
+  });
+  await adminHandler(req, res);
+  const users = res.getData()?.users || [];
+  const thanhtamMatches = users.filter(u => u.email.toLowerCase() === 'nguyenthithanhtam3410@gmail.com');
+
+  assert('User nguyenthithanhtam3410@gmail.com exists with single record (no duplicate)',
+    thanhtamMatches.length === 1);
+  assert('User nguyenthithanhtam3410@gmail.com has PRO plan and lifetime validity',
+    thanhtamMatches[0]?.plan === 'PRO' && thanhtamMatches[0]?.role === 'LICENSED');
+  assert('PRO users do not rely on 9999 quota in stored record',
+    thanhtamMatches[0]?.quota?.easy !== 9999 && thanhtamMatches[0]?.quota?.advanced !== 9999);
+}
+{
+  // Test writing a persistent user and reading it back
+  const testEmail = 'persist_test_teacher@school.edu.vn';
+  const { req: createReq, res: createRes } = createMockContext({
+    method: 'POST',
+    url: '/api/admin/create-user',
+    headers: adminHeaders,
+    body: {
+      email: testEmail,
+      name: 'Thầy Giáo Kiểm Thử Bền Vững',
+      role: 'LICENSED',
+      plan: 'PRO',
+      quota: { easy: 3, advanced: 1 },
+    },
+  });
+  await adminHandler(createReq, createRes);
+  assert('Writing user to persistent store succeeds',
+    createRes.getStatusCode() === 200 && createRes.getData()?.success === true);
+
+  // Read back and verify persistence
+  const { req: getReq, res: getRes } = createMockContext({
+    method: 'GET',
+    url: '/api/admin/users',
+    headers: adminHeaders,
+  });
+  await adminHandler(getReq, getRes);
+  const allUsers = getRes.getData()?.users || [];
+  const savedUser = allUsers.find(u => u.email === testEmail);
+  assert('Reading back saved user confirms persistent storage and accurate fields',
+    savedUser && savedUser.name === 'Thầy Giáo Kiểm Thử Bền Vững' && savedUser.plan === 'PRO');
+
+  // Clean up test user
+  const { req: cleanupReq, res: cleanupRes } = createMockContext({
+    method: 'POST',
+    url: '/api/admin/delete-user',
+    headers: adminHeaders,
+    body: { email: testEmail },
+  });
+  await adminHandler(cleanupReq, cleanupRes);
+  assert('Cleaning up persistent test user succeeds',
+    cleanupRes.getStatusCode() === 200 && cleanupRes.getData()?.success === true);
+}
+
+console.log('\n--- 7. Testing Apps Script Non-Response & Security Hardening ---');
+{
+  // Test spoofed role in headers is rejected
+  const { req, res } = createMockContext({
+    method: 'GET',
+    url: '/api/admin/users',
+    headers: {
+      'x-user-email': 'attacker@malicious.com',
+      'x-user-role': 'ADMIN',
+      'role': 'ADMIN',
+    },
+  });
+  await adminHandler(req, res);
+  assert('Spoofed x-user-role in header is strictly rejected with 403',
+    res.getStatusCode() === 403);
+}
+{
+  // Test conflict preview endpoint support in sync-sheet
+  const { req, res } = createMockContext({
+    method: 'POST',
+    url: '/api/admin/sync-sheet',
+    headers: adminHeaders,
+    body: { previewOnly: true },
+  });
+  await adminHandler(req, res);
+  assert('Sync-sheet endpoint handles conflict preview safely without crash',
+    res.getStatusCode() === 200 && res.getData()?.success === true);
+}
+
+console.log('\n--- 8. Testing Google Sheets Schema Compatibility (13-Col Old & 12-Col New) ---');
+{
+  // Test check-sheet-schema endpoint
+  const { req, res } = createMockContext({
+    method: 'GET',
+    url: '/api/admin/check-sheet-schema',
+    headers: adminHeaders,
+  });
+  await adminHandler(req, res);
+  assert('GET /api/admin/check-sheet-schema returns 200 with compatibility status',
+    res.getStatusCode() === 200 && 'compatible' in res.getData());
+}
+{
+  // Test Old 13-Column Schema Mapping Logic
+  // USER_ID | EMAIL | NAME | PLAN | STATUS | EASY_USED | EASY_LIMIT | ADVANCED_USED | ADVANCED_LIMIT | CREATED_AT | ACTIVATED_AT | EXPIRES_AT | LAST_USED_AT
+  const old13Sample = {
+    userId: 'manual-tam-001',
+    email: 'nguyenthithanhtam3410@gmail.com',
+    name: 'Nguyễn Thị Thanh Tâm',
+    plan: 'Pro',
+    status: 'ACTIVE',
+    easyUsed: 0,
+    easyLimit: 999999,
+    advancedUsed: 0,
+    advancedLimit: 999999,
+    createdAt: '2026-10-08T01:51:00.000Z',
+    activatedAt: '2026-10-08T01:51:00.000Z',
+    expiresAt: '',
+    lastUsedAt: '',
+    note: ''
+  };
+
+  // We can test reading via fetchUserFromLicenseApi or getOrCreateUser logic
+  // Test that mapRawSheetUserToAccount properly maps 13-column schema:
+  // In node context, import mapRawSheetUserToAccount from compiled api/admin.js
+  const { mapRawSheetUserToAccount } = await import(new URL(path.resolve('api/admin.js'), 'file://').href);
+  const mapped13 = mapRawSheetUserToAccount(old13Sample);
+
+  assert('Schema 13-col: Correctly maps email, name, role (LICENSED) from Pro plan without ROLE column',
+    mapped13 && mapped13.email === 'nguyenthithanhtam3410@gmail.com' && mapped13.role === 'LICENSED' && mapped13.plan === 'PRO');
+
+  assert('Schema 13-col: Preserves unlimited quota correctly without data loss',
+    mapped13 && mapped13.quota.easy === 999999 && mapped13.isBlocked === false);
+
+  // Test New 12-Column Schema Mapping Logic
+  // ID | EMAIL | NAME | ROLE | PLAN | QUOTA_EASY | QUOTA_ADVANCED | LICENSE_KEY | EXPIRES_AT | STATUS | CREATED_AT | LAST_ACTIVE_AT
+  const new12Sample = {
+    id: 'usr_new_123',
+    email: 'giaovien.moi@school.edu.vn',
+    name: 'Thầy Giáo Mới',
+    role: 'LICENSED',
+    plan: 'PRO',
+    quota: { easy: 5, advanced: 2 },
+    licenseKey: 'SKKN-NEW-2026',
+    licenseExpiresAt: '2027-01-01T00:00:00.000Z',
+    status: 'ACTIVE',
+    createdAt: '2026-10-10T00:00:00.000Z',
+    lastActiveAt: '2026-10-10T01:00:00.000Z'
+  };
+
+  const mapped12 = mapRawSheetUserToAccount(new12Sample);
+  assert('Schema 12-col: Correctly maps explicit role, plan, and quota',
+    mapped12 && mapped12.role === 'LICENSED' && mapped12.quota.easy === 5 && mapped12.licenseKey === 'SKKN-NEW-2026');
+
+  // Test Trial user in Old 13-col: EASY_LIMIT = 3, EASY_USED = 1 => 2 remaining
+  const old13Trial = {
+    userId: 'trial-user-01',
+    email: 'trial.user@gmail.com',
+    name: 'Người Dùng Thử',
+    plan: 'Trial',
+    status: 'ACTIVE',
+    easyUsed: 1,
+    easyLimit: 3,
+    advancedUsed: 0,
+    advancedLimit: 1,
+    createdAt: '2026-10-09T00:00:00.000Z'
+  };
+  const mappedTrial = mapRawSheetUserToAccount(old13Trial);
+  assert('Schema 13-col: Accurately computes remaining quota (3 - 1 = 2) without losing usage metrics',
+    mappedTrial && mappedTrial.role === 'TRIAL' && mappedTrial.quota.easy === 2 && mappedTrial.quota.advanced === 1);
 }
 
 if (failCount > 0) {

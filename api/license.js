@@ -22,7 +22,7 @@ function initDefaultData() {
         name: "\u0110a Thi\u1EC7n H\u1ED3 Nguy\u1EC5n",
         role: "ADMIN",
         plan: "PRO",
-        quota: { easy: 9999, advanced: 9999 },
+        quota: { easy: 3, advanced: 1 },
         licenseKey: "SKKN-ADMIN-SYSTEM",
         licenseExpiresAt: null,
         createdAt: now,
@@ -32,7 +32,6 @@ function initDefaultData() {
     } else {
       store.users[adminEmail].role = "ADMIN";
       store.users[adminEmail].plan = "PRO";
-      store.users[adminEmail].quota = { easy: 9999, advanced: 9999 };
       store.users[adminEmail].isBlocked = false;
     }
   });
@@ -131,33 +130,100 @@ function findUserByEmailOrId(identifier) {
   }
   return null;
 }
+function mapRawSheetUserToAccount(raw) {
+  if (!raw) return null;
+  const id = raw.id || raw.ID || raw.userId || raw.USER_ID || "";
+  const email = String(raw.email || raw.EMAIL || raw.userEmail || raw.USER_EMAIL || "").toLowerCase().trim();
+  if (!email && !raw.role && !raw.plan) return null;
+  const name = raw.name || raw.NAME || raw.fullName || raw.FULL_NAME || "";
+  const rawPlan = String(raw.plan || raw.PLAN || raw.package || raw.PACKAGE || "").toUpperCase().trim();
+  const plan = rawPlan === "SCHOOL" ? "SCHOOL" : rawPlan === "PREMIUM" ? "PREMIUM" : rawPlan === "PRO" || rawPlan === "PRO_MAX" ? "PRO" : rawPlan === "TRIAL" ? "TRIAL" : void 0;
+  const rawRole = String(raw.role || raw.ROLE || raw.userRole || raw.USER_ROLE || "").toUpperCase().trim();
+  let role;
+  if (rawRole) {
+    role = rawRole === "ADMIN" ? "ADMIN" : rawRole === "LICENSED" || rawRole === "PRO" ? "LICENSED" : rawRole === "FREE_ACCESS" || rawRole === "FREE" ? "FREE_ACCESS" : rawRole === "BLOCKED" ? "BLOCKED" : rawRole === "TRIAL" ? "TRIAL" : void 0;
+  } else if (plan) {
+    role = plan === "PRO" || plan === "SCHOOL" || plan === "PREMIUM" ? "LICENSED" : "TRIAL";
+  }
+  let easyQuota = 3;
+  let advancedQuota = 1;
+  if (raw.quota?.easy !== void 0) easyQuota = Number(raw.quota.easy);
+  else if (raw.quotaEasy !== void 0) easyQuota = Number(raw.quotaEasy);
+  else if (raw.QUOTA_EASY !== void 0) easyQuota = Number(raw.QUOTA_EASY);
+  else if (raw.easyLimit !== void 0 || raw.EASY_LIMIT !== void 0) {
+    const limit = Number(raw.easyLimit !== void 0 ? raw.easyLimit : raw.EASY_LIMIT);
+    const used = Number(raw.easyUsed !== void 0 ? raw.easyUsed : raw.EASY_USED || 0);
+    if (!isNaN(limit)) {
+      easyQuota = Math.max(0, limit - used);
+    }
+  }
+  if (raw.quota?.advanced !== void 0) advancedQuota = Number(raw.quota.advanced);
+  else if (raw.quotaAdvanced !== void 0) advancedQuota = Number(raw.quotaAdvanced);
+  else if (raw.QUOTA_ADVANCED !== void 0) advancedQuota = Number(raw.QUOTA_ADVANCED);
+  else if (raw.advancedLimit !== void 0 || raw.ADVANCED_LIMIT !== void 0) {
+    const limit = Number(raw.advancedLimit !== void 0 ? raw.advancedLimit : raw.ADVANCED_LIMIT);
+    const used = Number(raw.advancedUsed !== void 0 ? raw.advancedUsed : raw.ADVANCED_USED || 0);
+    if (!isNaN(limit)) {
+      advancedQuota = Math.max(0, limit - used);
+    }
+  }
+  const statusStr = String(raw.status || raw.STATUS || "").toUpperCase().trim();
+  const isBlocked = statusStr === "BLOCKED" || raw.isBlocked === true || role === "BLOCKED";
+  const licenseKey = raw.licenseKey || raw.LICENSE_KEY || raw.key || raw.KEY || void 0;
+  const licenseExpiresAt = raw.licenseExpiresAt || raw.expiresAt || raw.EXPIRES_AT || null;
+  return {
+    id: id || void 0,
+    email: email || void 0,
+    name: name || void 0,
+    role,
+    plan,
+    quota: { easy: easyQuota, advanced: advancedQuota },
+    licenseKey: licenseKey ? String(licenseKey) : void 0,
+    licenseExpiresAt: licenseExpiresAt ? String(licenseExpiresAt) : null,
+    isBlocked,
+    freeAccess: Boolean(raw.freeAccess || role === "FREE_ACCESS"),
+    freeAccessName: raw.freeAccessName || raw.campaignName,
+    freeAccessExpiresAt: raw.freeAccessExpiresAt || licenseExpiresAt
+  };
+}
 async function fetchUserFromLicenseApi(email, sub) {
   if (!process.env.LICENSE_API_URL) return null;
+  const targetEmail = email.toLowerCase().trim();
   try {
     const url = new URL(process.env.LICENSE_API_URL);
     url.searchParams.set("action", "getUser");
-    url.searchParams.set("email", email);
+    url.searchParams.set("email", targetEmail);
     if (sub) url.searchParams.set("sub", sub);
-    const resp = await fetch(url.toString(), { method: "GET" });
+    const resp = await fetch(url.toString(), { method: "GET", signal: AbortSignal.timeout(4e3) });
     if (resp.ok) {
       const data = await resp.json().catch(() => null);
-      if (data && (data.role || data.plan || data.userRole || data.freeAccess)) {
-        const rawRole = (data.role || data.userRole || "").toUpperCase();
-        const role = rawRole === "ADMIN" ? "ADMIN" : rawRole === "LICENSED" || rawRole === "PRO" ? "LICENSED" : rawRole === "FREE_ACCESS" || rawRole === "FREE" || Boolean(data.freeAccess) ? "FREE_ACCESS" : rawRole === "BLOCKED" ? "BLOCKED" : rawRole === "TRIAL" ? "TRIAL" : void 0;
-        const rawPlan = (data.plan || (rawRole === "PRO" ? "PRO" : "")).toUpperCase();
-        const plan = rawPlan === "SCHOOL" ? "SCHOOL" : rawPlan === "PREMIUM" ? "PREMIUM" : rawPlan === "PRO" ? "PRO" : void 0;
-        return {
-          role,
-          plan,
-          name: data.name,
-          freeAccess: Boolean(data.freeAccess || role === "FREE_ACCESS"),
-          freeAccessName: data.freeAccessName || data.campaignName,
-          freeAccessExpiresAt: data.freeAccessExpiresAt || data.expiresAt
-        };
+      const rawUser = data?.user || (data?.email || data?.role || data?.plan ? data : null);
+      if (rawUser) {
+        const mapped = mapRawSheetUserToAccount(rawUser);
+        if (mapped) return mapped;
+      }
+    }
+  } catch (_) {
+  }
+  try {
+    const resp = await fetch(process.env.LICENSE_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "getUser", email: targetEmail }),
+      signal: AbortSignal.timeout(4e3)
+    });
+    if (resp.ok) {
+      const data = await resp.json().catch(() => null);
+      if (data?.found && data?.user) {
+        const mapped = mapRawSheetUserToAccount(data.user);
+        if (mapped) return mapped;
+      } else if (data?.email || data?.role || data?.plan) {
+        const mapped = mapRawSheetUserToAccount(data);
+        if (mapped) return mapped;
       }
     }
   } catch (err) {
-    console.warn("Could not query user role from LICENSE_API_URL:", err);
+    console.warn("Could not query user role from LICENSE_API_URL via POST fallback:", err);
   }
   return null;
 }
@@ -170,7 +236,6 @@ async function getOrCreateUser(profile) {
     const userId = profile.id || `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const role = isRootAdmin ? "ADMIN" : remoteData?.role || "TRIAL";
     const plan = isRootAdmin ? "PRO" : remoteData?.plan || (role === "ADMIN" ? "PRO" : "TRIAL");
-    const isUnlimited = role === "ADMIN" || role === "LICENSED" || role === "FREE_ACCESS";
     const defaultTrialEasy = store.settings?.trialEasyLimit ?? 3;
     const defaultTrialAdvanced = store.settings?.trialAdvancedLimit ?? 1;
     user = {
@@ -180,7 +245,7 @@ async function getOrCreateUser(profile) {
       picture: profile.picture,
       role,
       plan,
-      quota: isUnlimited ? { easy: 9999, advanced: 9999 } : { easy: defaultTrialEasy, advanced: defaultTrialAdvanced },
+      quota: { easy: defaultTrialEasy, advanced: defaultTrialAdvanced },
       licenseKey: isRootAdmin ? "SKKN-ADMIN-SYSTEM" : role === "ADMIN" ? "SKKN-ADMIN-SYSTEM" : void 0,
       licenseExpiresAt: null,
       freeAccess: remoteData?.freeAccess || role === "FREE_ACCESS",
@@ -196,15 +261,11 @@ async function getOrCreateUser(profile) {
     if (isRootAdmin) {
       user.role = "ADMIN";
       user.plan = "PRO";
-      user.quota = { easy: 9999, advanced: 9999 };
       user.isBlocked = false;
       user.licenseKey = "SKKN-ADMIN-SYSTEM";
     } else {
       if (remoteData?.role) {
         user.role = remoteData.role;
-        if (remoteData.role === "ADMIN" || remoteData.role === "LICENSED" || remoteData.role === "FREE_ACCESS") {
-          user.quota = { easy: 9999, advanced: 9999 };
-        }
       }
       if (remoteData?.freeAccess !== void 0) {
         user.freeAccess = remoteData.freeAccess;
@@ -326,7 +387,6 @@ async function activateLicenseKey(params) {
     user.plan = lic.plan || "LICENSED";
     user.licenseKey = key;
     user.licenseExpiresAt = lic.expiresAt;
-    user.quota = { easy: 9999, advanced: 9999 };
     saveStore();
     return {
       success: true,
@@ -355,7 +415,6 @@ async function activateLicenseKey(params) {
         user2.plan = lic.plan || "LICENSED";
         user2.licenseKey = key;
         user2.licenseExpiresAt = lic.expiresAt;
-        user2.quota = { easy: 9999, advanced: 9999 };
       }
       saveStore();
       return {
@@ -386,7 +445,6 @@ async function activateLicenseKey(params) {
       user.plan = lic.plan || "LICENSED";
       user.licenseKey = key;
       user.licenseExpiresAt = lic.expiresAt;
-      user.quota = { easy: 9999, advanced: 9999 };
     }
     saveStore();
     return {
