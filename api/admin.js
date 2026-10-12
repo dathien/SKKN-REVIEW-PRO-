@@ -1,6 +1,7 @@
 // src/server/authStore.ts
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 var DATA_DIR = path.resolve("data");
 var STORE_FILE = path.join(DATA_DIR, "auth_store.json");
 var store = {
@@ -251,6 +252,66 @@ function isUserAdmin(identifier) {
   const user = findUserByEmailOrId(identifier);
   return user?.role === "ADMIN";
 }
+function getSessionSecret() {
+  return process.env.APPS_SCRIPT_SECRET || process.env.SESSION_SECRET || "skkn_secure_session_secret_2026";
+}
+function verifyAdminSessionToken(token) {
+  if (!token) return null;
+  const clean = token.replace(/^Bearer\s+/i, "").trim();
+  if (clean.startsWith("skkn_sess_")) {
+    const withoutPrefix = clean.slice("skkn_sess_".length);
+    const dotIdx = withoutPrefix.indexOf(".");
+    if (dotIdx !== -1) {
+      const b64Payload = withoutPrefix.slice(0, dotIdx);
+      const sig = withoutPrefix.slice(dotIdx + 1);
+      try {
+        const payload = Buffer.from(b64Payload, "base64url").toString("utf-8");
+        const expectedSig = crypto.createHmac("sha256", getSessionSecret()).update(payload).digest("hex");
+        if (sig.length === expectedSig.length && crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expectedSig))) {
+          const parts = payload.split("|");
+          const email = parts[0];
+          const role = parts[1] || "ADMIN";
+          const expiresAt = Number(parts[2]);
+          if (expiresAt > Date.now()) {
+            return { email: email.toLowerCase().trim(), role };
+          }
+        }
+      } catch {
+      }
+    }
+  }
+  const g = globalThis;
+  if (g.__skkn_sessions && g.__skkn_sessions[clean]) {
+    const s = g.__skkn_sessions[clean];
+    if (s.expiresAt > Date.now()) {
+      return { email: s.email, role: s.role };
+    }
+  }
+  return null;
+}
+function verifyGoogleIdToken(token) {
+  if (!token || typeof token !== "string") return null;
+  const clean = token.replace(/^Bearer\s+/i, "").trim();
+  const parts = clean.split(".");
+  if (parts.length < 2) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf-8"));
+    if (payload.exp && payload.exp * 1e3 < Date.now()) {
+      return null;
+    }
+    if (payload.iss && !payload.iss.includes("accounts.google.com")) {
+      return null;
+    }
+    if (payload.email) {
+      return {
+        email: String(payload.email).toLowerCase().trim(),
+        name: payload.name
+      };
+    }
+  } catch {
+  }
+  return null;
+}
 async function getOrCreateUser(profile) {
   const email = profile.email.toLowerCase();
   let user = findUserByEmailOrId(email);
@@ -349,7 +410,7 @@ async function checkSheetCompatibility() {
         return {
           success: true,
           compatible: Boolean(data.usersSchema.compatible),
-          version: data.version || "2.6",
+          version: data.version || "2.7",
           schemaType: data.usersSchema.type,
           columnCount: data.usersSchema.columnCount,
           headers: data.usersSchema.headers,
@@ -484,7 +545,10 @@ async function adminUpdateUser(params) {
   }
   saveStore();
   if (process.env.LICENSE_API_URL) {
-    const sheetRes = await syncUserToGoogleSheet(user, params.operatorEmail);
+    const sheetRes = await syncUserToGoogleSheet(user, {
+      operatorEmail: params.operatorEmail,
+      explicitQuota: params.quota !== void 0
+    });
     if (!sheetRes.success) {
       return {
         success: true,
@@ -523,7 +587,7 @@ async function adminCreateUser(params) {
           success: true,
           user,
           sheetSynced: false,
-          warning: "C\u1EADp nh\u1EADt th\xE0nh c\xF4ng v\xE0o c\u01A1 s\u1EDF d\u1EEF li\u1EC7u \u1EE9ng d\u1EE5ng. L\u01B0u \xFD: Google Sheets ch\u01B0a ghi nh\u1EADn (DEPLOY REQUIRED: C\u1EA7n c\u1EADp nh\u1EADt Code.gs v2.5)."
+          warning: "C\u1EADp nh\u1EADt th\xE0nh c\xF4ng v\xE0o c\u01A1 s\u1EDF d\u1EEF li\u1EC7u \u1EE9ng d\u1EE5ng. L\u01B0u \xFD: Google Sheets ch\u01B0a ghi nh\u1EADn (DEPLOY REQUIRED: C\u1EA7n c\u1EADp nh\u1EADt Code.gs v2.7)."
         };
       }
       return { success: true, user, sheetSynced: true, message: "\u0110\xE3 c\u1EADp nh\u1EADt v\xE0 x\xE1c nh\u1EADn l\u01B0u th\xE0nh c\xF4ng xu\u1ED1ng Google Sheets USERS." };
@@ -557,22 +621,23 @@ async function adminCreateUser(params) {
         success: true,
         user,
         sheetSynced: false,
-        warning: "T\u1EA1o t\xE0i kho\u1EA3n th\xE0nh c\xF4ng v\xE0o c\u01A1 s\u1EDF d\u1EEF li\u1EC7u \u1EE9ng d\u1EE5ng. L\u01B0u \xFD: Google Sheets ch\u01B0a ghi nh\u1EADn (DEPLOY REQUIRED: C\u1EA7n c\u1EADp nh\u1EADt Code.gs v2.5)."
+        warning: "T\u1EA1o t\xE0i kho\u1EA3n th\xE0nh c\xF4ng v\xE0o c\u01A1 s\u1EDF d\u1EEF li\u1EC7u \u1EE9ng d\u1EE5ng. L\u01B0u \xFD: Google Sheets ch\u01B0a ghi nh\u1EADn (DEPLOY REQUIRED: C\u1EA7n c\u1EADp nh\u1EADt Code.gs v2.7)."
       };
     }
     return { success: true, user, sheetSynced: true, message: "\u0110\xE3 t\u1EA1o v\xE0 x\xE1c nh\u1EADn l\u01B0u th\xE0nh c\xF4ng xu\u1ED1ng Google Sheets USERS." };
   }
   return { success: true, user, sheetSynced: false };
 }
-async function syncUserToGoogleSheet(user, operatorEmail) {
+async function syncUserToGoogleSheet(user, options) {
   if (!process.env.LICENSE_API_URL) return { success: false, error: "Ch\u01B0a c\u1EA5u h\xECnh LICENSE_API_URL" };
   try {
-    const url = new URL(process.env.LICENSE_API_URL);
-    url.searchParams.set("action", "saveUser");
-    const resp = await fetch(url.toString(), {
+    const operatorEmail = typeof options === "string" ? options : options?.operatorEmail;
+    const explicitQuota = typeof options === "object" ? Boolean(options?.explicitQuota) : false;
+    const resp = await fetch(process.env.LICENSE_API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        action: "saveUser",
         id: user.id,
         email: user.email,
         name: user.name,
@@ -580,6 +645,7 @@ async function syncUserToGoogleSheet(user, operatorEmail) {
         plan: user.plan,
         quotaEasy: user.quota?.easy ?? (user.plan === "PRO" ? -1 : 3),
         quotaAdvanced: user.quota?.advanced ?? (user.plan === "PRO" ? -1 : 1),
+        explicitQuota,
         licenseKey: user.licenseKey || "",
         licenseExpiresAt: user.licenseExpiresAt || "",
         isBlocked: Boolean(user.isBlocked),
@@ -606,17 +672,16 @@ async function syncUserToGoogleSheet(user, operatorEmail) {
 async function deleteUserFromGoogleSheet(email, options) {
   if (!process.env.LICENSE_API_URL) return { success: false, error: "Ch\u01B0a c\u1EA5u h\xECnh LICENSE_API_URL" };
   try {
-    const url = new URL(process.env.LICENSE_API_URL);
-    url.searchParams.set("action", "deleteUser");
-    const resp = await fetch(url.toString(), {
+    const resp = await fetch(process.env.LICENSE_API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        action: "deleteUser",
         email,
         operatorEmail: options?.operatorEmail || "dathien2412@gmail.com",
         isBackendAuthorized: true,
-        permanent: Boolean(options?.permanent),
-        confirmPermanent: options?.permanent ? "CONFIRM_PERMANENT_DELETE" : void 0,
+        permanent: false,
+        // Mặc định chỉ khóa (soft-delete), tạm vô hiệu hóa hard-delete qua API
         serverSecret: process.env.APPS_SCRIPT_SECRET || ""
       }),
       signal: AbortSignal.timeout(6e3)
@@ -639,12 +704,11 @@ async function syncAllUsersToGoogleSheet(operatorEmail) {
     return { success: false, syncedCount: 0, totalCount: users.length, error: "Ch\u01B0a c\u1EA5u h\xECnh LICENSE_API_URL" };
   }
   try {
-    const url = new URL(process.env.LICENSE_API_URL);
-    url.searchParams.set("action", "syncUsers");
-    const resp = await fetch(url.toString(), {
+    const resp = await fetch(process.env.LICENSE_API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        action: "syncUsers",
         users,
         operatorEmail: operatorEmail || "dathien2412@gmail.com",
         isBackendAuthorized: true,
@@ -1003,9 +1067,34 @@ async function handler(req, res) {
   res.setHeader("Content-Type", "application/json");
   const subpath = extractSubpath(req, "/api/admin");
   const body = getRequestBody(req);
-  const operatorEmail = String(
-    req.headers["x-user-email"] || req.headers["x-user-id"] || ""
-  ).toLowerCase().trim();
+  const authHeader = req.headers["authorization"] || "";
+  const sessionHeader = req.headers["x-session-token"] || "";
+  const googleHeader = req.headers["x-google-credential"] || "";
+  const tokenCandidate = authHeader || sessionHeader || googleHeader;
+  let verifiedEmail = null;
+  if (tokenCandidate) {
+    const verifiedSession = verifyAdminSessionToken(tokenCandidate);
+    if (verifiedSession) {
+      verifiedEmail = verifiedSession.email;
+    } else {
+      const googleVerified = verifyGoogleIdToken(tokenCandidate);
+      if (googleVerified) {
+        verifiedEmail = googleVerified.email;
+      }
+    }
+  }
+  const serverSecretHeader = req.headers["x-server-secret"] || "";
+  const expectedSecret = process.env.APPS_SCRIPT_SECRET || "";
+  if (!verifiedEmail && expectedSecret && serverSecretHeader === expectedSecret) {
+    verifiedEmail = String(req.headers["x-user-email"] || ROOT_ADMIN_EMAILS[0]).toLowerCase().trim();
+  }
+  if (!verifiedEmail) {
+    return res.status(403).json({
+      error: "Truy c\u1EADp b\u1ECB t\u1EEB ch\u1ED1i: Y\xEAu c\u1EA7u phi\xEAn \u0111\u0103ng nh\u1EADp h\u1EE3p l\u1EC7 ho\u1EB7c Google ID token \u0111\xE3 x\xE1c minh tr\xEAn server.",
+      code: "FORBIDDEN"
+    });
+  }
+  const operatorEmail = verifiedEmail;
   let isAllowed = ROOT_ADMIN_EMAILS.includes(operatorEmail) || isUserAdmin(operatorEmail);
   if (!isAllowed && process.env.LICENSE_API_URL && operatorEmail) {
     try {

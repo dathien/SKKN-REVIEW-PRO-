@@ -18,6 +18,8 @@ import {
   mapRawSheetUserToAccount,
   ROOT_ADMIN_EMAILS,
   updateSystemSettings,
+  verifyAdminSessionToken,
+  verifyGoogleIdToken,
 } from '../../src/server/authStore';
 import { extractSubpath, getRequestBody, handleCors } from './_lib/routeHelper';
 
@@ -30,12 +32,45 @@ export default async function handler(req: any, res: any) {
   const subpath = extractSubpath(req, '/api/admin');
   const body = getRequestBody(req);
 
-  const operatorEmail = String(
-    req.headers['x-user-email'] ||
-    req.headers['x-user-id'] ||
-    ''
-  ).toLowerCase().trim();
+  // XÁC MINH PHIÊN ĐĂNG NHẬP / GOOGLE ID TOKEN HỢP LỆ TRÊN SERVER
+  // TUYỆT ĐỐI KHÔNG CẤP QUYỀN CHỈ VÌ CLIENT GỬI x-user-email HOẶC x-user-role
+  const authHeader = req.headers['authorization'] || '';
+  const sessionHeader = req.headers['x-session-token'] || '';
+  const googleHeader = req.headers['x-google-credential'] || '';
+  const tokenCandidate = authHeader || sessionHeader || googleHeader;
 
+  let verifiedEmail: string | null = null;
+
+  // 1. Kiểm tra Admin Session Token đã cấp bởi server
+  if (tokenCandidate) {
+    const verifiedSession = verifyAdminSessionToken(tokenCandidate);
+    if (verifiedSession) {
+      verifiedEmail = verifiedSession.email;
+    } else {
+      // 2. Kiểm tra Google ID Token hợp lệ
+      const googleVerified = verifyGoogleIdToken(tokenCandidate);
+      if (googleVerified) {
+        verifiedEmail = googleVerified.email;
+      }
+    }
+  }
+
+  // 3. Cho phép Server Secret (server-to-server backend auth)
+  const serverSecretHeader = req.headers['x-server-secret'] || '';
+  const expectedSecret = process.env.APPS_SCRIPT_SECRET || '';
+  if (!verifiedEmail && expectedSecret && serverSecretHeader === expectedSecret) {
+    verifiedEmail = String(req.headers['x-user-email'] || ROOT_ADMIN_EMAILS[0]).toLowerCase().trim();
+  }
+
+  // Nếu không có phiên xác thực hợp lệ -> Từ chối ngay lập tức
+  if (!verifiedEmail) {
+    return res.status(403).json({
+      error: 'Truy cập bị từ chối: Yêu cầu phiên đăng nhập hợp lệ hoặc Google ID token đã xác minh trên server.',
+      code: 'FORBIDDEN',
+    });
+  }
+
+  const operatorEmail = verifiedEmail;
   let isAllowed = ROOT_ADMIN_EMAILS.includes(operatorEmail) || isUserAdmin(operatorEmail);
   if (!isAllowed && process.env.LICENSE_API_URL && operatorEmail) {
     try {

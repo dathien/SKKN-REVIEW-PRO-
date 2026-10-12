@@ -1,4 +1,4 @@
-import { getOrCreateUser } from '../../src/server/authStore';
+import { getOrCreateUser, createAdminSession, ROOT_ADMIN_EMAILS } from '../../src/server/authStore';
 import { extractSubpath, getRequestBody, handleCors } from './_lib/routeHelper';
 
 export default async function handler(req: any, res: any) {
@@ -56,7 +56,13 @@ export default async function handler(req: any, res: any) {
         id: userId,
       });
 
-      return res.status(200).json({ success: true, user });
+      // Tạo Admin Session Token nếu là Quản trị viên hoặc Root Admin
+      let sessionToken: string | undefined;
+      if (user.role === 'ADMIN' || ROOT_ADMIN_EMAILS.includes(userEmail)) {
+        sessionToken = createAdminSession(userEmail, user.role);
+      }
+
+      return res.status(200).json({ success: true, user, sessionToken });
     } catch (err: any) {
       return res.status(500).json({ error: err.message });
     }

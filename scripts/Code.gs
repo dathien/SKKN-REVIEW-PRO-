@@ -90,11 +90,23 @@ function handleRequest(e, method) {
       });
     }
 
-    // 3. GET USER BY EMAIL (Tra cứu thông tin tài khoản an toàn)
+    // 3. GET USER BY EMAIL (Tra cứu thông tin tài khoản an toàn — Bắt buộc Server Secret)
     if (action === 'getUser') {
       var email = (params.email || (postData && postData.email) || '').toLowerCase().trim();
       if (!email) {
         return jsonResponse({ success: false, error: 'Thiếu tham số email' });
+      }
+
+      // RÀ SOÁT BẢO MẬT: Bắt buộc phải có Server Secret hợp lệ từ Backend
+      var requiredSecret = getScriptSecret();
+      var providedSecret = postData && postData.serverSecret ? String(postData.serverSecret).trim() : '';
+      var isServerAuth = requiredSecret && (providedSecret === requiredSecret);
+
+      if (!isServerAuth) {
+        return jsonResponse({
+          success: false,
+          error: 'Truy cập bị từ chối: Yêu cầu xác thực Server Secret hợp lệ từ Backend để tra cứu thông tin tài khoản.'
+        });
       }
 
       var usersSheet = getOrCreateSheet(ss, 'USERS');
@@ -103,51 +115,60 @@ function handleRequest(e, method) {
         return jsonResponse({ success: true, found: false, user: null, message: 'Không tìm thấy người dùng' });
       }
 
-      // RÀ SOÁT BẢO MẬT: Kiểm tra xem có Server Secret hợp lệ từ Backend không
-      var requiredSecret = getScriptSecret();
-      var providedSecret = postData && postData.serverSecret ? String(postData.serverSecret).trim() : '';
-      var isServerAuth = requiredSecret && (providedSecret === requiredSecret);
-
       var safeUser = {
         id: user.id,
         email: user.email,
-        name: isServerAuth ? user.name : (user.name ? (user.name.charAt(0) + '***') : ''),
+        name: user.name,
         role: user.role,
         plan: user.plan,
         quota: user.quota,
         isUnlimited: user.isUnlimited,
         isBlocked: user.isBlocked,
-        licenseKey: isServerAuth ? user.licenseKey : (user.licenseKey ? (user.licenseKey.substring(0, 8) + '****') : undefined),
+        licenseKey: user.licenseKey,
         licenseExpiresAt: user.licenseExpiresAt,
-        createdAt: isServerAuth ? user.createdAt : undefined,
-        lastActiveAt: isServerAuth ? user.lastActiveAt : undefined
+        createdAt: user.createdAt,
+        lastActiveAt: user.lastActiveAt
       };
 
       return jsonResponse({ success: true, found: true, user: safeUser });
     }
 
-    // 4. VERIFY LICENSE (Kiểm tra mã bản quyền khi kích hoạt - Bảo mật danh tính)
+    // 4. VERIFY LICENSE (Kiểm tra mã bản quyền khi kích hoạt — Chống dò mã & Bảo mật danh tính)
     if (action === 'verifyLicense') {
       var key = (params.key || (postData && postData.key) || '').toUpperCase().trim();
-      if (!key) {
-        return jsonResponse({ success: false, message: 'Thiếu mã bản quyền' });
+      // Chống dò mã: Kiểm tra định dạng chuẩn và độ dài tối thiểu
+      if (!key || key.length < 10) {
+        return jsonResponse({ success: false, valid: false, message: 'Mã bản quyền không đúng định dạng.' });
       }
       var licSheet = getOrCreateSheet(ss, 'LICENSES');
       var license = findLicenseInSheet(licSheet, key);
       if (!license) {
-        return jsonResponse({ success: false, message: 'Mã bản quyền không tồn tại' });
+        return jsonResponse({ success: false, valid: false, message: 'Mã bản quyền không tồn tại' });
       }
 
-      // BẢO MẬT: Tuyệt đối không để lộ email người được cấp (assignedEmail), ghi chú (note), thiết bị
+      // Kiểm tra trạng thái mã bản quyền
+      if (license.status === 'REVOKED') {
+        return jsonResponse({ success: false, valid: false, message: 'Mã bản quyền này đã bị thu hồi hoặc tạm khóa.' });
+      }
+
+      if (license.expiresAt) {
+        var expTime = new Date(license.expiresAt).getTime();
+        if (!isNaN(expTime) && expTime < new Date().getTime()) {
+          return jsonResponse({ success: false, valid: false, message: 'Mã bản quyền này đã hết hạn sử dụng.' });
+        }
+      }
+
+      // BẢO MẬT: Chỉ trả về thông tin tối thiểu cần thiết để xác minh bản quyền
+      // Tuyệt đối không để lộ: assignedEmail, customerNote, lý do tạo, thiết bị đã liên kết
       return jsonResponse({
         success: true,
+        valid: true,
+        status: license.status || 'ACTIVE',
         license: {
           key: license.key,
           plan: license.plan,
-          maxDevices: license.maxDevices,
           status: license.status,
-          expiresAt: license.expiresAt,
-          isAssigned: Boolean(license.assignedEmail)
+          expiresAt: license.expiresAt
         }
       });
     }
@@ -252,7 +273,7 @@ function handleRequest(e, method) {
           return jsonResponse({ success: false, error: 'Thiếu email người dùng cần xử lý' });
         }
 
-        // BẢO VỆ TUYỆT ĐỐI ROOT ADMIN
+        // BẢO VỆ TUYỆT ĐỐI ROOT ADMIN: Không bao giờ được phép xóa hoặc khóa Root Admin
         if (isRootAdminEmail(email)) {
           return jsonResponse({
             success: false,
@@ -269,37 +290,23 @@ function handleRequest(e, method) {
           });
         }
 
-        // Kiểm tra chế độ xóa vĩnh viễn (permanent)
+        // BẢO VỆ AN TOÀN DỮ LIỆU: Vô hiệu hóa hoàn toàn Hard Delete qua API ở phiên bản này
         var isPermanent = Boolean((postData && postData.permanent) || params.permanent === 'true');
-        var operatorEmail = authResult.operatorEmail || '';
-
         if (isPermanent) {
-          // BẢO VỆ XÓA VĨNH VIỄN:
-          // 1. Chỉ Root Admin mới có thẩm quyền xóa vĩnh viễn dòng vật lý
-          if (!isRootAdminEmail(operatorEmail)) {
-            return jsonResponse({
-              success: false,
-              error: 'Quyền hạn bị từ chối: Chỉ Root Admin mới có thẩm quyền yêu cầu xóa vĩnh viễn người dùng khỏi Google Sheets.'
-            });
-          }
-
-          // 2. Mã xác nhận động theo email cụ thể, không chấp nhận chuỗi cố định đơn lẻ
-          var confirmKey = String((postData && postData.confirmPermanent) || params.confirmPermanent || '').trim();
-          var expectedCode = 'PERMANENT_DELETE_' + email.toUpperCase();
-          if (confirmKey !== expectedCode && confirmKey !== email) {
-            return jsonResponse({
-              success: false,
-              error: 'Mã xác nhận xóa vĩnh viễn không đúng. Yêu cầu mã: ' + expectedCode
-            });
-          }
-
-          var hardDeleted = hardDeleteUserInSheet(usersSheet, email);
-          return jsonResponse({ success: true, mode: 'HARD_DELETE', deleted: hardDeleted });
-        } else {
-          // MẶC ĐỊNH AN TOÀN TUYỆT ĐỐI: SOFT DELETE (Chuyển sang BLOCKED, không xóa dòng vật lý)
-          var softDeleted = softDeleteUserInSheet(usersSheet, email);
-          return jsonResponse({ success: true, mode: 'SOFT_DELETE_BLOCKED', deleted: softDeleted });
+          return jsonResponse({
+            success: false,
+            error: 'Thao tác xóa vĩnh viễn (Hard Delete) qua API đã bị vô hiệu hóa hoàn toàn ở phiên bản này. Vui lòng sử dụng tính năng khóa tài khoản (BLOCKED).'
+          });
         }
+
+        // MẶC ĐỊNH AN TOÀN DUY NHẤT: SOFT DELETE (Chuyển sang BLOCKED, bảo toàn 100% dữ liệu lịch sử)
+        var softDeleted = softDeleteUserInSheet(usersSheet, email);
+        return jsonResponse({
+          success: true,
+          mode: 'SOFT_DELETE_BLOCKED',
+          deleted: softDeleted,
+          message: 'Đã khóa tài khoản người dùng an toàn (BLOCKED).'
+        });
       } finally {
         try { lock.releaseLock(); } catch (_) {}
       }
@@ -359,8 +366,12 @@ function handleRequest(e, method) {
 
       try {
         var setSheet = getOrCreateSheet(ss, 'SETTINGS');
-        saveSettingsToSheet(setSheet, postData || params);
-        return jsonResponse({ success: true, message: 'Đã cập nhật cấu hình hệ thống an toàn' });
+        var written = saveSettingsToSheet(setSheet, postData || params);
+        return jsonResponse({
+          success: true,
+          message: 'Đã cập nhật cấu hình hệ thống an toàn (' + written + ' khóa hợp lệ được ghi).',
+          writtenCount: written
+        });
       } finally {
         try { lock.releaseLock(); } catch (_) {}
       }
@@ -774,7 +785,12 @@ function upsertUserInSheet(sheet, user) {
   var isOld13 = colMap['USER_ID'] !== undefined && colMap['EASY_LIMIT'] !== undefined;
 
   if (isOld13) {
-    var rowValues13 = existingRowValues ? existingRowValues.slice(0, 13) : new Array(13).fill('');
+    // Không dùng mảng cố định 13 phần tử nếu Sheet có nhiều hơn 13 cột; bảo toàn 100% cột bổ sung
+    var maxCols13 = Math.max(headers.length, existingRowValues ? existingRowValues.length : 13);
+    var rowValues13 = existingRowValues ? existingRowValues.slice(0) : [];
+    while (rowValues13.length < maxCols13) {
+      rowValues13.push('');
+    }
 
     if (colMap['USER_ID'] !== undefined) rowValues13[colMap['USER_ID']] = id;
     if (colMap['EMAIL'] !== undefined) rowValues13[colMap['EMAIL']] = email;
@@ -986,29 +1002,91 @@ function getSettingsFromSheet(sheet) {
   return result;
 }
 
-function saveSettingsToSheet(sheet, settings) {
+// DANH SÁCH KHÓA CẤU HÌNH ĐƯỢC PHÉP GHI VÀO SETTINGS
+var ALLOWED_SETTINGS_KEYS = [
+  'MAINTENANCE_MODE',
+  'DEFAULT_EASY_QUOTA',
+  'DEFAULT_ADVANCED_QUOTA',
+  'GUEST_EASY_LIMIT',
+  'GUEST_ADVANCED_LIMIT',
+  'TRIAL_EASY_LIMIT',
+  'TRIAL_ADVANCED_LIMIT',
+  'DEFAULT_PLAN',
+  'APP_VERSION',
+  'ANNOUNCEMENT',
+  'ANNOUNCEMENT_BANNER',
+  'TRIAL_DURATION_DAYS',
+  'ALLOW_NEW_REGISTRATIONS',
+  'FREE_ACCESS_ENABLED',
+  'FREE_ACCESS_NAME',
+  'FREE_ACCESS_START',
+  'FREE_ACCESS_END',
+  'SUPPORT_EMAIL',
+  'SYSTEM_PROMPT_VERSION',
+  'MAX_UPLOAD_SIZE_MB',
+  'GEMINI_MODEL_VERSION',
+  'AUTO_SYNC_ENABLED',
+  'MAX_DEVICES_PER_LICENSE'
+];
+
+function isSafeSettingsKey(key) {
+  if (!key || typeof key !== 'string') return false;
+  var upper = key.trim().toUpperCase();
+
+  // TUYỆT ĐỐI CẤM: Không bao giờ ghi secret, token, password, credentials, operator, action
+  if (upper === 'ACTION' ||
+      upper === 'SERVERSECRET' ||
+      upper === 'OPERATOREMAIL' ||
+      upper === 'CONFIRMPERMANENT' ||
+      upper.indexOf('SECRET') !== -1 ||
+      upper.indexOf('PASSWORD') !== -1 ||
+      upper.indexOf('TOKEN') !== -1 ||
+      upper.indexOf('CREDENTIAL') !== -1 ||
+      upper.indexOf('COOKIE') !== -1 ||
+      upper.indexOf('OPERATOR') !== -1) {
+    return false;
+  }
+
+  // Khóa phải nằm trong danh sách cho phép
+  return ALLOWED_SETTINGS_KEYS.indexOf(upper) !== -1;
+}
+
+function saveSettingsToSheet(sheet, payload) {
   var headers = getSheetHeaders(sheet);
   var colMap = createColumnIndexMap(headers);
   var keyCol = colMap['KEY'] !== undefined ? colMap['KEY'] : 0;
   var valCol = colMap['VALUE'] !== undefined ? colMap['VALUE'] : 1;
 
+  var settings = (payload && typeof payload.settings === 'object' && payload.settings !== null)
+    ? payload.settings
+    : (payload || {});
+
+  var writtenCount = 0;
   for (var key in settings) {
     if (Object.prototype.hasOwnProperty.call(settings, key)) {
+      if (!isSafeSettingsKey(key)) {
+        continue; // Bỏ qua hoàn toàn các khóa không được phép hoặc nhạy cảm
+      }
+
+      var normalizedKey = key.trim().toUpperCase();
       var val = settings[key];
       var data = sheet.getDataRange().getValues();
       var found = false;
+
       for (var r = 1; r < data.length; r++) {
-        if (String(data[r][keyCol] || '').trim() === key) {
+        if (String(data[r][keyCol] || '').trim().toUpperCase() === normalizedKey) {
           sheet.getRange(r + 1, valCol + 1).setValue(val);
           found = true;
           break;
         }
       }
       if (!found) {
-        sheet.appendRow([key, val, 'Cấu hình tự động lưu']);
+        sheet.appendRow([normalizedKey, val, 'Cấu hình hệ thống']);
       }
+      writtenCount++;
     }
   }
+  return writtenCount;
 }
 
 // Chuẩn hóa JSON phản hồi nhất quán, không dùng status code giả lập gây lỗi Apps Script

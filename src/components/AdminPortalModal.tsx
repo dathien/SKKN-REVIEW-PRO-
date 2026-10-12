@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserAccount, GuestSession, SystemStats, SystemSettings, UserRole, LicensePlan, LicenseItem, LicenseStatus } from '../types';
+import codeGsSource from '../../scripts/Code.gs?raw';
 
 export const AdminPortalModal: React.FC = () => {
   const { isAdminModalOpen, closeAdminModal, user } = useAuth();
@@ -117,11 +118,19 @@ export const AdminPortalModal: React.FC = () => {
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [settingsSyncStatus, setSettingsSyncStatus] = useState<string | null>(null);
 
-  const getAuthHeaders = () => ({
-    'Content-Type': 'application/json',
-    ...(user?.email ? { 'x-user-email': user.email } : {}),
-    ...(user?.id ? { 'x-user-id': user.id } : {})
-  });
+  const getAuthHeaders = () => {
+    const sessionToken = (user as any)?.sessionToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_session_token') : '') || '';
+    const googleCredential = (user as any)?.googleCredential || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_google_credential') : '') || '';
+    const token = sessionToken || googleCredential;
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      ...(sessionToken ? { 'x-session-token': sessionToken } : {}),
+      ...(googleCredential ? { 'x-google-credential': googleCredential } : {}),
+      ...(user?.email ? { 'x-user-email': user.email } : {}),
+      ...(user?.id ? { 'x-user-id': user.id } : {})
+    };
+  };
 
   const fetchAdminData = async () => {
     setIsLoading(true);
@@ -1955,45 +1964,48 @@ export const AdminPortalModal: React.FC = () => {
                   <div>
                     <h4 className="text-[15px] font-bold text-slate-900 flex items-center gap-2">
                       <Code className="w-4.5 h-4.5 text-purple-600" />
-                      <span>Mã nguồn Google Apps Script (Code.gs v2.6 — Tương thích 13 cột & 12 cột)</span>
+                      <span>Mã nguồn Google Apps Script (Code.gs v2.7 — Tương thích 13 cột & 12 cột)</span>
                     </h4>
                     <p className="text-[12.5px] text-slate-500">
-                      Tự động tương thích cả Sheet 13 cột cũ và Sheet 12 cột mới theo tiêu đề cột Header, bảo toàn dữ liệu 100%
+                      Phiên bản 2.7 chính thức: Xác thực serverSecret bắt buộc, khóa mềm an toàn (BLOCKED), bảo toàn hạn mức Trial (EASY_LIMIT/EASY_USED) và quyền PRO vĩnh viễn.
                     </p>
                   </div>
                   <button
                     type="button"
-                    onClick={() => {
-                      fetch('/scripts/Code.gs')
-                        .then(r => r.text())
-                        .then(text => {
-                          navigator.clipboard.writeText(text);
-                          setCopiedCodeGs(true);
-                          setTimeout(() => setCopiedCodeGs(false), 2500);
-                        })
-                        .catch(() => {
-                          setCopiedCodeGs(true);
-                          setTimeout(() => setCopiedCodeGs(false), 2500);
-                        });
+                    onClick={async () => {
+                      const fullCode = codeGsSource || '';
+                      try {
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                          await navigator.clipboard.writeText(fullCode);
+                        } else {
+                          throw new Error('Clipboard API not available');
+                        }
+                      } catch {
+                        try {
+                          const textArea = document.createElement('textarea');
+                          textArea.value = fullCode;
+                          textArea.style.position = 'fixed';
+                          textArea.style.left = '-999999px';
+                          textArea.style.top = '-999999px';
+                          document.body.appendChild(textArea);
+                          textArea.focus();
+                          textArea.select();
+                          document.execCommand('copy');
+                          document.body.removeChild(textArea);
+                        } catch (_) {}
+                      }
+                      setCopiedCodeGs(true);
+                      setTimeout(() => setCopiedCodeGs(false), 2500);
                     }}
                     className="px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold text-[13px] rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
                   >
                     {copiedCodeGs ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                    <span>{copiedCodeGs ? 'Đã sao chép Code.gs!' : 'Sao chép toàn bộ Code.gs'}</span>
+                    <span>{copiedCodeGs ? 'Đã sao chép Code.gs v2.7!' : 'Sao chép toàn bộ Code.gs'}</span>
                   </button>
                 </div>
 
-                <div className="p-4 bg-slate-900 rounded-xl text-slate-300 font-mono text-[12px] max-h-80 overflow-y-auto leading-relaxed border border-slate-800">
-                  <pre>{`// Google Apps Script endpoint v2.6 cho SKKN REVIEW PRO
-// Hỗ trợ tự động:
-// - Schema 13 cột cũ: USER_ID | EMAIL | NAME | PLAN | STATUS | EASY_USED | EASY_LIMIT | ADVANCED_USED | ADVANCED_LIMIT | CREATED_AT | ACTIVATED_AT | EXPIRES_AT | LAST_USED_AT
-// - Schema 12 cột mới: ID | EMAIL | NAME | ROLE | PLAN | QUOTA_EASY | QUOTA_ADVANCED | LICENSE_KEY | EXPIRES_AT | STATUS | CREATED_AT | LAST_ACTIVE_AT
-// - Action: ping, inspectSchema, getUser, getUsers, saveUser, deleteUser, syncUsers, verifyLicense, getSettings, updateSettings
-function doGet(e) { return handleRequest(e, 'GET'); }
-function doPost(e) { return handleRequest(e, 'POST'); }
-
-// Mã nguồn hoàn chỉnh đã có sẵn trong scripts/Code.gs.
-// Nhấn nút "Sao chép toàn bộ Code.gs" để dán vào Apps Script của Google Sheets.`}</pre>
+                <div className="p-4 bg-slate-900 rounded-xl text-slate-300 font-mono text-[12px] max-h-96 overflow-y-auto leading-relaxed border border-slate-800">
+                  <pre className="whitespace-pre">{codeGsSource}</pre>
                 </div>
               </div>
             </div>

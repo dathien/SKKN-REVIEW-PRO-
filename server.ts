@@ -1204,6 +1204,20 @@ app.post('/api/admin/licenses/delete', requireAdminMiddleware, (req, res) => {
   }
 });
 
+// Explicit route to serve canonical Google Apps Script Code.gs
+app.get('/scripts/Code.gs', (req, res, next) => {
+  // If Vite is handling ES module import with ?raw or ?import, pass through to Vite middleware
+  if (req.query.raw !== undefined || req.query.import !== undefined) {
+    return next();
+  }
+  const filePath = path.resolve('scripts', 'Code.gs');
+  if (fs.existsSync(filePath)) {
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    return res.sendFile(filePath);
+  }
+  return res.status(404).send('Not Found');
+});
+
 // Vite Middleware for Development / Static for Production
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {

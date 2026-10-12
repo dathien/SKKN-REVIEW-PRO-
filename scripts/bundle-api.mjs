@@ -53,4 +53,20 @@ for (const file of sourceFiles) {
   }
 }
 
+// Sync scripts/Code.gs to public/scripts/Code.gs and dist/scripts/Code.gs
+if (fs.existsSync('scripts/Code.gs')) {
+  if (!fs.existsSync('public/scripts')) {
+    fs.mkdirSync('public/scripts', { recursive: true });
+  }
+  fs.copyFileSync('scripts/Code.gs', 'public/scripts/Code.gs');
+
+  if (fs.existsSync('dist')) {
+    if (!fs.existsSync('dist/scripts')) {
+      fs.mkdirSync('dist/scripts', { recursive: true });
+    }
+    fs.copyFileSync('scripts/Code.gs', 'dist/scripts/Code.gs');
+  }
+  console.log('[bundle-api] ✓ Synced scripts/Code.gs -> public/scripts/Code.gs & dist/scripts/Code.gs');
+}
+
 console.log(`[bundle-api] Successfully bundled ${successCount} serverless API endpoints into self-contained ESM JavaScript.`);

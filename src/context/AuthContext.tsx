@@ -98,6 +98,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   });
 
+  const userRef = useRef<UserAccount | null>(user);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+
   const [quota, setQuota] = useState<UserQuota>(() => {
     try {
       if (isSignedOutByUser()) return { easy: 3, advanced: 1 };
@@ -174,7 +180,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const isSignedOut = signedOutRef.current || isSignedOutByUser();
-      const currentUser = forcedUser !== undefined ? forcedUser : (isSignedOut ? null : user);
+      const currentUser = forcedUser !== undefined ? forcedUser : (isSignedOut ? null : userRef.current);
 
       // 2. Query status:
       // QUAN TRỌNG: Nếu người dùng đã logout (isSignedOut hoặc currentUser null), TUYỆT ĐỐI KHÔNG GỬI email hay userId!
@@ -226,7 +232,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsLoading(false);
       }
     }
-  }, [guestId, user, googleClientId]);
+  }, [guestId, googleClientId]);
 
   useEffect(() => {
     refreshStatus();
@@ -305,11 +311,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const data = await resp.json();
       if (data.success && data.user) {
         if (currentGen !== authGenerationRef.current) return false;
-        setUser(data.user);
+        const userToSave = {
+          ...data.user,
+          sessionToken: data.sessionToken,
+          googleCredential: credential,
+        };
+        if (data.sessionToken) {
+          localStorage.setItem('skkn_session_token', data.sessionToken);
+        }
+        if (credential) {
+          localStorage.setItem('skkn_google_credential', credential);
+        }
+        setUser(userToSave);
         setRole(data.user.role);
         setPlan(data.user.plan);
         setQuota(data.user.quota);
-        localStorage.setItem('skkn_user', JSON.stringify(data.user));
+        localStorage.setItem('skkn_user', JSON.stringify(userToSave));
         return true;
       }
       return false;

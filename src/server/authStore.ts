@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { UserAccount, GuestSession, LicenseItem, LicenseStatus, SystemStats, UserRole, LicensePlan, SystemSettings } from '../types/index';
 
 const DATA_DIR = path.resolve('data');
@@ -357,6 +358,96 @@ export function isUserAdmin(identifier?: string): boolean {
   return user?.role === 'ADMIN';
 }
 
+// ----------------- ADMIN SESSIONS & TOKEN VERIFICATION -----------------
+export interface AdminSession {
+  token: string;
+  email: string;
+  role: string;
+  createdAt: number;
+  expiresAt: number;
+}
+
+function getSessionSecret(): string {
+  return process.env.APPS_SCRIPT_SECRET || process.env.SESSION_SECRET || 'skkn_secure_session_secret_2026';
+}
+
+export function createAdminSession(email: string, role = 'ADMIN'): string {
+  const cleanEmail = email.toLowerCase().trim();
+  const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
+  const payload = `${cleanEmail}|${role}|${expiresAt}`;
+  const sig = crypto.createHmac('sha256', getSessionSecret()).update(payload).digest('hex');
+  const token = `skkn_sess_${Buffer.from(payload).toString('base64url')}.${sig}`;
+
+  // Lưu thêm vào globalThis để đồng bộ giữa các module trong cùng process
+  const g = globalThis as any;
+  g.__skkn_sessions = g.__skkn_sessions || {};
+  g.__skkn_sessions[token] = { email: cleanEmail, role, expiresAt };
+
+  return token;
+}
+
+export function verifyAdminSessionToken(token: string): { email: string; role: string } | null {
+  if (!token) return null;
+  const clean = token.replace(/^Bearer\s+/i, '').trim();
+
+  // 1. Kiểm tra Signed Token độc lập không phụ thuộc shared memory
+  if (clean.startsWith('skkn_sess_')) {
+    const withoutPrefix = clean.slice('skkn_sess_'.length);
+    const dotIdx = withoutPrefix.indexOf('.');
+    if (dotIdx !== -1) {
+      const b64Payload = withoutPrefix.slice(0, dotIdx);
+      const sig = withoutPrefix.slice(dotIdx + 1);
+      try {
+        const payload = Buffer.from(b64Payload, 'base64url').toString('utf-8');
+        const expectedSig = crypto.createHmac('sha256', getSessionSecret()).update(payload).digest('hex');
+        if (sig.length === expectedSig.length && crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expectedSig))) {
+          const parts = payload.split('|');
+          const email = parts[0];
+          const role = parts[1] || 'ADMIN';
+          const expiresAt = Number(parts[2]);
+          if (expiresAt > Date.now()) {
+            return { email: email.toLowerCase().trim(), role };
+          }
+        }
+      } catch {}
+    }
+  }
+
+  // 2. Kiểm tra bộ nhớ global
+  const g = globalThis as any;
+  if (g.__skkn_sessions && g.__skkn_sessions[clean]) {
+    const s = g.__skkn_sessions[clean];
+    if (s.expiresAt > Date.now()) {
+      return { email: s.email, role: s.role };
+    }
+  }
+
+  return null;
+}
+
+export function verifyGoogleIdToken(token: string): { email: string; name?: string } | null {
+  if (!token || typeof token !== 'string') return null;
+  const clean = token.replace(/^Bearer\s+/i, '').trim();
+  const parts = clean.split('.');
+  if (parts.length < 2) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf-8'));
+    if (payload.exp && payload.exp * 1000 < Date.now()) {
+      return null;
+    }
+    if (payload.iss && !payload.iss.includes('accounts.google.com')) {
+      return null;
+    }
+    if (payload.email) {
+      return {
+        email: String(payload.email).toLowerCase().trim(),
+        name: payload.name,
+      };
+    }
+  } catch {}
+  return null;
+}
+
 export async function getOrCreateUser(profile: {
   email: string;
   name?: string;
@@ -586,22 +677,27 @@ export async function activateLicenseKey(params: {
   // Check external LICENSE_API_URL if configured and still not found
   if (!lic && process.env.LICENSE_API_URL) {
     try {
-      const url = new URL(process.env.LICENSE_API_URL);
-      url.searchParams.set('action', 'verifyLicense');
-      url.searchParams.set('key', key);
-      url.searchParams.set('email', params.email);
-
-      const resp = await fetch(url.toString(), { method: 'GET' });
+      const resp = await fetch(process.env.LICENSE_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'verifyLicense',
+          key,
+          email: params.email,
+          serverSecret: process.env.APPS_SCRIPT_SECRET || '',
+        }),
+      });
       if (resp.ok) {
         const data = await resp.json().catch(() => null);
         if (data && (data.valid === true || data.status === 'ACTIVE' || data.success === true)) {
+          const licInfo = data.license || data;
           lic = {
             key,
-            plan: data.plan || 'PRO',
-            maxDevices: data.maxDevices || 1,
+            plan: licInfo.plan || data.plan || 'PRO',
+            maxDevices: licInfo.maxDevices || data.maxDevices || 1,
             boundDevices: [],
             status: 'UNUSED',
-            expiresAt: data.expiresAt || null,
+            expiresAt: licInfo.expiresAt || data.expiresAt || null,
             createdReason: 'Xác thực từ Google Apps Script License API',
             createdAt: now,
           };
@@ -609,7 +705,31 @@ export async function activateLicenseKey(params: {
         }
       }
     } catch (apiErr) {
-      console.warn('Could not reach LICENSE_API_URL, checking local database:', apiErr);
+      console.warn('Could not reach LICENSE_API_URL via POST, trying fallback:', apiErr);
+      try {
+        const url = new URL(process.env.LICENSE_API_URL);
+        url.searchParams.set('action', 'verifyLicense');
+        url.searchParams.set('key', key);
+        url.searchParams.set('email', params.email);
+        const resp = await fetch(url.toString(), { method: 'GET' });
+        if (resp.ok) {
+          const data = await resp.json().catch(() => null);
+          if (data && (data.valid === true || data.status === 'ACTIVE' || data.success === true)) {
+            const licInfo = data.license || data;
+            lic = {
+              key,
+              plan: licInfo.plan || data.plan || 'PRO',
+              maxDevices: licInfo.maxDevices || data.maxDevices || 1,
+              boundDevices: [],
+              status: 'UNUSED',
+              expiresAt: licInfo.expiresAt || data.expiresAt || null,
+              createdReason: 'Xác thực từ Google Apps Script License API',
+              createdAt: now,
+            };
+            store.licenses[key] = lic;
+          }
+        }
+      } catch (_) {}
     }
   }
 
@@ -791,7 +911,7 @@ export async function checkSheetCompatibility(): Promise<{
 
   try {
     const url = new URL(process.env.LICENSE_API_URL);
-    // 1. Thử gọi action inspectSchema (Code.gs v2.6+)
+    // 1. Thử gọi action inspectSchema (Code.gs v2.7+)
     url.searchParams.set('action', 'inspectSchema');
     const resp = await fetch(url.toString(), { method: 'GET', signal: AbortSignal.timeout(4000) });
     if (resp.ok) {
@@ -800,7 +920,7 @@ export async function checkSheetCompatibility(): Promise<{
         return {
           success: true,
           compatible: Boolean(data.usersSchema.compatible),
-          version: data.version || '2.6',
+          version: data.version || '2.7',
           schemaType: data.usersSchema.type,
           columnCount: data.usersSchema.columnCount,
           headers: data.usersSchema.headers,
@@ -1011,7 +1131,7 @@ export async function adminCreateUser(params: {
           success: true,
           user,
           sheetSynced: false,
-          warning: 'Cập nhật thành công vào cơ sở dữ liệu ứng dụng. Lưu ý: Google Sheets chưa ghi nhận (DEPLOY REQUIRED: Cần cập nhật Code.gs v2.5).',
+          warning: 'Cập nhật thành công vào cơ sở dữ liệu ứng dụng. Lưu ý: Google Sheets chưa ghi nhận (DEPLOY REQUIRED: Cần cập nhật Code.gs v2.7).',
         };
       }
       return { success: true, user, sheetSynced: true, message: 'Đã cập nhật và xác nhận lưu thành công xuống Google Sheets USERS.' };
@@ -1052,7 +1172,7 @@ export async function adminCreateUser(params: {
         success: true,
         user,
         sheetSynced: false,
-        warning: 'Tạo tài khoản thành công vào cơ sở dữ liệu ứng dụng. Lưu ý: Google Sheets chưa ghi nhận (DEPLOY REQUIRED: Cần cập nhật Code.gs v2.5).',
+        warning: 'Tạo tài khoản thành công vào cơ sở dữ liệu ứng dụng. Lưu ý: Google Sheets chưa ghi nhận (DEPLOY REQUIRED: Cần cập nhật Code.gs v2.7).',
       };
     }
     return { success: true, user, sheetSynced: true, message: 'Đã tạo và xác nhận lưu thành công xuống Google Sheets USERS.' };

@@ -340,21 +340,27 @@ async function activateLicenseKey(params) {
   }
   if (!lic && process.env.LICENSE_API_URL) {
     try {
-      const url = new URL(process.env.LICENSE_API_URL);
-      url.searchParams.set("action", "verifyLicense");
-      url.searchParams.set("key", key);
-      url.searchParams.set("email", params.email);
-      const resp = await fetch(url.toString(), { method: "GET" });
+      const resp = await fetch(process.env.LICENSE_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "verifyLicense",
+          key,
+          email: params.email,
+          serverSecret: process.env.APPS_SCRIPT_SECRET || ""
+        })
+      });
       if (resp.ok) {
         const data = await resp.json().catch(() => null);
         if (data && (data.valid === true || data.status === "ACTIVE" || data.success === true)) {
+          const licInfo = data.license || data;
           lic = {
             key,
-            plan: data.plan || "PRO",
-            maxDevices: data.maxDevices || 1,
+            plan: licInfo.plan || data.plan || "PRO",
+            maxDevices: licInfo.maxDevices || data.maxDevices || 1,
             boundDevices: [],
             status: "UNUSED",
-            expiresAt: data.expiresAt || null,
+            expiresAt: licInfo.expiresAt || data.expiresAt || null,
             createdReason: "X\xE1c th\u1EF1c t\u1EEB Google Apps Script License API",
             createdAt: now
           };
@@ -362,7 +368,32 @@ async function activateLicenseKey(params) {
         }
       }
     } catch (apiErr) {
-      console.warn("Could not reach LICENSE_API_URL, checking local database:", apiErr);
+      console.warn("Could not reach LICENSE_API_URL via POST, trying fallback:", apiErr);
+      try {
+        const url = new URL(process.env.LICENSE_API_URL);
+        url.searchParams.set("action", "verifyLicense");
+        url.searchParams.set("key", key);
+        url.searchParams.set("email", params.email);
+        const resp = await fetch(url.toString(), { method: "GET" });
+        if (resp.ok) {
+          const data = await resp.json().catch(() => null);
+          if (data && (data.valid === true || data.status === "ACTIVE" || data.success === true)) {
+            const licInfo = data.license || data;
+            lic = {
+              key,
+              plan: licInfo.plan || data.plan || "PRO",
+              maxDevices: licInfo.maxDevices || data.maxDevices || 1,
+              boundDevices: [],
+              status: "UNUSED",
+              expiresAt: licInfo.expiresAt || data.expiresAt || null,
+              createdReason: "X\xE1c th\u1EF1c t\u1EEB Google Apps Script License API",
+              createdAt: now
+            };
+            store.licenses[key] = lic;
+          }
+        }
+      } catch (_) {
+      }
     }
   }
   if (!lic) {

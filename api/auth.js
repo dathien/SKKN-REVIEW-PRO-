@@ -1,6 +1,7 @@
 // src/server/authStore.ts
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 var DATA_DIR = path.resolve("data");
 var STORE_FILE = path.join(DATA_DIR, "auth_store.json");
 var store = {
@@ -246,6 +247,20 @@ async function fetchUserFromLicenseApi(email, sub) {
   }
   return null;
 }
+function getSessionSecret() {
+  return process.env.APPS_SCRIPT_SECRET || process.env.SESSION_SECRET || "skkn_secure_session_secret_2026";
+}
+function createAdminSession(email, role = "ADMIN") {
+  const cleanEmail = email.toLowerCase().trim();
+  const expiresAt = Date.now() + 24 * 60 * 60 * 1e3;
+  const payload = `${cleanEmail}|${role}|${expiresAt}`;
+  const sig = crypto.createHmac("sha256", getSessionSecret()).update(payload).digest("hex");
+  const token = `skkn_sess_${Buffer.from(payload).toString("base64url")}.${sig}`;
+  const g = globalThis;
+  g.__skkn_sessions = g.__skkn_sessions || {};
+  g.__skkn_sessions[token] = { email: cleanEmail, role, expiresAt };
+  return token;
+}
 async function getOrCreateUser(profile) {
   const email = profile.email.toLowerCase();
   let user = findUserByEmailOrId(email);
@@ -418,7 +433,11 @@ async function handler(req, res) {
         picture: userPicture,
         id: userId
       });
-      return res.status(200).json({ success: true, user });
+      let sessionToken;
+      if (user.role === "ADMIN" || ROOT_ADMIN_EMAILS.includes(userEmail)) {
+        sessionToken = createAdminSession(userEmail, user.role);
+      }
+      return res.status(200).json({ success: true, user, sessionToken });
     } catch (err) {
       return res.status(500).json({ error: err.message });
     }

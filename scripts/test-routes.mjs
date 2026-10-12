@@ -1,3 +1,4 @@
+import fs from 'fs';
 import path from 'path';
 
 console.log('[test-routes] Testing all routes through compiled serverless functions in api/ ...');
@@ -102,6 +103,35 @@ globalThis.fetch = async function(url, init = {}) {
         headers: { 'Content-Type': 'application/json' },
       });
     }
+    if (action === 'getUser') {
+      if (!body.serverSecret || body.serverSecret !== SCRIPT_SECRET) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Truy cập bị từ chối: Yêu cầu xác thực Server Secret hợp lệ từ Backend để tra cứu thông tin tài khoản.'
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(JSON.stringify({
+        success: true,
+        found: true,
+        user: { email: body.email, role: 'LICENSED', plan: 'PRO' }
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    if (action === 'updateSettings') {
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Đã cập nhật cấu hình hệ thống an toàn',
+        writtenCount: 1,
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
     if (action === 'deleteUser') {
       const email = (body.email || '').toLowerCase().trim();
       if (email === 'dathien2412@gmail.com') {
@@ -115,26 +145,10 @@ globalThis.fetch = async function(url, init = {}) {
       }
 
       if (body.permanent) {
-        if (body.operatorEmail !== 'dathien2412@gmail.com') {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Quyền hạn bị từ chối: Chỉ Root Admin mới có thẩm quyền yêu cầu xóa vĩnh viễn người dùng khỏi Google Sheets.'
-          }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' },
-          });
-        }
-        const expectedCode = 'PERMANENT_DELETE_' + email.toUpperCase();
-        if (body.confirmPermanent !== expectedCode && body.confirmPermanent !== email) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Mã xác nhận xóa vĩnh viễn không đúng. Yêu cầu mã: ' + expectedCode
-          }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' },
-          });
-        }
-        return new Response(JSON.stringify({ success: true, mode: 'HARD_DELETE', deleted: true }), {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Thao tác xóa vĩnh viễn (Hard Delete) qua API đã bị vô hiệu hóa hoàn toàn ở phiên bản này. Vui lòng sử dụng tính năng khóa tài khoản (BLOCKED).'
+        }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         });
@@ -171,15 +185,26 @@ globalThis.fetch = async function(url, init = {}) {
       });
     }
     if (action === 'verifyLicense') {
+      const key = (body.key || (urlStr.includes('?') ? new URL(urlStr).searchParams.get('key') : '') || '').toUpperCase().trim();
+      if (!key || key.length < 10) {
+        return new Response(JSON.stringify({
+          success: false,
+          valid: false,
+          message: 'Mã bản quyền không đúng định dạng.'
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
       return new Response(JSON.stringify({
         success: true,
+        valid: true,
+        status: 'ACTIVE',
         license: {
-          key: body.key || 'SKKN-PRO-VIP',
+          key: key,
           plan: 'PRO',
-          maxDevices: 2,
           status: 'ACTIVE',
           expiresAt: null,
-          isAssigned: true,
         }
       }), {
         status: 200,
@@ -307,8 +332,34 @@ console.log('\n--- 4. Testing Admin Security & Authorization (/api/admin) ---');
   assert('Non-admin access is rejected with 403 FORBIDDEN',
     res.getStatusCode() === 403 && res.getData()?.code === 'FORBIDDEN');
 }
+{
+  // Test that sending ONLY spoofed x-user-email or x-user-role without valid session/token is rejected
+  const { req: spoofReq, res: spoofRes } = createMockContext({
+    method: 'GET',
+    url: '/api/admin/users',
+    headers: { 'x-user-email': 'dathien2412@gmail.com', 'x-user-role': 'ADMIN' },
+  });
+  await adminHandler(spoofReq, spoofRes);
+  assert('Client sending ONLY x-user-email or x-user-role without valid server session is strictly rejected with 403',
+    spoofRes.getStatusCode() === 403);
+}
 
-const adminHeaders = { 'x-user-email': 'dathien2412@gmail.com' };
+// Log in as Root Admin via /api/auth/google to establish a real verified server session
+const { req: adminLoginReq, res: adminLoginRes } = createMockContext({
+  method: 'POST',
+  url: '/api/auth/google',
+  body: { email: 'dathien2412@gmail.com', name: 'Đa Thiện Hồ Nguyễn' },
+});
+await authHandler(adminLoginReq, adminLoginRes);
+const adminSessionToken = adminLoginRes.getData()?.sessionToken;
+assert('Root Admin login via /api/auth/google issues a valid server sessionToken',
+  Boolean(adminSessionToken));
+
+const adminHeaders = {
+  'Authorization': `Bearer ${adminSessionToken}`,
+  'x-session-token': adminSessionToken,
+  'x-user-email': 'dathien2412@gmail.com',
+};
 
 console.log('\n--- 5. Testing Authorized Admin Endpoints (/api/admin) ---');
 {
@@ -864,25 +915,8 @@ console.log('\n--- 10. Negative Security Tests (Requirement 7) ---');
   assert('Negative Test 5b: Direct Apps Script call strictly forbids deleting Root Admin',
     delRootDirectData.success === false && delRootDirectData.error?.includes('Root Admin'));
 
-  // 6. Negative Test: Hard delete without Root Admin privilege
-  const nonRootHardDelResp = await fetch(process.env.LICENSE_API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'deleteUser',
-      email: 'test_student@school.edu.vn',
-      operatorEmail: 'sub_admin@school.edu.vn', // Not a root admin
-      permanent: true,
-      confirmPermanent: 'PERMANENT_DELETE_TEST_STUDENT@SCHOOL.EDU.VN',
-      serverSecret: process.env.APPS_SCRIPT_SECRET,
-    }),
-  });
-  const nonRootHardDelData = await nonRootHardDelResp.json();
-  assert('Negative Test 6: Hard-delete requested by non-root operator is rejected',
-    nonRootHardDelData.success === false && nonRootHardDelData.error?.includes('Root Admin'));
-
-  // 7. Negative Test: Hard delete with static legacy confirm key rejected
-  const staticTokenResp = await fetch(process.env.LICENSE_API_URL, {
+  // 6. Negative Test: Hard delete via API is completely disabled in v2.7
+  const hardDelResp = await fetch(process.env.LICENSE_API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -890,13 +924,72 @@ console.log('\n--- 10. Negative Security Tests (Requirement 7) ---');
       email: 'test_student@school.edu.vn',
       operatorEmail: 'dathien2412@gmail.com',
       permanent: true,
-      confirmPermanent: 'CONFIRM_PERMANENT_DELETE', // Old static token
       serverSecret: process.env.APPS_SCRIPT_SECRET,
     }),
   });
-  const staticTokenData = await staticTokenResp.json();
-  assert('Negative Test 7: Hard-delete with static confirmation token is rejected (requires dynamic email code)',
-    staticTokenData.success === false && staticTokenData.error?.includes('PERMANENT_DELETE_'));
+  const hardDelData = await hardDelResp.json();
+  assert('Negative Test 6: Hard-delete via API is completely disabled in v2.7',
+    hardDelData.success === false && hardDelData.error?.includes('vô hiệu hóa'));
+
+  // 7. Negative Test: Unauthorized call to getUser without serverSecret is rejected
+  const unauthGetUserResp = await fetch(process.env.LICENSE_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'getUser',
+      email: 'victim@school.edu.vn',
+      // No serverSecret
+    }),
+  });
+  const unauthGetUserData = await unauthGetUserResp.json();
+  assert('Negative Test 7: Unauthorized call to getUser without serverSecret is strictly rejected',
+    unauthGetUserData.success === false && !unauthGetUserData.user);
+
+  // 8. Negative Test: verifyLicense with short/malformed key is rejected
+  const badLicResp = await fetch(process.env.LICENSE_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'verifyLicense',
+      key: 'SHORT',
+    }),
+  });
+  const badLicData = await badLicResp.json();
+  assert('Negative Test 8: verifyLicense with malformed key is strictly rejected',
+    badLicData.success === false && badLicData.valid === false);
+}
+
+console.log('\n--- 11. Testing Code.gs v2.7 Source Integrity & Admin UI Sync ---');
+{
+  const codeGsPath = path.resolve('scripts/Code.gs');
+  assert('File scripts/Code.gs exists', fs.existsSync(codeGsPath));
+  const codeGsContent = fs.readFileSync(codeGsPath, 'utf8');
+
+  assert('Code.gs header indicates version 2.7',
+    codeGsContent.includes('Phiên bản: 2.7'));
+
+  assert('Code.gs contains mandatory serverSecret validation',
+    codeGsContent.includes('verifyServerAuthorization') && codeGsContent.includes('serverSecret'));
+
+  assert('Code.gs contains safe soft-delete BLOCKED logic',
+    codeGsContent.includes('softDeleteUserInSheet') && codeGsContent.includes('BLOCKED'));
+
+  assert('Code.gs preserves EASY_LIMIT, EASY_USED, ADVANCED_LIMIT, ADVANCED_USED when updating profile',
+    codeGsContent.includes('rowValues13[colMap[\'EASY_LIMIT\']] = existingRowValues[colMap[\'EASY_LIMIT\']]') &&
+    codeGsContent.includes('rowValues13[colMap[\'EASY_USED\']] = existingRowValues[colMap[\'EASY_USED\']]'));
+
+  const publicCodeGsPath = path.resolve('public/scripts/Code.gs');
+  assert('File public/scripts/Code.gs exists and matches scripts/Code.gs 100%',
+    fs.existsSync(publicCodeGsPath) && fs.readFileSync(publicCodeGsPath, 'utf8') === codeGsContent);
+
+  const adminModalPath = path.resolve('src/components/AdminPortalModal.tsx');
+  const adminModalContent = fs.readFileSync(adminModalPath, 'utf8');
+  assert('AdminPortalModal.tsx imports Code.gs directly via ?raw as single source of truth',
+    adminModalContent.includes("from '../../scripts/Code.gs?raw'"));
+  assert('AdminPortalModal.tsx displays Code.gs v2.7 in UI header',
+    adminModalContent.includes('Code.gs v2.7 — Tương thích 13 cột & 12 cột'));
+  assert('AdminPortalModal.tsx renders real codeGsSource in pre element',
+    adminModalContent.includes('{codeGsSource}'));
 }
 
 if (failCount > 0) {
