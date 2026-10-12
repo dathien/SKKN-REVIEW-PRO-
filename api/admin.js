@@ -145,26 +145,41 @@ function mapRawSheetUserToAccount(raw) {
   } else if (plan) {
     role = plan === "PRO" || plan === "SCHOOL" || plan === "PREMIUM" ? "LICENSED" : "TRIAL";
   }
-  let easyQuota = 3;
-  let advancedQuota = 1;
-  if (raw.quota?.easy !== void 0) easyQuota = Number(raw.quota.easy);
-  else if (raw.quotaEasy !== void 0) easyQuota = Number(raw.quotaEasy);
-  else if (raw.QUOTA_EASY !== void 0) easyQuota = Number(raw.QUOTA_EASY);
+  const isUnlimitedPlan = plan === "PRO" || plan === "SCHOOL" || plan === "PREMIUM" || role === "ADMIN" || role === "LICENSED" || role === "FREE_ACCESS";
+  let easyQuota = isUnlimitedPlan ? -1 : 3;
+  let advancedQuota = isUnlimitedPlan ? -1 : 1;
+  function parseQuotaVal(v, fallback) {
+    if (v === void 0 || v === null || v === "") return fallback;
+    const str = String(v).trim().toUpperCase();
+    if (str === "UNLIMITED" || str === "-1") return -1;
+    const num = Number(str);
+    if (isNaN(num)) return fallback;
+    return Math.max(0, num);
+  }
+  if (raw.quota?.easy !== void 0) easyQuota = parseQuotaVal(raw.quota.easy, easyQuota);
+  else if (raw.quotaEasy !== void 0) easyQuota = parseQuotaVal(raw.quotaEasy, easyQuota);
+  else if (raw.QUOTA_EASY !== void 0) easyQuota = parseQuotaVal(raw.QUOTA_EASY, easyQuota);
   else if (raw.easyLimit !== void 0 || raw.EASY_LIMIT !== void 0) {
-    const limit = Number(raw.easyLimit !== void 0 ? raw.easyLimit : raw.EASY_LIMIT);
-    const used = Number(raw.easyUsed !== void 0 ? raw.easyUsed : raw.EASY_USED || 0);
-    if (!isNaN(limit)) {
-      easyQuota = Math.max(0, limit - used);
+    const limitRaw = raw.easyLimit !== void 0 ? raw.easyLimit : raw.EASY_LIMIT;
+    const limitParsed = parseQuotaVal(limitRaw, 3);
+    if (limitParsed === -1) {
+      easyQuota = -1;
+    } else {
+      const used = Number(raw.easyUsed !== void 0 ? raw.easyUsed : raw.EASY_USED || 0);
+      easyQuota = Math.max(0, limitParsed - (isNaN(used) ? 0 : used));
     }
   }
-  if (raw.quota?.advanced !== void 0) advancedQuota = Number(raw.quota.advanced);
-  else if (raw.quotaAdvanced !== void 0) advancedQuota = Number(raw.quotaAdvanced);
-  else if (raw.QUOTA_ADVANCED !== void 0) advancedQuota = Number(raw.QUOTA_ADVANCED);
+  if (raw.quota?.advanced !== void 0) advancedQuota = parseQuotaVal(raw.quota.advanced, advancedQuota);
+  else if (raw.quotaAdvanced !== void 0) advancedQuota = parseQuotaVal(raw.quotaAdvanced, advancedQuota);
+  else if (raw.QUOTA_ADVANCED !== void 0) advancedQuota = parseQuotaVal(raw.QUOTA_ADVANCED, advancedQuota);
   else if (raw.advancedLimit !== void 0 || raw.ADVANCED_LIMIT !== void 0) {
-    const limit = Number(raw.advancedLimit !== void 0 ? raw.advancedLimit : raw.ADVANCED_LIMIT);
-    const used = Number(raw.advancedUsed !== void 0 ? raw.advancedUsed : raw.ADVANCED_USED || 0);
-    if (!isNaN(limit)) {
-      advancedQuota = Math.max(0, limit - used);
+    const limitRaw = raw.advancedLimit !== void 0 ? raw.advancedLimit : raw.ADVANCED_LIMIT;
+    const limitParsed = parseQuotaVal(limitRaw, 1);
+    if (limitParsed === -1) {
+      advancedQuota = -1;
+    } else {
+      const used = Number(raw.advancedUsed !== void 0 ? raw.advancedUsed : raw.ADVANCED_USED || 0);
+      advancedQuota = Math.max(0, limitParsed - (isNaN(used) ? 0 : used));
     }
   }
   const statusStr = String(raw.status || raw.STATUS || "").toUpperCase().trim();
@@ -190,6 +205,30 @@ async function fetchUserFromLicenseApi(email, sub) {
   if (!process.env.LICENSE_API_URL) return null;
   const targetEmail = email.toLowerCase().trim();
   try {
+    const resp = await fetch(process.env.LICENSE_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "getUser",
+        email: targetEmail,
+        serverSecret: process.env.APPS_SCRIPT_SECRET || ""
+      }),
+      signal: AbortSignal.timeout(4e3)
+    });
+    if (resp.ok) {
+      const data = await resp.json().catch(() => null);
+      if (data?.found && data?.user) {
+        const mapped = mapRawSheetUserToAccount(data.user);
+        if (mapped) return mapped;
+      } else if (data?.email || data?.role || data?.plan) {
+        const mapped = mapRawSheetUserToAccount(data);
+        if (mapped) return mapped;
+      }
+    }
+  } catch (err) {
+    console.warn("Could not query user role from LICENSE_API_URL via POST:", err);
+  }
+  try {
     const url = new URL(process.env.LICENSE_API_URL);
     url.searchParams.set("action", "getUser");
     url.searchParams.set("email", targetEmail);
@@ -204,26 +243,6 @@ async function fetchUserFromLicenseApi(email, sub) {
       }
     }
   } catch (_) {
-  }
-  try {
-    const resp = await fetch(process.env.LICENSE_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "getUser", email: targetEmail }),
-      signal: AbortSignal.timeout(4e3)
-    });
-    if (resp.ok) {
-      const data = await resp.json().catch(() => null);
-      if (data?.found && data?.user) {
-        const mapped = mapRawSheetUserToAccount(data.user);
-        if (mapped) return mapped;
-      } else if (data?.email || data?.role || data?.plan) {
-        const mapped = mapRawSheetUserToAccount(data);
-        if (mapped) return mapped;
-      }
-    }
-  } catch (err) {
-    console.warn("Could not query user role from LICENSE_API_URL via POST fallback:", err);
   }
   return null;
 }
@@ -370,9 +389,17 @@ async function checkSheetCompatibility() {
 async function getAllUsersAndGuests() {
   if (process.env.LICENSE_API_URL) {
     try {
-      const url = new URL(process.env.LICENSE_API_URL);
-      url.searchParams.set("action", "getUsers");
-      const resp = await fetch(url.toString(), { method: "GET", signal: AbortSignal.timeout(3e3) });
+      const resp = await fetch(process.env.LICENSE_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "getUsers",
+          operatorEmail: "dathien2412@gmail.com",
+          isBackendAuthorized: true,
+          serverSecret: process.env.APPS_SCRIPT_SECRET || ""
+        }),
+        signal: AbortSignal.timeout(3e3)
+      });
       if (resp.ok) {
         const data = await resp.json().catch(() => null);
         const list = Array.isArray(data?.users) ? data.users : Array.isArray(data) ? data : [];
@@ -457,13 +484,13 @@ async function adminUpdateUser(params) {
   }
   saveStore();
   if (process.env.LICENSE_API_URL) {
-    const sheetRes = await syncUserToGoogleSheet(user);
+    const sheetRes = await syncUserToGoogleSheet(user, params.operatorEmail);
     if (!sheetRes.success) {
       return {
         success: true,
         user,
         sheetSynced: false,
-        warning: "C\u1EADp nh\u1EADt th\xE0nh c\xF4ng v\xE0o c\u01A1 s\u1EDF d\u1EEF li\u1EC7u \u1EE9ng d\u1EE5ng. L\u01B0u \xFD: Google Sheets ch\u01B0a ghi nh\u1EADn (DEPLOY REQUIRED: C\u1EA7n c\u1EADp nh\u1EADt Code.gs v2.5)."
+        warning: `C\u1EADp nh\u1EADt th\xE0nh c\xF4ng v\xE0o c\u01A1 s\u1EDF d\u1EEF li\u1EC7u \u1EE9ng d\u1EE5ng. L\u01B0u \xFD: Google Sheets ch\u01B0a ghi nh\u1EADn (${sheetRes.error || "C\u1EA7n c\u1EADp nh\u1EADt Code.gs v2.7"}).`
       };
     }
     return { success: true, user, sheetSynced: true, message: "\u0110\xE3 c\u1EADp nh\u1EADt v\xE0 x\xE1c nh\u1EADn l\u01B0u th\xE0nh c\xF4ng xu\u1ED1ng Google Sheets USERS." };
@@ -481,7 +508,7 @@ async function adminCreateUser(params) {
   if (user) {
     if (params.role !== void 0) user.role = isRootAdmin ? "ADMIN" : params.role;
     if (params.plan !== void 0) user.plan = isRootAdmin ? "PRO" : params.plan;
-    if (params.name && !user.name) user.name = params.name;
+    if (params.name) user.name = params.name.trim();
     if (params.quota) user.quota = params.quota;
     if (params.expiresAt !== void 0) user.licenseExpiresAt = params.expiresAt;
     if (user.plan === "LICENSED") {
@@ -537,7 +564,7 @@ async function adminCreateUser(params) {
   }
   return { success: true, user, sheetSynced: false };
 }
-async function syncUserToGoogleSheet(user) {
+async function syncUserToGoogleSheet(user, operatorEmail) {
   if (!process.env.LICENSE_API_URL) return { success: false, error: "Ch\u01B0a c\u1EA5u h\xECnh LICENSE_API_URL" };
   try {
     const url = new URL(process.env.LICENSE_API_URL);
@@ -551,18 +578,24 @@ async function syncUserToGoogleSheet(user) {
         name: user.name,
         role: user.role,
         plan: user.plan,
-        quotaEasy: user.quota?.easy ?? 3,
-        quotaAdvanced: user.quota?.advanced ?? 1,
+        quotaEasy: user.quota?.easy ?? (user.plan === "PRO" ? -1 : 3),
+        quotaAdvanced: user.quota?.advanced ?? (user.plan === "PRO" ? -1 : 1),
         licenseKey: user.licenseKey || "",
         licenseExpiresAt: user.licenseExpiresAt || "",
         isBlocked: Boolean(user.isBlocked),
         createdAt: user.createdAt,
-        lastActiveAt: user.lastActiveAt
+        lastActiveAt: user.lastActiveAt,
+        operatorEmail: operatorEmail || "dathien2412@gmail.com",
+        isBackendAuthorized: true,
+        serverSecret: process.env.APPS_SCRIPT_SECRET || ""
       }),
-      signal: AbortSignal.timeout(5e3)
+      signal: AbortSignal.timeout(6e3)
     });
     if (resp.ok) {
       const data = await resp.json().catch(() => null);
+      if (data && data.success === false) {
+        return { success: false, error: data.error || "Google Apps Script t\u1EEB ch\u1ED1i ghi d\u1EEF li\u1EC7u" };
+      }
       return { success: Boolean(data?.success ?? true) };
     }
     return { success: false, error: `HTTP ${resp.status}` };
@@ -570,7 +603,7 @@ async function syncUserToGoogleSheet(user) {
     return { success: false, error: err.message };
   }
 }
-async function deleteUserFromGoogleSheet(email) {
+async function deleteUserFromGoogleSheet(email, options) {
   if (!process.env.LICENSE_API_URL) return { success: false, error: "Ch\u01B0a c\u1EA5u h\xECnh LICENSE_API_URL" };
   try {
     const url = new URL(process.env.LICENSE_API_URL);
@@ -578,11 +611,21 @@ async function deleteUserFromGoogleSheet(email) {
     const resp = await fetch(url.toString(), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-      signal: AbortSignal.timeout(5e3)
+      body: JSON.stringify({
+        email,
+        operatorEmail: options?.operatorEmail || "dathien2412@gmail.com",
+        isBackendAuthorized: true,
+        permanent: Boolean(options?.permanent),
+        confirmPermanent: options?.permanent ? "CONFIRM_PERMANENT_DELETE" : void 0,
+        serverSecret: process.env.APPS_SCRIPT_SECRET || ""
+      }),
+      signal: AbortSignal.timeout(6e3)
     });
     if (resp.ok) {
       const data = await resp.json().catch(() => null);
+      if (data && data.success === false) {
+        return { success: false, error: data.error || "Google Apps Script t\u1EEB ch\u1ED1i x\xF3a d\u1EEF li\u1EC7u" };
+      }
       return { success: Boolean(data?.success ?? true) };
     }
     return { success: false, error: `HTTP ${resp.status}` };
@@ -590,7 +633,7 @@ async function deleteUserFromGoogleSheet(email) {
     return { success: false, error: err.message };
   }
 }
-async function syncAllUsersToGoogleSheet() {
+async function syncAllUsersToGoogleSheet(operatorEmail) {
   const users = Object.values(store.users);
   if (!process.env.LICENSE_API_URL) {
     return { success: false, syncedCount: 0, totalCount: users.length, error: "Ch\u01B0a c\u1EA5u h\xECnh LICENSE_API_URL" };
@@ -601,11 +644,19 @@ async function syncAllUsersToGoogleSheet() {
     const resp = await fetch(url.toString(), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ users }),
-      signal: AbortSignal.timeout(1e4)
+      body: JSON.stringify({
+        users,
+        operatorEmail: operatorEmail || "dathien2412@gmail.com",
+        isBackendAuthorized: true,
+        serverSecret: process.env.APPS_SCRIPT_SECRET || ""
+      }),
+      signal: AbortSignal.timeout(12e3)
     });
     if (resp.ok) {
       const data = await resp.json().catch(() => null);
+      if (data && data.success === false) {
+        return { success: false, syncedCount: 0, totalCount: users.length, error: data.error || "L\u1ED7i \u0111\u1ED3ng b\u1ED9 Apps Script" };
+      }
       return {
         success: true,
         syncedCount: data?.syncedCount ?? users.length,
@@ -614,7 +665,7 @@ async function syncAllUsersToGoogleSheet() {
     }
     let synced = 0;
     for (const u of users) {
-      const res = await syncUserToGoogleSheet(u);
+      const res = await syncUserToGoogleSheet(u, operatorEmail);
       if (res.success) synced++;
     }
     return { success: synced > 0, syncedCount: synced, totalCount: users.length };
@@ -627,9 +678,17 @@ async function adminSyncGoogleSheets(params) {
   const conflicts = [];
   if (process.env.LICENSE_API_URL) {
     try {
-      const url = new URL(process.env.LICENSE_API_URL);
-      url.searchParams.set("action", "getUsers");
-      const resp = await fetch(url.toString(), { method: "GET", signal: AbortSignal.timeout(6e3) });
+      const resp = await fetch(process.env.LICENSE_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "getUsers",
+          operatorEmail: "dathien2412@gmail.com",
+          isBackendAuthorized: true,
+          serverSecret: process.env.APPS_SCRIPT_SECRET || ""
+        }),
+        signal: AbortSignal.timeout(6e3)
+      });
       if (resp.ok) {
         const data = await resp.json().catch(() => null);
         const list = Array.isArray(data?.users) ? data.users : Array.isArray(data) ? data : [];
@@ -945,7 +1004,7 @@ async function handler(req, res) {
   const subpath = extractSubpath(req, "/api/admin");
   const body = getRequestBody(req);
   const operatorEmail = String(
-    req.headers["x-user-email"] || req.headers["x-user-id"] || req.query?.adminEmail || body?.operatorEmail || ""
+    req.headers["x-user-email"] || req.headers["x-user-id"] || ""
   ).toLowerCase().trim();
   let isAllowed = ROOT_ADMIN_EMAILS.includes(operatorEmail) || isUserAdmin(operatorEmail);
   if (!isAllowed && process.env.LICENSE_API_URL && operatorEmail) {

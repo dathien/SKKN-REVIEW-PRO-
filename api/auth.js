@@ -145,26 +145,41 @@ function mapRawSheetUserToAccount(raw) {
   } else if (plan) {
     role = plan === "PRO" || plan === "SCHOOL" || plan === "PREMIUM" ? "LICENSED" : "TRIAL";
   }
-  let easyQuota = 3;
-  let advancedQuota = 1;
-  if (raw.quota?.easy !== void 0) easyQuota = Number(raw.quota.easy);
-  else if (raw.quotaEasy !== void 0) easyQuota = Number(raw.quotaEasy);
-  else if (raw.QUOTA_EASY !== void 0) easyQuota = Number(raw.QUOTA_EASY);
+  const isUnlimitedPlan = plan === "PRO" || plan === "SCHOOL" || plan === "PREMIUM" || role === "ADMIN" || role === "LICENSED" || role === "FREE_ACCESS";
+  let easyQuota = isUnlimitedPlan ? -1 : 3;
+  let advancedQuota = isUnlimitedPlan ? -1 : 1;
+  function parseQuotaVal(v, fallback) {
+    if (v === void 0 || v === null || v === "") return fallback;
+    const str = String(v).trim().toUpperCase();
+    if (str === "UNLIMITED" || str === "-1") return -1;
+    const num = Number(str);
+    if (isNaN(num)) return fallback;
+    return Math.max(0, num);
+  }
+  if (raw.quota?.easy !== void 0) easyQuota = parseQuotaVal(raw.quota.easy, easyQuota);
+  else if (raw.quotaEasy !== void 0) easyQuota = parseQuotaVal(raw.quotaEasy, easyQuota);
+  else if (raw.QUOTA_EASY !== void 0) easyQuota = parseQuotaVal(raw.QUOTA_EASY, easyQuota);
   else if (raw.easyLimit !== void 0 || raw.EASY_LIMIT !== void 0) {
-    const limit = Number(raw.easyLimit !== void 0 ? raw.easyLimit : raw.EASY_LIMIT);
-    const used = Number(raw.easyUsed !== void 0 ? raw.easyUsed : raw.EASY_USED || 0);
-    if (!isNaN(limit)) {
-      easyQuota = Math.max(0, limit - used);
+    const limitRaw = raw.easyLimit !== void 0 ? raw.easyLimit : raw.EASY_LIMIT;
+    const limitParsed = parseQuotaVal(limitRaw, 3);
+    if (limitParsed === -1) {
+      easyQuota = -1;
+    } else {
+      const used = Number(raw.easyUsed !== void 0 ? raw.easyUsed : raw.EASY_USED || 0);
+      easyQuota = Math.max(0, limitParsed - (isNaN(used) ? 0 : used));
     }
   }
-  if (raw.quota?.advanced !== void 0) advancedQuota = Number(raw.quota.advanced);
-  else if (raw.quotaAdvanced !== void 0) advancedQuota = Number(raw.quotaAdvanced);
-  else if (raw.QUOTA_ADVANCED !== void 0) advancedQuota = Number(raw.QUOTA_ADVANCED);
+  if (raw.quota?.advanced !== void 0) advancedQuota = parseQuotaVal(raw.quota.advanced, advancedQuota);
+  else if (raw.quotaAdvanced !== void 0) advancedQuota = parseQuotaVal(raw.quotaAdvanced, advancedQuota);
+  else if (raw.QUOTA_ADVANCED !== void 0) advancedQuota = parseQuotaVal(raw.QUOTA_ADVANCED, advancedQuota);
   else if (raw.advancedLimit !== void 0 || raw.ADVANCED_LIMIT !== void 0) {
-    const limit = Number(raw.advancedLimit !== void 0 ? raw.advancedLimit : raw.ADVANCED_LIMIT);
-    const used = Number(raw.advancedUsed !== void 0 ? raw.advancedUsed : raw.ADVANCED_USED || 0);
-    if (!isNaN(limit)) {
-      advancedQuota = Math.max(0, limit - used);
+    const limitRaw = raw.advancedLimit !== void 0 ? raw.advancedLimit : raw.ADVANCED_LIMIT;
+    const limitParsed = parseQuotaVal(limitRaw, 1);
+    if (limitParsed === -1) {
+      advancedQuota = -1;
+    } else {
+      const used = Number(raw.advancedUsed !== void 0 ? raw.advancedUsed : raw.ADVANCED_USED || 0);
+      advancedQuota = Math.max(0, limitParsed - (isNaN(used) ? 0 : used));
     }
   }
   const statusStr = String(raw.status || raw.STATUS || "").toUpperCase().trim();
@@ -190,6 +205,30 @@ async function fetchUserFromLicenseApi(email, sub) {
   if (!process.env.LICENSE_API_URL) return null;
   const targetEmail = email.toLowerCase().trim();
   try {
+    const resp = await fetch(process.env.LICENSE_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "getUser",
+        email: targetEmail,
+        serverSecret: process.env.APPS_SCRIPT_SECRET || ""
+      }),
+      signal: AbortSignal.timeout(4e3)
+    });
+    if (resp.ok) {
+      const data = await resp.json().catch(() => null);
+      if (data?.found && data?.user) {
+        const mapped = mapRawSheetUserToAccount(data.user);
+        if (mapped) return mapped;
+      } else if (data?.email || data?.role || data?.plan) {
+        const mapped = mapRawSheetUserToAccount(data);
+        if (mapped) return mapped;
+      }
+    }
+  } catch (err) {
+    console.warn("Could not query user role from LICENSE_API_URL via POST:", err);
+  }
+  try {
     const url = new URL(process.env.LICENSE_API_URL);
     url.searchParams.set("action", "getUser");
     url.searchParams.set("email", targetEmail);
@@ -204,26 +243,6 @@ async function fetchUserFromLicenseApi(email, sub) {
       }
     }
   } catch (_) {
-  }
-  try {
-    const resp = await fetch(process.env.LICENSE_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "getUser", email: targetEmail }),
-      signal: AbortSignal.timeout(4e3)
-    });
-    if (resp.ok) {
-      const data = await resp.json().catch(() => null);
-      if (data?.found && data?.user) {
-        const mapped = mapRawSheetUserToAccount(data.user);
-        if (mapped) return mapped;
-      } else if (data?.email || data?.role || data?.plan) {
-        const mapped = mapRawSheetUserToAccount(data);
-        if (mapped) return mapped;
-      }
-    }
-  } catch (err) {
-    console.warn("Could not query user role from LICENSE_API_URL via POST fallback:", err);
   }
   return null;
 }

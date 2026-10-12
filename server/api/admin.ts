@@ -33,8 +33,6 @@ export default async function handler(req: any, res: any) {
   const operatorEmail = String(
     req.headers['x-user-email'] ||
     req.headers['x-user-id'] ||
-    req.query?.adminEmail ||
-    body?.operatorEmail ||
     ''
   ).toLowerCase().trim();
 

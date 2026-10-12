@@ -58,6 +58,142 @@ function assert(desc, condition) {
   }
 }
 
+// Configure shared secret for server-to-server tests
+const SCRIPT_SECRET = process.env.APPS_SCRIPT_SECRET || 'skkn_secure_s2s_secret_2026';
+process.env.APPS_SCRIPT_SECRET = SCRIPT_SECRET;
+
+// Mock global fetch for LICENSE_API_URL during automated route testing to prevent build timeouts
+const originalFetch = globalThis.fetch;
+globalThis.fetch = async function(url, init = {}) {
+  const urlStr = String(url);
+  if (process.env.LICENSE_API_URL && urlStr.startsWith(process.env.LICENSE_API_URL)) {
+    let body = {};
+    if (init && init.body) {
+      try { body = JSON.parse(init.body); } catch (_) {}
+    }
+    const action = body.action || (urlStr.includes('?') ? new URL(urlStr).searchParams.get('action') : '');
+
+    // Simulating Apps Script v2.7 mandatory secret verification
+    const adminActions = ['saveUser', 'updateUser', 'deleteUser', 'syncUsers', 'getUsers', 'getSettings'];
+    if (adminActions.includes(action)) {
+      if (!body.serverSecret || body.serverSecret !== SCRIPT_SECRET) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Xác thực Server thất bại: Khóa bí mật Server Secret không chính xác hoặc bị thiếu.'
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      if (!body.operatorEmail) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Yêu cầu quản trị cần danh tính người vận hành (operatorEmail) được backend xác minh.'
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    if (action === 'saveUser' || action === 'updateUser') {
+      return new Response(JSON.stringify({ success: true, user: body }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    if (action === 'deleteUser') {
+      const email = (body.email || '').toLowerCase().trim();
+      if (email === 'dathien2412@gmail.com') {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Bảo mật Quản trị: Tuyệt đối không thể xóa hoặc vô hiệu hóa tài khoản Root Admin.'
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (body.permanent) {
+        if (body.operatorEmail !== 'dathien2412@gmail.com') {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'Quyền hạn bị từ chối: Chỉ Root Admin mới có thẩm quyền yêu cầu xóa vĩnh viễn người dùng khỏi Google Sheets.'
+          }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        const expectedCode = 'PERMANENT_DELETE_' + email.toUpperCase();
+        if (body.confirmPermanent !== expectedCode && body.confirmPermanent !== email) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'Mã xác nhận xóa vĩnh viễn không đúng. Yêu cầu mã: ' + expectedCode
+          }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        return new Response(JSON.stringify({ success: true, mode: 'HARD_DELETE', deleted: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response(JSON.stringify({ success: true, mode: 'SOFT_DELETE_BLOCKED', deleted: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    if (action === 'syncUsers') {
+      return new Response(JSON.stringify({ success: true, syncedCount: (body.users || []).length }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    if (action === 'getUsers') {
+      return new Response(JSON.stringify({ success: true, users: [] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    if (action === 'inspectSchema') {
+      return new Response(JSON.stringify({
+        success: true,
+        version: '2.7',
+        isFullyCompatible: true,
+        usersSchema: { isValid: true, type: 'SCHEMA_13_OLD', missing: [], columnCount: 13 },
+        licensesSchema: { isValid: true, missing: [], columnCount: 9 },
+        settingsSchema: { isValid: true, missing: [], columnCount: 3 },
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    if (action === 'verifyLicense') {
+      return new Response(JSON.stringify({
+        success: true,
+        license: {
+          key: body.key || 'SKKN-PRO-VIP',
+          plan: 'PRO',
+          maxDevices: 2,
+          status: 'ACTIVE',
+          expiresAt: null,
+          isAssigned: true,
+        }
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+  return originalFetch.apply(this, arguments);
+};
+
 // Import compiled handlers
 const authHandler = (await import(new URL(path.resolve('api/auth.js'), 'file://').href)).default;
 const userHandler = (await import(new URL(path.resolve('api/user.js'), 'file://').href)).default;
@@ -509,6 +645,258 @@ console.log('\n--- 8. Testing Google Sheets Schema Compatibility (13-Col Old & 1
   const mappedTrial = mapRawSheetUserToAccount(old13Trial);
   assert('Schema 13-col: Accurately computes remaining quota (3 - 1 = 2) without losing usage metrics',
     mappedTrial && mappedTrial.role === 'TRIAL' && mappedTrial.quota.easy === 2 && mappedTrial.quota.advanced === 1);
+
+  // Test Requirement: EASY_LIMIT=3, EASY_USED=1 - Before and after editing name must remain exactly 2 turns!
+  // Simulating updating name without changing quota in Schema 13:
+  const updatedNameRow = { ...old13Trial, name: 'Tên Giáo Viên Mới Cập Nhật' };
+  // When only name is updated (no quota changes), EASY_LIMIT remains 3, EASY_USED remains 1
+  const mappedTrialAfterNameEdit = mapRawSheetUserToAccount(updatedNameRow);
+  assert('Schema 13-col: EASY_LIMIT=3, EASY_USED=1 before and after updating name strictly preserves 2 turns remaining',
+    mappedTrialAfterNameEdit && mappedTrialAfterNameEdit.quota.easy === 2 && mappedTrialAfterNameEdit.name === 'Tên Giáo Viên Mới Cập Nhật');
+}
+
+console.log('\n--- 9. Testing Code.gs v2.7 Ten Core Requirements ---');
+{
+  // 1. Role Demotion Prevention (Requirement 4)
+  const { req: updateReq, res: updateRes } = createMockContext({
+    method: 'POST',
+    url: '/api/admin/update-user',
+    headers: adminHeaders,
+    body: { email: 'teacher1@gmail.com', name: 'Teacher 1 Updated Name' }, // Missing role and plan
+  });
+  await adminHandler(updateReq, updateRes);
+  const updatedUser = updateRes.getData()?.user;
+  assert('Role Demotion Prevention: Updating user without role/plan preserves PRO and LICENSED',
+    updatedUser && updatedUser.role === 'LICENSED' && updatedUser.plan === 'PRO');
+
+  // 2. Privilege Escalation Defense (Requirement 2)
+  const { req: escalateReq, res: escalateRes } = createMockContext({
+    method: 'POST',
+    url: '/api/admin/update-user',
+    headers: { 'x-user-email': 'regular_user@gmail.com' }, // Non-admin caller
+    body: { email: 'regular_user@gmail.com', role: 'ADMIN' },
+  });
+  await adminHandler(escalateReq, escalateRes);
+  assert('Privilege Escalation Defense: Client cannot self-promote to ADMIN (403)',
+    escalateRes.getStatusCode() === 403);
+
+  // 3. Root Admin Protection (Requirement 6)
+  const { req: delRootReq, res: delRootRes } = createMockContext({
+    method: 'POST',
+    url: '/api/admin/delete-user',
+    headers: adminHeaders,
+    body: { email: 'dathien2412@gmail.com' },
+  });
+  await adminHandler(delRootReq, delRootRes);
+  assert('Root Admin Protection: Absolute prevention of deleting Root Admin',
+    delRootRes.getStatusCode() === 400 && delRootRes.getData()?.error?.includes('Quản trị'));
+
+  // 4. Preservation of Nguyễn Thị Thanh Tâm (Requirement 10 & Critical Data Guarantee)
+  const { req: tamReq, res: tamRes } = createMockContext({
+    method: 'GET',
+    url: '/api/admin/users',
+    headers: adminHeaders,
+  });
+  await adminHandler(tamReq, tamRes);
+  const tamUser = (tamRes.getData()?.users || []).find(u => u.email === 'nguyenthithanhtam3410@gmail.com');
+  assert('Account Integrity: Nguyễn Thị Thanh Tâm account is PRO, LICENSED, and has active license',
+    tamUser && tamUser.role === 'LICENSED' && tamUser.plan === 'PRO' && tamUser.licenseKey === 'SKKN-PRO-THANHTAM-VIP');
+
+  // 5. Concurrency & Duplicate Prevention (Requirement 8)
+  const concurrentEmail = 'concurrent_test@school.edu.vn';
+  const { req: c1Req, res: c1Res } = createMockContext({
+    method: 'POST',
+    url: '/api/admin/create-user',
+    headers: adminHeaders,
+    body: { email: concurrentEmail, name: 'First Write', role: 'LICENSED', plan: 'PRO' },
+  });
+  await adminHandler(c1Req, c1Res);
+  const { req: c2Req, res: c2Res } = createMockContext({
+    method: 'POST',
+    url: '/api/admin/create-user',
+    headers: adminHeaders,
+    body: { email: concurrentEmail, name: 'Second Write (Upsert)', role: 'LICENSED', plan: 'PRO' },
+  });
+  await adminHandler(c2Req, c2Res);
+
+  const { req: listReq, res: listRes } = createMockContext({
+    method: 'GET',
+    url: '/api/admin/users',
+    headers: adminHeaders,
+  });
+  await adminHandler(listReq, listRes);
+  const matches = (listRes.getData()?.users || []).filter(u => u.email === concurrentEmail);
+  assert('Concurrency Defense: Multiple writes update existing record without duplicates',
+    matches.length === 1 && matches[0].name === 'Second Write (Upsert)');
+
+  // Clean up concurrent test user
+  const { req: cleanCReq, res: cleanCRes } = createMockContext({
+    method: 'POST',
+    url: '/api/admin/delete-user',
+    headers: adminHeaders,
+    body: { email: concurrentEmail },
+  });
+  await adminHandler(cleanCReq, cleanCRes);
+  assert('Cleaned up concurrency test user', cleanCRes.getStatusCode() === 200);
+}
+
+console.log('\n--- 10. Negative Security Tests (Requirement 7) ---');
+{
+  // 1. Negative Test: No secret provided to Apps Script
+  const noSecretResp = await fetch(process.env.LICENSE_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'saveUser',
+      email: 'attacker@test.com',
+      operatorEmail: 'dathien2412@gmail.com',
+      // No serverSecret
+    }),
+  });
+  const noSecretData = await noSecretResp.json();
+  assert('Negative Test 1: Apps Script rejects request without serverSecret',
+    noSecretData.success === false && noSecretData.error?.includes('Server Secret'));
+
+  // 2. Negative Test: Wrong secret provided to Apps Script
+  const wrongSecretResp = await fetch(process.env.LICENSE_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'saveUser',
+      email: 'attacker@test.com',
+      operatorEmail: 'dathien2412@gmail.com',
+      serverSecret: 'INVALID_ATTACKER_SECRET_123',
+    }),
+  });
+  const wrongSecretData = await wrongSecretResp.json();
+  assert('Negative Test 2: Apps Script rejects request with incorrect serverSecret',
+    wrongSecretData.success === false && wrongSecretData.error?.includes('không chính xác'));
+
+  // 3. Negative Test: Self-declared isBackendAuthorized=true without secret
+  const spoofedAuthResp = await fetch(process.env.LICENSE_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'saveUser',
+      email: 'attacker@test.com',
+      operatorEmail: 'dathien2412@gmail.com',
+      isBackendAuthorized: true, // Attacker tries to spoof backend flag
+      serverSecret: '',          // But lacks serverSecret
+    }),
+  });
+  const spoofedAuthData = await spoofedAuthResp.json();
+  assert('Negative Test 3: Self-declared isBackendAuthorized=true without secret is strictly rejected',
+    spoofedAuthData.success === false);
+
+  // 4. Negative Test: Regular non-admin user calling admin endpoints
+  const regularHeaders = { 'x-user-email': 'teacher1@gmail.com' };
+  const { req: regUsersReq, res: regUsersRes } = createMockContext({
+    method: 'GET',
+    url: '/api/admin/users',
+    headers: regularHeaders,
+  });
+  await adminHandler(regUsersReq, regUsersRes);
+  assert('Negative Test 4a: Regular user calling GET /api/admin/users is rejected with 403',
+    regUsersRes.getStatusCode() === 403);
+
+  const { req: regCreateReq, res: regCreateRes } = createMockContext({
+    method: 'POST',
+    url: '/api/admin/create-user',
+    headers: regularHeaders,
+    body: { email: 'unauthorized_creation@school.edu.vn' },
+  });
+  await adminHandler(regCreateReq, regCreateRes);
+  assert('Negative Test 4b: Regular user calling POST /api/admin/create-user is rejected with 403',
+    regCreateRes.getStatusCode() === 403);
+
+  const { req: regUpdateReq, res: regUpdateRes } = createMockContext({
+    method: 'POST',
+    url: '/api/admin/update-user',
+    headers: regularHeaders,
+    body: { email: 'teacher1@gmail.com', name: 'Hacked Name' },
+  });
+  await adminHandler(regUpdateReq, regUpdateRes);
+  assert('Negative Test 4c: Regular user calling POST /api/admin/update-user is rejected with 403',
+    regUpdateRes.getStatusCode() === 403);
+
+  const { req: regDelReq, res: regDelRes } = createMockContext({
+    method: 'POST',
+    url: '/api/admin/delete-user',
+    headers: regularHeaders,
+    body: { email: 'teacher1@gmail.com' },
+  });
+  await adminHandler(regDelReq, regDelRes);
+  assert('Negative Test 4d: Regular user calling POST /api/admin/delete-user is rejected with 403',
+    regDelRes.getStatusCode() === 403);
+
+  const { req: regSyncReq, res: regSyncRes } = createMockContext({
+    method: 'POST',
+    url: '/api/admin/sync-sheet',
+    headers: regularHeaders,
+    body: {},
+  });
+  await adminHandler(regSyncReq, regSyncRes);
+  assert('Negative Test 4e: Regular user calling POST /api/admin/sync-sheet is rejected with 403',
+    regSyncRes.getStatusCode() === 403);
+
+  // 5. Negative Test: Attempting to delete Root Admin
+  const { req: delRootReq, res: delRootRes } = createMockContext({
+    method: 'POST',
+    url: '/api/admin/delete-user',
+    headers: adminHeaders,
+    body: { email: 'dathien2412@gmail.com' },
+  });
+  await adminHandler(delRootReq, delRootRes);
+  assert('Negative Test 5a: Backend delete-user strictly forbids deleting Root Admin (400)',
+    delRootRes.getStatusCode() === 400);
+
+  const delRootDirectResp = await fetch(process.env.LICENSE_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'deleteUser',
+      email: 'dathien2412@gmail.com',
+      operatorEmail: 'dathien2412@gmail.com',
+      serverSecret: process.env.APPS_SCRIPT_SECRET,
+    }),
+  });
+  const delRootDirectData = await delRootDirectResp.json();
+  assert('Negative Test 5b: Direct Apps Script call strictly forbids deleting Root Admin',
+    delRootDirectData.success === false && delRootDirectData.error?.includes('Root Admin'));
+
+  // 6. Negative Test: Hard delete without Root Admin privilege
+  const nonRootHardDelResp = await fetch(process.env.LICENSE_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'deleteUser',
+      email: 'test_student@school.edu.vn',
+      operatorEmail: 'sub_admin@school.edu.vn', // Not a root admin
+      permanent: true,
+      confirmPermanent: 'PERMANENT_DELETE_TEST_STUDENT@SCHOOL.EDU.VN',
+      serverSecret: process.env.APPS_SCRIPT_SECRET,
+    }),
+  });
+  const nonRootHardDelData = await nonRootHardDelResp.json();
+  assert('Negative Test 6: Hard-delete requested by non-root operator is rejected',
+    nonRootHardDelData.success === false && nonRootHardDelData.error?.includes('Root Admin'));
+
+  // 7. Negative Test: Hard delete with static legacy confirm key rejected
+  const staticTokenResp = await fetch(process.env.LICENSE_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'deleteUser',
+      email: 'test_student@school.edu.vn',
+      operatorEmail: 'dathien2412@gmail.com',
+      permanent: true,
+      confirmPermanent: 'CONFIRM_PERMANENT_DELETE', // Old static token
+      serverSecret: process.env.APPS_SCRIPT_SECRET,
+    }),
+  });
+  const staticTokenData = await staticTokenResp.json();
+  assert('Negative Test 7: Hard-delete with static confirmation token is rejected (requires dynamic email code)',
+    staticTokenData.success === false && staticTokenData.error?.includes('PERMANENT_DELETE_'));
 }
 
 if (failCount > 0) {

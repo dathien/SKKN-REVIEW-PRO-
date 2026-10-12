@@ -230,31 +230,47 @@ export function mapRawSheetUserToAccount(raw: any): MappedUserData | null {
     role = (plan === 'PRO' || plan === 'SCHOOL' || plan === 'PREMIUM') ? 'LICENSED' : 'TRIAL';
   }
 
-  // Quotas
-  let easyQuota = 3;
-  let advancedQuota = 1;
+  // Quotas: Nếu là tài khoản PRO, SCHOOL, PREMIUM hoặc role ADMIN, mặc định không giới hạn
+  const isUnlimitedPlan = (plan === 'PRO' || plan === 'SCHOOL' || plan === 'PREMIUM' || role === 'ADMIN' || role === 'LICENSED' || role === 'FREE_ACCESS');
+  let easyQuota = isUnlimitedPlan ? -1 : 3;
+  let advancedQuota = isUnlimitedPlan ? -1 : 1;
 
-  if (raw.quota?.easy !== undefined) easyQuota = Number(raw.quota.easy);
-  else if (raw.quotaEasy !== undefined) easyQuota = Number(raw.quotaEasy);
-  else if (raw.QUOTA_EASY !== undefined) easyQuota = Number(raw.QUOTA_EASY);
+  function parseQuotaVal(v: any, fallback: number): number {
+    if (v === undefined || v === null || v === '') return fallback;
+    const str = String(v).trim().toUpperCase();
+    if (str === 'UNLIMITED' || str === '-1') return -1;
+    const num = Number(str);
+    if (isNaN(num)) return fallback;
+    return Math.max(0, num);
+  }
+
+  if (raw.quota?.easy !== undefined) easyQuota = parseQuotaVal(raw.quota.easy, easyQuota);
+  else if (raw.quotaEasy !== undefined) easyQuota = parseQuotaVal(raw.quotaEasy, easyQuota);
+  else if (raw.QUOTA_EASY !== undefined) easyQuota = parseQuotaVal(raw.QUOTA_EASY, easyQuota);
   else if (raw.easyLimit !== undefined || raw.EASY_LIMIT !== undefined) {
     // Schema 13 cột cũ
-    const limit = Number(raw.easyLimit !== undefined ? raw.easyLimit : raw.EASY_LIMIT);
-    const used = Number(raw.easyUsed !== undefined ? raw.easyUsed : (raw.EASY_USED || 0));
-    if (!isNaN(limit)) {
-      easyQuota = Math.max(0, limit - used);
+    const limitRaw = raw.easyLimit !== undefined ? raw.easyLimit : raw.EASY_LIMIT;
+    const limitParsed = parseQuotaVal(limitRaw, 3);
+    if (limitParsed === -1) {
+      easyQuota = -1;
+    } else {
+      const used = Number(raw.easyUsed !== undefined ? raw.easyUsed : (raw.EASY_USED || 0));
+      easyQuota = Math.max(0, limitParsed - (isNaN(used) ? 0 : used));
     }
   }
 
-  if (raw.quota?.advanced !== undefined) advancedQuota = Number(raw.quota.advanced);
-  else if (raw.quotaAdvanced !== undefined) advancedQuota = Number(raw.quotaAdvanced);
-  else if (raw.QUOTA_ADVANCED !== undefined) advancedQuota = Number(raw.QUOTA_ADVANCED);
+  if (raw.quota?.advanced !== undefined) advancedQuota = parseQuotaVal(raw.quota.advanced, advancedQuota);
+  else if (raw.quotaAdvanced !== undefined) advancedQuota = parseQuotaVal(raw.quotaAdvanced, advancedQuota);
+  else if (raw.QUOTA_ADVANCED !== undefined) advancedQuota = parseQuotaVal(raw.QUOTA_ADVANCED, advancedQuota);
   else if (raw.advancedLimit !== undefined || raw.ADVANCED_LIMIT !== undefined) {
     // Schema 13 cột cũ
-    const limit = Number(raw.advancedLimit !== undefined ? raw.advancedLimit : raw.ADVANCED_LIMIT);
-    const used = Number(raw.advancedUsed !== undefined ? raw.advancedUsed : (raw.ADVANCED_USED || 0));
-    if (!isNaN(limit)) {
-      advancedQuota = Math.max(0, limit - used);
+    const limitRaw = raw.advancedLimit !== undefined ? raw.advancedLimit : raw.ADVANCED_LIMIT;
+    const limitParsed = parseQuotaVal(limitRaw, 1);
+    if (limitParsed === -1) {
+      advancedQuota = -1;
+    } else {
+      const used = Number(raw.advancedUsed !== undefined ? raw.advancedUsed : (raw.ADVANCED_USED || 0));
+      advancedQuota = Math.max(0, limitParsed - (isNaN(used) ? 0 : used));
     }
   }
 
@@ -288,7 +304,33 @@ export async function fetchUserFromLicenseApi(
   if (!process.env.LICENSE_API_URL) return null;
   const targetEmail = email.toLowerCase().trim();
 
-  // 1. Thử gọi GET trước
+  // 1. Thử gọi POST an toàn có serverSecret qua request body (không lộ trên URL)
+  try {
+    const resp = await fetch(process.env.LICENSE_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'getUser',
+        email: targetEmail,
+        serverSecret: process.env.APPS_SCRIPT_SECRET || '',
+      }),
+      signal: AbortSignal.timeout(4000),
+    });
+    if (resp.ok) {
+      const data = await resp.json().catch(() => null);
+      if (data?.found && data?.user) {
+        const mapped = mapRawSheetUserToAccount(data.user);
+        if (mapped) return mapped;
+      } else if (data?.email || data?.role || data?.plan) {
+        const mapped = mapRawSheetUserToAccount(data);
+        if (mapped) return mapped;
+      }
+    }
+  } catch (err) {
+    console.warn('Could not query user role from LICENSE_API_URL via POST:', err);
+  }
+
+  // 2. Thử gọi GET fallback (không truyền secret qua URL)
   try {
     const url = new URL(process.env.LICENSE_API_URL);
     url.searchParams.set('action', 'getUser');
@@ -305,28 +347,6 @@ export async function fetchUserFromLicenseApi(
       }
     }
   } catch (_) {}
-
-  // 2. Thử gọi POST fallback (tương thích các phiên bản script Apps Script cũ và mới)
-  try {
-    const resp = await fetch(process.env.LICENSE_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'getUser', email: targetEmail }),
-      signal: AbortSignal.timeout(4000),
-    });
-    if (resp.ok) {
-      const data = await resp.json().catch(() => null);
-      if (data?.found && data?.user) {
-        const mapped = mapRawSheetUserToAccount(data.user);
-        if (mapped) return mapped;
-      } else if (data?.email || data?.role || data?.plan) {
-        const mapped = mapRawSheetUserToAccount(data);
-        if (mapped) return mapped;
-      }
-    }
-  } catch (err) {
-    console.warn('Could not query user role from LICENSE_API_URL via POST fallback:', err);
-  }
 
   return null;
 }
@@ -824,9 +844,17 @@ export async function checkSheetCompatibility(): Promise<{
 export async function getAllUsersAndGuests() {
   if (process.env.LICENSE_API_URL) {
     try {
-      const url = new URL(process.env.LICENSE_API_URL);
-      url.searchParams.set('action', 'getUsers');
-      const resp = await fetch(url.toString(), { method: 'GET', signal: AbortSignal.timeout(3000) });
+      const resp = await fetch(process.env.LICENSE_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'getUsers',
+          operatorEmail: 'dathien2412@gmail.com',
+          isBackendAuthorized: true,
+          serverSecret: process.env.APPS_SCRIPT_SECRET || '',
+        }),
+        signal: AbortSignal.timeout(3000),
+      });
       if (resp.ok) {
         const data = await resp.json().catch(() => null);
         const list = Array.isArray(data?.users) ? data.users : (Array.isArray(data) ? data : []);
@@ -928,13 +956,16 @@ export async function adminUpdateUser(params: {
 
   // Xác nhận đồng bộ lưu thành công từ Apps Script nếu có LICENSE_API_URL
   if (process.env.LICENSE_API_URL) {
-    const sheetRes = await syncUserToGoogleSheet(user);
+    const sheetRes = await syncUserToGoogleSheet(user, {
+      operatorEmail: params.operatorEmail,
+      explicitQuota: params.quota !== undefined,
+    });
     if (!sheetRes.success) {
       return {
         success: true,
         user,
         sheetSynced: false,
-        warning: 'Cập nhật thành công vào cơ sở dữ liệu ứng dụng. Lưu ý: Google Sheets chưa ghi nhận (DEPLOY REQUIRED: Cần cập nhật Code.gs v2.5).',
+        warning: `Cập nhật thành công vào cơ sở dữ liệu ứng dụng. Lưu ý: Google Sheets chưa ghi nhận (${sheetRes.error || 'Cần cập nhật Code.gs v2.7'}).`,
       };
     }
     return { success: true, user, sheetSynced: true, message: 'Đã cập nhật và xác nhận lưu thành công xuống Google Sheets USERS.' };
@@ -964,7 +995,7 @@ export async function adminCreateUser(params: {
     // Nếu user đã tồn tại, cập nhật quyền/gói/lượt nếu được chỉ định
     if (params.role !== undefined) user.role = isRootAdmin ? 'ADMIN' : params.role;
     if (params.plan !== undefined) user.plan = isRootAdmin ? 'PRO' : params.plan;
-    if (params.name && !user.name) user.name = params.name;
+    if (params.name) user.name = params.name.trim();
     if (params.quota) user.quota = params.quota;
     if (params.expiresAt !== undefined) user.licenseExpiresAt = params.expiresAt;
     if (user.plan === 'LICENSED') {
@@ -1031,32 +1062,44 @@ export async function adminCreateUser(params: {
 }
 
 // ----------------- GOOGLE SHEETS USERS SYNCHRONIZATION -----------------
-export async function syncUserToGoogleSheet(user: UserAccount): Promise<{ success: boolean; error?: string }> {
+export async function syncUserToGoogleSheet(
+  user: UserAccount,
+  options?: { operatorEmail?: string; explicitQuota?: boolean } | string
+): Promise<{ success: boolean; error?: string }> {
   if (!process.env.LICENSE_API_URL) return { success: false, error: 'Chưa cấu hình LICENSE_API_URL' };
   try {
-    const url = new URL(process.env.LICENSE_API_URL);
-    url.searchParams.set('action', 'saveUser');
-    const resp = await fetch(url.toString(), {
+    const operatorEmail = typeof options === 'string' ? options : options?.operatorEmail;
+    const explicitQuota = typeof options === 'object' ? Boolean(options?.explicitQuota) : false;
+
+    const resp = await fetch(process.env.LICENSE_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        action: 'saveUser',
         id: user.id,
         email: user.email,
         name: user.name,
         role: user.role,
         plan: user.plan,
-        quotaEasy: user.quota?.easy ?? 3,
-        quotaAdvanced: user.quota?.advanced ?? 1,
+        quotaEasy: user.quota?.easy ?? (user.plan === 'PRO' ? -1 : 3),
+        quotaAdvanced: user.quota?.advanced ?? (user.plan === 'PRO' ? -1 : 1),
+        explicitQuota,
         licenseKey: user.licenseKey || '',
         licenseExpiresAt: user.licenseExpiresAt || '',
         isBlocked: Boolean(user.isBlocked),
         createdAt: user.createdAt,
         lastActiveAt: user.lastActiveAt,
+        operatorEmail: operatorEmail || 'dathien2412@gmail.com',
+        isBackendAuthorized: true,
+        serverSecret: process.env.APPS_SCRIPT_SECRET || '',
       }),
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(6000),
     });
     if (resp.ok) {
       const data = await resp.json().catch(() => null);
+      if (data && data.success === false) {
+        return { success: false, error: data.error || 'Google Apps Script từ chối ghi dữ liệu' };
+      }
       return { success: Boolean(data?.success ?? true) };
     }
     return { success: false, error: `HTTP ${resp.status}` };
@@ -1065,19 +1108,30 @@ export async function syncUserToGoogleSheet(user: UserAccount): Promise<{ succes
   }
 }
 
-export async function deleteUserFromGoogleSheet(email: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteUserFromGoogleSheet(
+  email: string,
+  options?: { operatorEmail?: string; permanent?: boolean }
+): Promise<{ success: boolean; error?: string }> {
   if (!process.env.LICENSE_API_URL) return { success: false, error: 'Chưa cấu hình LICENSE_API_URL' };
   try {
-    const url = new URL(process.env.LICENSE_API_URL);
-    url.searchParams.set('action', 'deleteUser');
-    const resp = await fetch(url.toString(), {
+    const resp = await fetch(process.env.LICENSE_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-      signal: AbortSignal.timeout(5000),
+      body: JSON.stringify({
+        action: 'deleteUser',
+        email,
+        operatorEmail: options?.operatorEmail || 'dathien2412@gmail.com',
+        isBackendAuthorized: true,
+        permanent: false, // Mặc định chỉ khóa (soft-delete), tạm vô hiệu hóa hard-delete qua API
+        serverSecret: process.env.APPS_SCRIPT_SECRET || '',
+      }),
+      signal: AbortSignal.timeout(6000),
     });
     if (resp.ok) {
       const data = await resp.json().catch(() => null);
+      if (data && data.success === false) {
+        return { success: false, error: data.error || 'Google Apps Script từ chối xóa dữ liệu' };
+      }
       return { success: Boolean(data?.success ?? true) };
     }
     return { success: false, error: `HTTP ${resp.status}` };
@@ -1086,7 +1140,7 @@ export async function deleteUserFromGoogleSheet(email: string): Promise<{ succes
   }
 }
 
-export async function syncAllUsersToGoogleSheet(): Promise<{
+export async function syncAllUsersToGoogleSheet(operatorEmail?: string): Promise<{
   success: boolean;
   syncedCount: number;
   totalCount: number;
@@ -1098,17 +1152,24 @@ export async function syncAllUsersToGoogleSheet(): Promise<{
   }
 
   try {
-    const url = new URL(process.env.LICENSE_API_URL);
-    url.searchParams.set('action', 'syncUsers');
-    const resp = await fetch(url.toString(), {
+    const resp = await fetch(process.env.LICENSE_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ users }),
-      signal: AbortSignal.timeout(10000),
+      body: JSON.stringify({
+        action: 'syncUsers',
+        users,
+        operatorEmail: operatorEmail || 'dathien2412@gmail.com',
+        isBackendAuthorized: true,
+        serverSecret: process.env.APPS_SCRIPT_SECRET || '',
+      }),
+      signal: AbortSignal.timeout(12000),
     });
 
     if (resp.ok) {
       const data = await resp.json().catch(() => null);
+      if (data && data.success === false) {
+        return { success: false, syncedCount: 0, totalCount: users.length, error: data.error || 'Lỗi đồng bộ Apps Script' };
+      }
       return {
         success: true,
         syncedCount: data?.syncedCount ?? users.length,
@@ -1119,7 +1180,7 @@ export async function syncAllUsersToGoogleSheet(): Promise<{
     // Fallback: Sync individually
     let synced = 0;
     for (const u of users) {
-      const res = await syncUserToGoogleSheet(u);
+      const res = await syncUserToGoogleSheet(u, operatorEmail);
       if (res.success) synced++;
     }
     return { success: synced > 0, syncedCount: synced, totalCount: users.length };
@@ -1156,9 +1217,17 @@ export async function adminSyncGoogleSheets(params?: {
   // 1. Pull latest from Google Sheets
   if (process.env.LICENSE_API_URL) {
     try {
-      const url = new URL(process.env.LICENSE_API_URL);
-      url.searchParams.set('action', 'getUsers');
-      const resp = await fetch(url.toString(), { method: 'GET', signal: AbortSignal.timeout(6000) });
+      const resp = await fetch(process.env.LICENSE_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'getUsers',
+          operatorEmail: 'dathien2412@gmail.com',
+          isBackendAuthorized: true,
+          serverSecret: process.env.APPS_SCRIPT_SECRET || '',
+        }),
+        signal: AbortSignal.timeout(6000),
+      });
       if (resp.ok) {
         const data = await resp.json().catch(() => null);
         const list = Array.isArray(data?.users) ? data.users : (Array.isArray(data) ? data : []);
