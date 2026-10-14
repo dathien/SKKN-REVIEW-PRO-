@@ -582,18 +582,37 @@ function parseUserRowWithHeaders(row, colMap) {
   var id = String(getVal(['ID', 'USER_ID']) || '');
   var name = String(getVal(['NAME', 'FULL_NAME', 'DISPLAY_NAME']) || '');
 
-  // Plan
+  // Plan: Chuẩn hóa mọi biến thể Pro/PRO/pro/VIP/LICENSED/PREMIUM/SCHOOL -> PRO/PREMIUM/SCHOOL
   var rawPlan = String(getVal(['PLAN', 'PACKAGE']) || '').toUpperCase().trim();
-  var plan = (rawPlan === 'SCHOOL' || rawPlan === 'PREMIUM' || rawPlan === 'PRO') ? rawPlan : 'TRIAL';
+  var plan = 'TRIAL';
+  if (rawPlan === 'SCHOOL' || rawPlan.indexOf('SCHOOL') !== -1) {
+    plan = 'SCHOOL';
+  } else if (rawPlan === 'PREMIUM' || rawPlan.indexOf('PREMIUM') !== -1) {
+    plan = 'PREMIUM';
+  } else if (rawPlan === 'PRO' || rawPlan.indexOf('PRO') !== -1 || rawPlan === 'LICENSED' || rawPlan === 'VIP') {
+    plan = 'PRO';
+  }
 
-  // Role
+  // Role: Phân biệt vai trò quản trị (ADMIN), người dùng (USER/TRIAL) và quyền sử dụng (LICENSED)
+  // Tuyệt đối không hiểu nhầm ROLE = USER là TRIAL nếu PLAN là PRO/SCHOOL/PREMIUM!
   var rawRole = getVal(['ROLE', 'USER_ROLE']);
   var role;
   if (rawRole) {
     var rUpper = String(rawRole).toUpperCase().trim();
-    role = (rUpper === 'ADMIN') ? 'ADMIN' : ((rUpper === 'LICENSED' || rUpper === 'PRO') ? 'LICENSED' : (rUpper === 'FREE_ACCESS' ? 'FREE_ACCESS' : (rUpper === 'BLOCKED' ? 'BLOCKED' : 'TRIAL')));
+    if (rUpper === 'ADMIN') {
+      role = 'ADMIN';
+    } else if (rUpper === 'BLOCKED') {
+      role = 'BLOCKED';
+    } else if (rUpper === 'FREE_ACCESS' || rUpper === 'FREE') {
+      role = 'FREE_ACCESS';
+    } else if (rUpper === 'LICENSED' || rUpper === 'PRO' || plan === 'PRO' || plan === 'SCHOOL' || plan === 'PREMIUM') {
+      role = 'LICENSED';
+    } else {
+      // rUpper là USER, TRIAL,... nhưng nếu PLAN là PRO/SCHOOL/PREMIUM thì quyền sử dụng là LICENSED
+      role = (plan === 'PRO' || plan === 'SCHOOL' || plan === 'PREMIUM') ? 'LICENSED' : 'TRIAL';
+    }
   } else {
-    // BẢO TOÀN NGHIỆP VỤ: Nếu không có cột ROLE nhưng PLAN là PRO/SCHOOL/PREMIUM -> Giữ nguyên là LICENSED
+    // Schema 13 cột không có cột ROLE: Ánh xạ theo PLAN
     role = (plan === 'PRO' || plan === 'SCHOOL' || plan === 'PREMIUM') ? 'LICENSED' : 'TRIAL';
   }
 
@@ -608,55 +627,57 @@ function parseUserRowWithHeaders(row, colMap) {
   var isBlocked = rawStatus === 'BLOCKED' || role === 'BLOCKED';
   if (isRootAdminEmail(email)) isBlocked = false;
 
-  // Quotas:
-  var isUnlimited = (plan === 'PRO' || plan === 'SCHOOL' || plan === 'PREMIUM' || role === 'ADMIN');
+  // Quotas: Nếu là tài khoản PRO, SCHOOL, PREMIUM hoặc role ADMIN/LICENSED -> Luôn là UNLIMITED (-1)
+  var isUnlimited = (plan === 'PRO' || plan === 'SCHOOL' || plan === 'PREMIUM' || role === 'ADMIN' || role === 'LICENSED');
   var easyQuota = isUnlimited ? -1 : 3;
   var advancedQuota = isUnlimited ? -1 : 1;
 
-  var qEasy = getVal(['QUOTA_EASY', 'EASY_QUOTA']);
-  if (qEasy !== undefined) {
-    var val = String(qEasy).trim().toUpperCase();
-    if (val === 'UNLIMITED' || val === '-1') {
-      easyQuota = -1;
-    } else {
-      var num = Number(val);
-      easyQuota = isNaN(num) ? 3 : num;
-    }
-  } else {
-    // Schema 13 cột cũ
-    var eLimit = getVal(['EASY_LIMIT']);
-    var eUsed = Number(getVal(['EASY_USED'])) || 0;
-    if (eLimit !== undefined && eLimit !== '') {
-      var val = String(eLimit).trim().toUpperCase();
-      if (val === 'UNLIMITED' || val === '-1' || Number(val) >= 99999) {
+  if (!isUnlimited) {
+    var qEasy = getVal(['QUOTA_EASY', 'EASY_QUOTA']);
+    if (qEasy !== undefined) {
+      var val = String(qEasy).trim().toUpperCase();
+      if (val === 'UNLIMITED' || val === '-1') {
         easyQuota = -1;
       } else {
         var num = Number(val);
-        if (!isNaN(num)) easyQuota = Math.max(0, num - eUsed);
+        easyQuota = isNaN(num) ? 3 : num;
+      }
+    } else {
+      // Schema 13 cột cũ
+      var eLimit = getVal(['EASY_LIMIT']);
+      var eUsed = Number(getVal(['EASY_USED'])) || 0;
+      if (eLimit !== undefined && eLimit !== '') {
+        var val = String(eLimit).trim().toUpperCase();
+        if (val === 'UNLIMITED' || val === '-1' || Number(val) >= 99999) {
+          easyQuota = -1;
+        } else {
+          var num = Number(val);
+          if (!isNaN(num)) easyQuota = Math.max(0, num - eUsed);
+        }
       }
     }
-  }
 
-  var qAdv = getVal(['QUOTA_ADVANCED', 'ADVANCED_QUOTA']);
-  if (qAdv !== undefined) {
-    var val = String(qAdv).trim().toUpperCase();
-    if (val === 'UNLIMITED' || val === '-1') {
-      advancedQuota = -1;
-    } else {
-      var num = Number(val);
-      advancedQuota = isNaN(num) ? 1 : num;
-    }
-  } else {
-    // Schema 13 cột cũ
-    var aLimit = getVal(['ADVANCED_LIMIT']);
-    var aUsed = Number(getVal(['ADVANCED_USED'])) || 0;
-    if (aLimit !== undefined && aLimit !== '') {
-      var val = String(aLimit).trim().toUpperCase();
-      if (val === 'UNLIMITED' || val === '-1' || Number(val) >= 99999) {
+    var qAdv = getVal(['QUOTA_ADVANCED', 'ADVANCED_QUOTA']);
+    if (qAdv !== undefined) {
+      var val = String(qAdv).trim().toUpperCase();
+      if (val === 'UNLIMITED' || val === '-1') {
         advancedQuota = -1;
       } else {
         var num = Number(val);
-        if (!isNaN(num)) advancedQuota = Math.max(0, num - aUsed);
+        advancedQuota = isNaN(num) ? 1 : num;
+      }
+    } else {
+      // Schema 13 cột cũ
+      var aLimit = getVal(['ADVANCED_LIMIT']);
+      var aUsed = Number(getVal(['ADVANCED_USED'])) || 0;
+      if (aLimit !== undefined && aLimit !== '') {
+        var val = String(aLimit).trim().toUpperCase();
+        if (val === 'UNLIMITED' || val === '-1' || Number(val) >= 99999) {
+          advancedQuota = -1;
+        } else {
+          var num = Number(val);
+          if (!isNaN(num)) advancedQuota = Math.max(0, num - aUsed);
+        }
       }
     }
   }

@@ -40,7 +40,7 @@ function initDefaultData() {
         name: 'Đa Thiện Hồ Nguyễn',
         role: 'ADMIN',
         plan: 'PRO',
-        quota: { easy: 3, advanced: 1 },
+        quota: { easy: -1, advanced: -1 },
         licenseKey: 'SKKN-ADMIN-SYSTEM',
         licenseExpiresAt: null,
         createdAt: now,
@@ -127,6 +127,43 @@ export function loadStore() {
           lic.status = lic.assignedEmail ? 'ACTIVE' : 'UNUSED';
         }
       });
+      // Normalize users & PRO entitlements
+      Object.values(store.users).forEach(u => {
+        if (!u) return;
+        const isRootAdmin = ROOT_ADMIN_EMAILS.includes(u.email?.toLowerCase());
+        if (isRootAdmin) {
+          u.role = 'ADMIN';
+          u.plan = 'PRO';
+          u.quota = { easy: -1, advanced: -1 };
+          u.licenseKey = 'SKKN-ADMIN-SYSTEM';
+          u.isBlocked = false;
+          return;
+        }
+        // Normalize plan: LICENSED or PRO variants -> PRO
+        const planUpper = String(u.plan || '').toUpperCase().trim();
+        if (planUpper === 'LICENSED' || planUpper.includes('PRO')) {
+          u.plan = 'PRO';
+        }
+        // Normalize role & quota for PRO / LICENSED accounts
+        if (u.plan === 'PRO' || u.plan === 'PREMIUM' || u.plan === 'SCHOOL' || u.role === 'LICENSED') {
+          if (u.role !== 'BLOCKED') {
+            u.role = 'LICENSED';
+          }
+          if (u.quota?.easy === 3 && u.quota?.advanced === 1) {
+            u.quota = { easy: -1, advanced: -1 };
+          }
+        }
+      });
+      // Ensure Nguyễn Thị Thanh Tâm account integrity
+      const tamEmail = 'nguyenthithanhtam3410@gmail.com';
+      if (store.users[tamEmail]) {
+        store.users[tamEmail].role = 'LICENSED';
+        store.users[tamEmail].plan = 'PRO';
+        store.users[tamEmail].quota = { easy: -1, advanced: -1 };
+        store.users[tamEmail].licenseKey = store.users[tamEmail].licenseKey || 'SKKN-PRO-THANHTAM-VIP';
+        store.users[tamEmail].licenseExpiresAt = null;
+        store.users[tamEmail].isBlocked = false;
+      }
     }
   } catch (err) {
     console.error('Could not load auth store, using in-memory store:', err);
@@ -207,34 +244,45 @@ export function mapRawSheetUserToAccount(raw: any): MappedUserData | null {
 
   const name = raw.name || raw.NAME || raw.fullName || raw.FULL_NAME || '';
 
-  // Plan
+  // Plan: Chuẩn hóa mọi biến thể Pro/PRO/pro/VIP/LICENSED/PREMIUM/SCHOOL -> PRO/PREMIUM/SCHOOL
   const rawPlan = String(raw.plan || raw.PLAN || raw.package || raw.PACKAGE || '').toUpperCase().trim();
-  const plan: LicensePlan | undefined =
-    rawPlan === 'SCHOOL' ? 'SCHOOL' :
-    rawPlan === 'PREMIUM' ? 'PREMIUM' :
-    (rawPlan === 'PRO' || rawPlan === 'PRO_MAX') ? 'PRO' :
-    (rawPlan === 'TRIAL' ? 'TRIAL' : undefined);
-
-  // Role
-  const rawRole = String(raw.role || raw.ROLE || raw.userRole || raw.USER_ROLE || '').toUpperCase().trim();
-  let role: UserRole | undefined;
-  if (rawRole) {
-    role =
-      rawRole === 'ADMIN' ? 'ADMIN' :
-      (rawRole === 'LICENSED' || rawRole === 'PRO') ? 'LICENSED' :
-      (rawRole === 'FREE_ACCESS' || rawRole === 'FREE') ? 'FREE_ACCESS' :
-      rawRole === 'BLOCKED' ? 'BLOCKED' :
-      rawRole === 'TRIAL' ? 'TRIAL' : undefined;
-  } else if (plan) {
-    // Trường hợp schema 13 cột cũ (không có cột ROLE)
-    // Nếu PLAN là Pro / School / Premium thì giữ đúng nghiệp vụ là LICENSED
-    role = (plan === 'PRO' || plan === 'SCHOOL' || plan === 'PREMIUM') ? 'LICENSED' : 'TRIAL';
+  let plan: LicensePlan = 'TRIAL';
+  if (rawPlan === 'SCHOOL' || rawPlan.includes('SCHOOL')) {
+    plan = 'SCHOOL';
+  } else if (rawPlan === 'PREMIUM' || rawPlan.includes('PREMIUM')) {
+    plan = 'PREMIUM';
+  } else if (
+    rawPlan === 'PRO' ||
+    rawPlan.includes('PRO') ||
+    rawPlan === 'LICENSED' ||
+    rawPlan === 'VIP' ||
+    raw.role === 'LICENSED' ||
+    raw.role === 'PRO'
+  ) {
+    plan = 'PRO';
   }
 
-  // Quotas: Nếu là tài khoản PRO, SCHOOL, PREMIUM hoặc role ADMIN, mặc định không giới hạn
-  const isUnlimitedPlan = (plan === 'PRO' || plan === 'SCHOOL' || plan === 'PREMIUM' || role === 'ADMIN' || role === 'LICENSED' || role === 'FREE_ACCESS');
-  let easyQuota = isUnlimitedPlan ? -1 : 3;
-  let advancedQuota = isUnlimitedPlan ? -1 : 1;
+  // Role: Phân biệt vai trò quản trị (ADMIN), người dùng thông thường (USER/TRIAL) và quyền sử dụng (LICENSED)
+  // Tuyệt đối không hiểu nhầm ROLE = USER là TRIAL nếu PLAN là PRO/SCHOOL/PREMIUM!
+  const rawRole = String(raw.role || raw.ROLE || raw.userRole || raw.USER_ROLE || '').toUpperCase().trim();
+  let role: UserRole;
+  if (rawRole === 'ADMIN') {
+    role = 'ADMIN';
+  } else if (rawRole === 'BLOCKED') {
+    role = 'BLOCKED';
+  } else if (rawRole === 'FREE_ACCESS' || rawRole === 'FREE') {
+    role = 'FREE_ACCESS';
+  } else if (rawRole === 'LICENSED' || rawRole === 'PRO' || plan === 'PRO' || plan === 'SCHOOL' || plan === 'PREMIUM') {
+    role = 'LICENSED';
+  } else {
+    role = 'TRIAL';
+  }
+
+  // Root Admin luôn là ADMIN / PRO
+  if (ROOT_ADMIN_EMAILS.includes(email)) {
+    role = 'ADMIN';
+    plan = 'PRO';
+  }
 
   function parseQuotaVal(v: any, fallback: number): number {
     if (v === undefined || v === null || v === '') return fallback;
@@ -245,13 +293,21 @@ export function mapRawSheetUserToAccount(raw: any): MappedUserData | null {
     return Math.max(0, num);
   }
 
-  if (raw.quota?.easy !== undefined) easyQuota = parseQuotaVal(raw.quota.easy, easyQuota);
-  else if (raw.quotaEasy !== undefined) easyQuota = parseQuotaVal(raw.quotaEasy, easyQuota);
-  else if (raw.QUOTA_EASY !== undefined) easyQuota = parseQuotaVal(raw.QUOTA_EASY, easyQuota);
+  // Quotas: Nếu là tài khoản PRO, SCHOOL, PREMIUM hoặc role ADMIN / LICENSED -> Mặc định là UNLIMITED (-1)
+  const isUnlimitedPlan = (plan === 'PRO' || plan === 'SCHOOL' || plan === 'PREMIUM' || role === 'ADMIN' || role === 'LICENSED' || role === 'FREE_ACCESS');
+  const defaultEasy = isUnlimitedPlan ? -1 : 3;
+  const defaultAdvanced = isUnlimitedPlan ? -1 : 1;
+
+  let easyQuota = defaultEasy;
+  let advancedQuota = defaultAdvanced;
+
+  if (raw.quota?.easy !== undefined) easyQuota = parseQuotaVal(raw.quota.easy, defaultEasy);
+  else if (raw.quotaEasy !== undefined) easyQuota = parseQuotaVal(raw.quotaEasy, defaultEasy);
+  else if (raw.QUOTA_EASY !== undefined) easyQuota = parseQuotaVal(raw.QUOTA_EASY, defaultEasy);
   else if (raw.easyLimit !== undefined || raw.EASY_LIMIT !== undefined) {
     // Schema 13 cột cũ
     const limitRaw = raw.easyLimit !== undefined ? raw.easyLimit : raw.EASY_LIMIT;
-    const limitParsed = parseQuotaVal(limitRaw, 3);
+    const limitParsed = parseQuotaVal(limitRaw, defaultEasy);
     if (limitParsed === -1) {
       easyQuota = -1;
     } else {
@@ -260,13 +316,13 @@ export function mapRawSheetUserToAccount(raw: any): MappedUserData | null {
     }
   }
 
-  if (raw.quota?.advanced !== undefined) advancedQuota = parseQuotaVal(raw.quota.advanced, advancedQuota);
-  else if (raw.quotaAdvanced !== undefined) advancedQuota = parseQuotaVal(raw.quotaAdvanced, advancedQuota);
-  else if (raw.QUOTA_ADVANCED !== undefined) advancedQuota = parseQuotaVal(raw.QUOTA_ADVANCED, advancedQuota);
+  if (raw.quota?.advanced !== undefined) advancedQuota = parseQuotaVal(raw.quota.advanced, defaultAdvanced);
+  else if (raw.quotaAdvanced !== undefined) advancedQuota = parseQuotaVal(raw.quotaAdvanced, defaultAdvanced);
+  else if (raw.QUOTA_ADVANCED !== undefined) advancedQuota = parseQuotaVal(raw.QUOTA_ADVANCED, defaultAdvanced);
   else if (raw.advancedLimit !== undefined || raw.ADVANCED_LIMIT !== undefined) {
     // Schema 13 cột cũ
     const limitRaw = raw.advancedLimit !== undefined ? raw.advancedLimit : raw.ADVANCED_LIMIT;
-    const limitParsed = parseQuotaVal(limitRaw, 1);
+    const limitParsed = parseQuotaVal(limitRaw, defaultAdvanced);
     if (limitParsed === -1) {
       advancedQuota = -1;
     } else {
@@ -468,6 +524,10 @@ export async function getOrCreateUser(profile: {
 
     const defaultTrialEasy = store.settings?.trialEasyLimit ?? 3;
     const defaultTrialAdvanced = store.settings?.trialAdvancedLimit ?? 1;
+    const isUnlimited = isRootAdmin || plan === 'PRO' || plan === 'SCHOOL' || plan === 'PREMIUM' || role === 'ADMIN' || role === 'LICENSED';
+    const quota = isUnlimited
+      ? { easy: -1, advanced: -1 }
+      : (remoteData?.quota || { easy: defaultTrialEasy, advanced: defaultTrialAdvanced });
 
     user = {
       id: userId,
@@ -476,9 +536,9 @@ export async function getOrCreateUser(profile: {
       picture: profile.picture,
       role,
       plan,
-      quota: { easy: defaultTrialEasy, advanced: defaultTrialAdvanced },
-      licenseKey: isRootAdmin ? 'SKKN-ADMIN-SYSTEM' : (role === 'ADMIN' ? 'SKKN-ADMIN-SYSTEM' : undefined),
-      licenseExpiresAt: null,
+      quota,
+      licenseKey: isRootAdmin ? 'SKKN-ADMIN-SYSTEM' : (remoteData?.licenseKey || (role === 'ADMIN' ? 'SKKN-ADMIN-SYSTEM' : undefined)),
+      licenseExpiresAt: remoteData?.licenseExpiresAt || null,
       freeAccess: remoteData?.freeAccess || role === 'FREE_ACCESS',
       freeAccessName: remoteData?.freeAccessName,
       freeAccessExpiresAt: remoteData?.freeAccessExpiresAt,
@@ -495,6 +555,7 @@ export async function getOrCreateUser(profile: {
       user.plan = 'PRO';
       user.isBlocked = false;
       user.licenseKey = 'SKKN-ADMIN-SYSTEM';
+      user.quota = { easy: -1, advanced: -1 };
     } else {
       // Nếu có phân quyền cập nhật từ Google Sheets / License API thì đồng bộ
       if (remoteData?.role) {
@@ -512,10 +573,22 @@ export async function getOrCreateUser(profile: {
       if (remoteData?.plan) {
         user.plan = remoteData.plan;
       }
+      if (remoteData?.licenseKey) {
+        user.licenseKey = remoteData.licenseKey;
+      }
+      if (remoteData?.licenseExpiresAt !== undefined) {
+        user.licenseExpiresAt = remoteData.licenseExpiresAt;
+      }
       if (remoteData?.name) {
         user.name = remoteData.name;
       } else if (profile.name) {
         user.name = profile.name;
+      }
+      // Bảo đảm PRO / LICENSED luôn có quota không giới hạn
+      if (user.plan === 'PRO' || user.plan === 'SCHOOL' || user.plan === 'PREMIUM' || user.role === 'LICENSED') {
+        user.quota = { easy: -1, advanced: -1 };
+      } else if (remoteData?.quota) {
+        user.quota = remoteData.quota;
       }
     }
     if (profile.picture) user.picture = profile.picture;
@@ -872,11 +945,19 @@ export async function activateLicenseKey(params: {
   };
 }
 
-// ----------------- ADMIN OPERATIONS -----------------
 export function getSystemStats(): SystemStats {
   const usersList = Object.values(store.users);
-  const trialUsers = usersList.filter(u => u.role === 'TRIAL' || u.plan === 'TRIAL').length;
-  const licensedUsers = usersList.filter(u => u.role === 'LICENSED' || u.plan === 'LICENSED' || u.role === 'ADMIN').length;
+  const isLicensedUser = (u: UserAccount) =>
+    u.role === 'LICENSED' ||
+    u.plan === 'PRO' ||
+    u.plan === 'PREMIUM' ||
+    u.plan === 'SCHOOL' ||
+    u.plan === 'LICENSED' ||
+    u.role === 'ADMIN' ||
+    u.quota?.easy === -1;
+
+  const licensedUsers = usersList.filter(isLicensedUser).length;
+  const trialUsers = usersList.filter(u => !isLicensedUser(u) && u.role !== 'BLOCKED' && !u.isBlocked).length;
   const activeLicenses = Object.values(store.licenses).filter(l => l.status === 'ACTIVE').length;
 
   return {
@@ -984,23 +1065,37 @@ export async function getAllUsersAndGuests() {
             if (mapped && mapped.email) {
               const email = mapped.email;
               const existing = store.users[email];
+              const isRootAdmin = ROOT_ADMIN_EMAILS.includes(email);
+              const role: UserRole = isRootAdmin ? 'ADMIN' : (mapped.role || 'TRIAL');
+              const plan: LicensePlan = isRootAdmin ? 'PRO' : (mapped.plan || (role === 'ADMIN' ? 'PRO' : 'TRIAL'));
+              const isUnlimited = isRootAdmin || plan === 'PRO' || plan === 'SCHOOL' || plan === 'PREMIUM' || role === 'LICENSED';
+              const quota = isUnlimited ? { easy: -1, advanced: -1 } : (mapped.quota || { easy: 3, advanced: 1 });
+
               if (!existing) {
-                const isRootAdmin = ROOT_ADMIN_EMAILS.includes(email);
-                const role: UserRole = isRootAdmin ? 'ADMIN' : (mapped.role || 'TRIAL');
-                const plan: LicensePlan = isRootAdmin ? 'PRO' : (mapped.plan || (role === 'ADMIN' ? 'PRO' : 'TRIAL'));
                 store.users[email] = {
                   id: mapped.id || `usr_sheet_${email.split('@')[0]}`,
                   email,
                   name: mapped.name || (isRootAdmin ? 'Đa Thiện Hồ Nguyễn' : email.split('@')[0]),
                   role,
                   plan,
-                  quota: mapped.quota || { easy: 3, advanced: 1 },
+                  quota,
                   licenseKey: mapped.licenseKey || (isRootAdmin ? 'SKKN-ADMIN-SYSTEM' : undefined),
                   licenseExpiresAt: mapped.licenseExpiresAt || null,
                   createdAt: new Date().toISOString(),
                   lastActiveAt: new Date().toISOString(),
                   isBlocked: isRootAdmin ? false : Boolean(mapped.isBlocked),
                 };
+              } else {
+                // Cập nhật người dùng hiện có từ dữ liệu mới nhất của Google Sheets
+                if (!isRootAdmin) {
+                  existing.role = role;
+                  existing.plan = plan;
+                  existing.isBlocked = Boolean(mapped.isBlocked);
+                }
+                if (mapped.name) existing.name = mapped.name;
+                if (mapped.licenseKey) existing.licenseKey = mapped.licenseKey;
+                if (mapped.licenseExpiresAt !== undefined) existing.licenseExpiresAt = mapped.licenseExpiresAt;
+                existing.quota = quota;
               }
             }
           }
@@ -1051,8 +1146,10 @@ export async function adminUpdateUser(params: {
   if (params.role !== undefined) user.role = params.role;
   if (params.plan !== undefined) {
     user.plan = params.plan;
-    if (params.plan === 'LICENSED') {
+    if (params.plan === 'LICENSED' || params.plan === 'PRO' || params.plan === 'PREMIUM' || params.plan === 'SCHOOL') {
+      if (params.plan === 'LICENSED') user.plan = 'PRO';
       if (user.role !== 'ADMIN') user.role = 'LICENSED';
+      user.quota = { easy: -1, advanced: -1 };
       user.licenseExpiresAt = params.expiresAt !== undefined ? params.expiresAt : user.licenseExpiresAt;
     } else if (params.plan === 'TRIAL') {
       if (user.role !== 'ADMIN') user.role = 'TRIAL';
@@ -1068,7 +1165,7 @@ export async function adminUpdateUser(params: {
     if (params.isBlocked && user.role !== 'ADMIN') {
       user.role = 'BLOCKED';
     } else if (!params.isBlocked && user.role === 'BLOCKED') {
-      user.role = user.plan === 'LICENSED' ? 'LICENSED' : 'TRIAL';
+      user.role = (user.plan === 'PRO' || user.plan === 'LICENSED' || user.plan === 'PREMIUM' || user.plan === 'SCHOOL') ? 'LICENSED' : 'TRIAL';
     }
   }
 
@@ -1113,14 +1210,18 @@ export async function adminCreateUser(params: {
 
   if (user) {
     // Nếu user đã tồn tại, cập nhật quyền/gói/lượt nếu được chỉ định
+    if (params.plan !== undefined) {
+      const p = String(params.plan).toUpperCase().trim();
+      user.plan = isRootAdmin ? 'PRO' : (p === 'LICENSED' || p.includes('PRO') ? 'PRO' : params.plan);
+    }
     if (params.role !== undefined) user.role = isRootAdmin ? 'ADMIN' : params.role;
-    if (params.plan !== undefined) user.plan = isRootAdmin ? 'PRO' : params.plan;
+    if (user.plan === 'PRO' || user.plan === 'SCHOOL' || user.plan === 'PREMIUM' || user.role === 'LICENSED') {
+      if (user.role !== 'ADMIN' && user.role !== 'BLOCKED') user.role = 'LICENSED';
+      if (!params.quota) user.quota = { easy: -1, advanced: -1 };
+    }
     if (params.name) user.name = params.name.trim();
     if (params.quota) user.quota = params.quota;
     if (params.expiresAt !== undefined) user.licenseExpiresAt = params.expiresAt;
-    if (user.plan === 'LICENSED') {
-      if (user.role !== 'ADMIN') user.role = 'LICENSED';
-    }
     user.lastActiveAt = now;
     saveStore();
 
@@ -1140,11 +1241,17 @@ export async function adminCreateUser(params: {
     return { success: true, user, sheetSynced: false };
   }
 
-  const role: UserRole = isRootAdmin ? 'ADMIN' : (params.role || 'TRIAL');
-  const plan: LicensePlan = isRootAdmin ? 'PRO' : (params.plan || (role === 'ADMIN' ? 'PRO' : 'TRIAL'));
+  let planCandidate: LicensePlan = params.plan || 'TRIAL';
+  const rawP = String(planCandidate).toUpperCase().trim();
+  if (rawP === 'LICENSED' || rawP.includes('PRO')) {
+    planCandidate = 'PRO';
+  }
+  const role: UserRole = isRootAdmin ? 'ADMIN' : (params.role || (planCandidate === 'PRO' ? 'LICENSED' : 'TRIAL'));
+  const plan: LicensePlan = isRootAdmin ? 'PRO' : planCandidate;
 
-  const defaultTrialEasy = store.settings?.trialEasyLimit ?? 3;
-  const defaultTrialAdvanced = store.settings?.trialAdvancedLimit ?? 1;
+  const isUnlimited = isRootAdmin || plan === 'PRO' || plan === 'SCHOOL' || plan === 'PREMIUM' || role === 'LICENSED';
+  const defaultTrialEasy = isUnlimited ? -1 : (store.settings?.trialEasyLimit ?? 3);
+  const defaultTrialAdvanced = isUnlimited ? -1 : (store.settings?.trialAdvancedLimit ?? 1);
 
   const quota = params.quota || { easy: defaultTrialEasy, advanced: defaultTrialAdvanced };
 
@@ -1422,6 +1529,9 @@ export async function adminSyncGoogleSheets(params?: {
               const role: UserRole = isRootAdmin ? 'ADMIN' : (mapped.role || 'TRIAL');
               const plan: LicensePlan = isRootAdmin ? 'PRO' : (mapped.plan || 'TRIAL');
 
+              const isUnlimited = isRootAdmin || plan === 'PRO' || plan === 'SCHOOL' || plan === 'PREMIUM' || role === 'LICENSED';
+              const quota = isUnlimited ? { easy: -1, advanced: -1 } : (mapped.quota || { easy: 3, advanced: 1 });
+
               if (!existing) {
                 store.users[email] = {
                   id: mapped.id || `usr_sheet_${email.split('@')[0]}`,
@@ -1429,7 +1539,7 @@ export async function adminSyncGoogleSheets(params?: {
                   name: mapped.name || (isRootAdmin ? 'Đa Thiện Hồ Nguyễn' : email.split('@')[0]),
                   role,
                   plan,
-                  quota: mapped.quota || { easy: 3, advanced: 1 },
+                  quota,
                   licenseKey: mapped.licenseKey || (isRootAdmin ? 'SKKN-ADMIN-SYSTEM' : undefined),
                   licenseExpiresAt: mapped.licenseExpiresAt || null,
                   createdAt: new Date().toISOString(),
@@ -1446,6 +1556,7 @@ export async function adminSyncGoogleSheets(params?: {
                 if (mapped.name) existing.name = mapped.name;
                 if (mapped.licenseKey) existing.licenseKey = mapped.licenseKey;
                 if (mapped.licenseExpiresAt !== undefined) existing.licenseExpiresAt = mapped.licenseExpiresAt;
+                existing.quota = quota;
               }
             }
           }

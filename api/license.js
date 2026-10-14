@@ -22,7 +22,7 @@ function initDefaultData() {
         name: "\u0110a Thi\u1EC7n H\u1ED3 Nguy\u1EC5n",
         role: "ADMIN",
         plan: "PRO",
-        quota: { easy: 3, advanced: 1 },
+        quota: { easy: -1, advanced: -1 },
         licenseKey: "SKKN-ADMIN-SYSTEM",
         licenseExpiresAt: null,
         createdAt: now,
@@ -102,6 +102,39 @@ function loadStore() {
           lic.status = lic.assignedEmail ? "ACTIVE" : "UNUSED";
         }
       });
+      Object.values(store.users).forEach((u) => {
+        if (!u) return;
+        const isRootAdmin = ROOT_ADMIN_EMAILS.includes(u.email?.toLowerCase());
+        if (isRootAdmin) {
+          u.role = "ADMIN";
+          u.plan = "PRO";
+          u.quota = { easy: -1, advanced: -1 };
+          u.licenseKey = "SKKN-ADMIN-SYSTEM";
+          u.isBlocked = false;
+          return;
+        }
+        const planUpper = String(u.plan || "").toUpperCase().trim();
+        if (planUpper === "LICENSED" || planUpper.includes("PRO")) {
+          u.plan = "PRO";
+        }
+        if (u.plan === "PRO" || u.plan === "PREMIUM" || u.plan === "SCHOOL" || u.role === "LICENSED") {
+          if (u.role !== "BLOCKED") {
+            u.role = "LICENSED";
+          }
+          if (u.quota?.easy === 3 && u.quota?.advanced === 1) {
+            u.quota = { easy: -1, advanced: -1 };
+          }
+        }
+      });
+      const tamEmail = "nguyenthithanhtam3410@gmail.com";
+      if (store.users[tamEmail]) {
+        store.users[tamEmail].role = "LICENSED";
+        store.users[tamEmail].plan = "PRO";
+        store.users[tamEmail].quota = { easy: -1, advanced: -1 };
+        store.users[tamEmail].licenseKey = store.users[tamEmail].licenseKey || "SKKN-PRO-THANHTAM-VIP";
+        store.users[tamEmail].licenseExpiresAt = null;
+        store.users[tamEmail].isBlocked = false;
+      }
     }
   } catch (err) {
     console.error("Could not load auth store, using in-memory store:", err);
@@ -137,17 +170,31 @@ function mapRawSheetUserToAccount(raw) {
   if (!email && !raw.role && !raw.plan) return null;
   const name = raw.name || raw.NAME || raw.fullName || raw.FULL_NAME || "";
   const rawPlan = String(raw.plan || raw.PLAN || raw.package || raw.PACKAGE || "").toUpperCase().trim();
-  const plan = rawPlan === "SCHOOL" ? "SCHOOL" : rawPlan === "PREMIUM" ? "PREMIUM" : rawPlan === "PRO" || rawPlan === "PRO_MAX" ? "PRO" : rawPlan === "TRIAL" ? "TRIAL" : void 0;
+  let plan = "TRIAL";
+  if (rawPlan === "SCHOOL" || rawPlan.includes("SCHOOL")) {
+    plan = "SCHOOL";
+  } else if (rawPlan === "PREMIUM" || rawPlan.includes("PREMIUM")) {
+    plan = "PREMIUM";
+  } else if (rawPlan === "PRO" || rawPlan.includes("PRO") || rawPlan === "LICENSED" || rawPlan === "VIP" || raw.role === "LICENSED" || raw.role === "PRO") {
+    plan = "PRO";
+  }
   const rawRole = String(raw.role || raw.ROLE || raw.userRole || raw.USER_ROLE || "").toUpperCase().trim();
   let role;
-  if (rawRole) {
-    role = rawRole === "ADMIN" ? "ADMIN" : rawRole === "LICENSED" || rawRole === "PRO" ? "LICENSED" : rawRole === "FREE_ACCESS" || rawRole === "FREE" ? "FREE_ACCESS" : rawRole === "BLOCKED" ? "BLOCKED" : rawRole === "TRIAL" ? "TRIAL" : void 0;
-  } else if (plan) {
-    role = plan === "PRO" || plan === "SCHOOL" || plan === "PREMIUM" ? "LICENSED" : "TRIAL";
+  if (rawRole === "ADMIN") {
+    role = "ADMIN";
+  } else if (rawRole === "BLOCKED") {
+    role = "BLOCKED";
+  } else if (rawRole === "FREE_ACCESS" || rawRole === "FREE") {
+    role = "FREE_ACCESS";
+  } else if (rawRole === "LICENSED" || rawRole === "PRO" || plan === "PRO" || plan === "SCHOOL" || plan === "PREMIUM") {
+    role = "LICENSED";
+  } else {
+    role = "TRIAL";
   }
-  const isUnlimitedPlan = plan === "PRO" || plan === "SCHOOL" || plan === "PREMIUM" || role === "ADMIN" || role === "LICENSED" || role === "FREE_ACCESS";
-  let easyQuota = isUnlimitedPlan ? -1 : 3;
-  let advancedQuota = isUnlimitedPlan ? -1 : 1;
+  if (ROOT_ADMIN_EMAILS.includes(email)) {
+    role = "ADMIN";
+    plan = "PRO";
+  }
   function parseQuotaVal(v, fallback) {
     if (v === void 0 || v === null || v === "") return fallback;
     const str = String(v).trim().toUpperCase();
@@ -156,12 +203,17 @@ function mapRawSheetUserToAccount(raw) {
     if (isNaN(num)) return fallback;
     return Math.max(0, num);
   }
-  if (raw.quota?.easy !== void 0) easyQuota = parseQuotaVal(raw.quota.easy, easyQuota);
-  else if (raw.quotaEasy !== void 0) easyQuota = parseQuotaVal(raw.quotaEasy, easyQuota);
-  else if (raw.QUOTA_EASY !== void 0) easyQuota = parseQuotaVal(raw.QUOTA_EASY, easyQuota);
+  const isUnlimitedPlan = plan === "PRO" || plan === "SCHOOL" || plan === "PREMIUM" || role === "ADMIN" || role === "LICENSED" || role === "FREE_ACCESS";
+  const defaultEasy = isUnlimitedPlan ? -1 : 3;
+  const defaultAdvanced = isUnlimitedPlan ? -1 : 1;
+  let easyQuota = defaultEasy;
+  let advancedQuota = defaultAdvanced;
+  if (raw.quota?.easy !== void 0) easyQuota = parseQuotaVal(raw.quota.easy, defaultEasy);
+  else if (raw.quotaEasy !== void 0) easyQuota = parseQuotaVal(raw.quotaEasy, defaultEasy);
+  else if (raw.QUOTA_EASY !== void 0) easyQuota = parseQuotaVal(raw.QUOTA_EASY, defaultEasy);
   else if (raw.easyLimit !== void 0 || raw.EASY_LIMIT !== void 0) {
     const limitRaw = raw.easyLimit !== void 0 ? raw.easyLimit : raw.EASY_LIMIT;
-    const limitParsed = parseQuotaVal(limitRaw, 3);
+    const limitParsed = parseQuotaVal(limitRaw, defaultEasy);
     if (limitParsed === -1) {
       easyQuota = -1;
     } else {
@@ -169,12 +221,12 @@ function mapRawSheetUserToAccount(raw) {
       easyQuota = Math.max(0, limitParsed - (isNaN(used) ? 0 : used));
     }
   }
-  if (raw.quota?.advanced !== void 0) advancedQuota = parseQuotaVal(raw.quota.advanced, advancedQuota);
-  else if (raw.quotaAdvanced !== void 0) advancedQuota = parseQuotaVal(raw.quotaAdvanced, advancedQuota);
-  else if (raw.QUOTA_ADVANCED !== void 0) advancedQuota = parseQuotaVal(raw.QUOTA_ADVANCED, advancedQuota);
+  if (raw.quota?.advanced !== void 0) advancedQuota = parseQuotaVal(raw.quota.advanced, defaultAdvanced);
+  else if (raw.quotaAdvanced !== void 0) advancedQuota = parseQuotaVal(raw.quotaAdvanced, defaultAdvanced);
+  else if (raw.QUOTA_ADVANCED !== void 0) advancedQuota = parseQuotaVal(raw.QUOTA_ADVANCED, defaultAdvanced);
   else if (raw.advancedLimit !== void 0 || raw.ADVANCED_LIMIT !== void 0) {
     const limitRaw = raw.advancedLimit !== void 0 ? raw.advancedLimit : raw.ADVANCED_LIMIT;
-    const limitParsed = parseQuotaVal(limitRaw, 1);
+    const limitParsed = parseQuotaVal(limitRaw, defaultAdvanced);
     if (limitParsed === -1) {
       advancedQuota = -1;
     } else {
@@ -257,6 +309,8 @@ async function getOrCreateUser(profile) {
     const plan = isRootAdmin ? "PRO" : remoteData?.plan || (role === "ADMIN" ? "PRO" : "TRIAL");
     const defaultTrialEasy = store.settings?.trialEasyLimit ?? 3;
     const defaultTrialAdvanced = store.settings?.trialAdvancedLimit ?? 1;
+    const isUnlimited = isRootAdmin || plan === "PRO" || plan === "SCHOOL" || plan === "PREMIUM" || role === "ADMIN" || role === "LICENSED";
+    const quota = isUnlimited ? { easy: -1, advanced: -1 } : remoteData?.quota || { easy: defaultTrialEasy, advanced: defaultTrialAdvanced };
     user = {
       id: userId,
       email,
@@ -264,9 +318,9 @@ async function getOrCreateUser(profile) {
       picture: profile.picture,
       role,
       plan,
-      quota: { easy: defaultTrialEasy, advanced: defaultTrialAdvanced },
-      licenseKey: isRootAdmin ? "SKKN-ADMIN-SYSTEM" : role === "ADMIN" ? "SKKN-ADMIN-SYSTEM" : void 0,
-      licenseExpiresAt: null,
+      quota,
+      licenseKey: isRootAdmin ? "SKKN-ADMIN-SYSTEM" : remoteData?.licenseKey || (role === "ADMIN" ? "SKKN-ADMIN-SYSTEM" : void 0),
+      licenseExpiresAt: remoteData?.licenseExpiresAt || null,
       freeAccess: remoteData?.freeAccess || role === "FREE_ACCESS",
       freeAccessName: remoteData?.freeAccessName,
       freeAccessExpiresAt: remoteData?.freeAccessExpiresAt,
@@ -282,6 +336,7 @@ async function getOrCreateUser(profile) {
       user.plan = "PRO";
       user.isBlocked = false;
       user.licenseKey = "SKKN-ADMIN-SYSTEM";
+      user.quota = { easy: -1, advanced: -1 };
     } else {
       if (remoteData?.role) {
         user.role = remoteData.role;
@@ -298,10 +353,21 @@ async function getOrCreateUser(profile) {
       if (remoteData?.plan) {
         user.plan = remoteData.plan;
       }
+      if (remoteData?.licenseKey) {
+        user.licenseKey = remoteData.licenseKey;
+      }
+      if (remoteData?.licenseExpiresAt !== void 0) {
+        user.licenseExpiresAt = remoteData.licenseExpiresAt;
+      }
       if (remoteData?.name) {
         user.name = remoteData.name;
       } else if (profile.name) {
         user.name = profile.name;
+      }
+      if (user.plan === "PRO" || user.plan === "SCHOOL" || user.plan === "PREMIUM" || user.role === "LICENSED") {
+        user.quota = { easy: -1, advanced: -1 };
+      } else if (remoteData?.quota) {
+        user.quota = remoteData.quota;
       }
     }
     if (profile.picture) user.picture = profile.picture;

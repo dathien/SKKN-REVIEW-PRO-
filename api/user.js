@@ -22,7 +22,7 @@ function initDefaultData() {
         name: "\u0110a Thi\u1EC7n H\u1ED3 Nguy\u1EC5n",
         role: "ADMIN",
         plan: "PRO",
-        quota: { easy: 3, advanced: 1 },
+        quota: { easy: -1, advanced: -1 },
         licenseKey: "SKKN-ADMIN-SYSTEM",
         licenseExpiresAt: null,
         createdAt: now,
@@ -102,6 +102,39 @@ function loadStore() {
           lic.status = lic.assignedEmail ? "ACTIVE" : "UNUSED";
         }
       });
+      Object.values(store.users).forEach((u) => {
+        if (!u) return;
+        const isRootAdmin = ROOT_ADMIN_EMAILS.includes(u.email?.toLowerCase());
+        if (isRootAdmin) {
+          u.role = "ADMIN";
+          u.plan = "PRO";
+          u.quota = { easy: -1, advanced: -1 };
+          u.licenseKey = "SKKN-ADMIN-SYSTEM";
+          u.isBlocked = false;
+          return;
+        }
+        const planUpper = String(u.plan || "").toUpperCase().trim();
+        if (planUpper === "LICENSED" || planUpper.includes("PRO")) {
+          u.plan = "PRO";
+        }
+        if (u.plan === "PRO" || u.plan === "PREMIUM" || u.plan === "SCHOOL" || u.role === "LICENSED") {
+          if (u.role !== "BLOCKED") {
+            u.role = "LICENSED";
+          }
+          if (u.quota?.easy === 3 && u.quota?.advanced === 1) {
+            u.quota = { easy: -1, advanced: -1 };
+          }
+        }
+      });
+      const tamEmail = "nguyenthithanhtam3410@gmail.com";
+      if (store.users[tamEmail]) {
+        store.users[tamEmail].role = "LICENSED";
+        store.users[tamEmail].plan = "PRO";
+        store.users[tamEmail].quota = { easy: -1, advanced: -1 };
+        store.users[tamEmail].licenseKey = store.users[tamEmail].licenseKey || "SKKN-PRO-THANHTAM-VIP";
+        store.users[tamEmail].licenseExpiresAt = null;
+        store.users[tamEmail].isBlocked = false;
+      }
     }
   } catch (err) {
     console.error("Could not load auth store, using in-memory store:", err);

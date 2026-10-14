@@ -7,8 +7,8 @@
       "role": "ADMIN",
       "plan": "PRO",
       "quota": {
-        "easy": 3,
-        "advanced": 1
+        "easy": -1,
+        "advanced": -1
       },
       "licenseKey": "SKKN-ADMIN-SYSTEM",
       "licenseExpiresAt": null,
@@ -24,8 +24,8 @@
       "role": "LICENSED",
       "plan": "PRO",
       "quota": {
-        "easy": 3,
-        "advanced": 1
+        "easy": -1,
+        "advanced": -1
       },
       "licenseKey": "SKKN-PRO-2025-VIP",
       "licenseExpiresAt": null,
@@ -40,8 +40,8 @@
       "role": "LICENSED",
       "plan": "PRO",
       "quota": {
-        "easy": 3,
-        "advanced": 1
+        "easy": -1,
+        "advanced": -1
       },
       "licenseKey": "SKKN-PRO-G34Q-P844",
       "licenseExpiresAt": null,
@@ -88,8 +88,8 @@
       "role": "LICENSED",
       "plan": "PRO",
       "quota": {
-        "easy": 3,
-        "advanced": 1
+        "easy": -1,
+        "advanced": -1
       },
       "licenseKey": "INVALID-KEY-123",
       "licenseExpiresAt": null,
@@ -102,15 +102,15 @@
       "id": "usr_1791558317128_02tl8",
       "email": "new_teacher@school.edu.vn",
       "name": "New Teacher",
-      "role": "USER",
+      "role": "LICENSED",
       "plan": "PRO",
       "quota": {
-        "easy": 3,
-        "advanced": 1
+        "easy": -1,
+        "advanced": -1
       },
       "licenseExpiresAt": null,
       "createdAt": "2026-10-09T15:05:17.128Z",
-      "lastActiveAt": "2026-10-12T02:55:50.622Z",
+      "lastActiveAt": "2026-10-14T03:12:03.453Z",
       "isBlocked": false
     },
     "nguyenthithanhtam3410@gmail.com": {
@@ -120,8 +120,8 @@
       "role": "LICENSED",
       "plan": "PRO",
       "quota": {
-        "easy": 3,
-        "advanced": 1
+        "easy": -1,
+        "advanced": -1
       },
       "licenseKey": "SKKN-PRO-THANHTAM-VIP",
       "licenseExpiresAt": null,

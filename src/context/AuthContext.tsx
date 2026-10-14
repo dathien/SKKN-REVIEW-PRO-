@@ -535,7 +535,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const isAdmin = role === 'ADMIN';
   const isBlocked = role === 'BLOCKED' || Boolean(user?.isBlocked);
-  const isLicensed = role === 'LICENSED' || role === 'ADMIN' || role === 'FREE_ACCESS' || Boolean(user?.freeAccess);
+  const isLicensed =
+    role === 'LICENSED' ||
+    role === 'ADMIN' ||
+    role === 'FREE_ACCESS' ||
+    plan === 'PRO' ||
+    plan === 'SCHOOL' ||
+    plan === 'PREMIUM' ||
+    plan === 'LICENSED' ||
+    user?.plan === 'PRO' ||
+    user?.plan === 'SCHOOL' ||
+    user?.plan === 'PREMIUM' ||
+    user?.role === 'LICENSED' ||
+    quota.easy === -1 ||
+    Boolean(user?.freeAccess);
 
   return (
     <AuthContext.Provider

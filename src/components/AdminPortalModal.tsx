@@ -85,7 +85,7 @@ export const AdminPortalModal: React.FC = () => {
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserName, setNewUserName] = useState('');
-  const [newUserPlan, setNewUserPlan] = useState<'TRIAL' | 'LICENSED'>('TRIAL');
+  const [newUserPlan, setNewUserPlan] = useState<'TRIAL' | 'LICENSED' | 'PRO'>('TRIAL');
   const [newUserEasyQuota, setNewUserEasyQuota] = useState<number>(3);
   const [newUserAdvancedQuota, setNewUserAdvancedQuota] = useState<number>(1);
   const [newUserHasExpiry, setNewUserHasExpiry] = useState(false);
@@ -240,7 +240,8 @@ export const AdminPortalModal: React.FC = () => {
         headers: getAuthHeaders(),
         body: JSON.stringify({
           email: grantModalUser.email,
-          plan: 'LICENSED',
+          plan: 'PRO',
+          role: 'LICENSED',
           expiresAt
         })
       });
@@ -410,10 +411,13 @@ export const AdminPortalModal: React.FC = () => {
         ? new Date(newUserExpiryDate).toISOString()
         : null;
 
-      const quota = {
-        easy: Math.max(0, newUserEasyQuota || 3),
-        advanced: Math.max(0, newUserAdvancedQuota || 1)
-      };
+      const isGrantingPro = newUserPlan === 'LICENSED' || newUserPlan === 'PRO';
+      const quota = isGrantingPro
+        ? { easy: -1, advanced: -1 }
+        : {
+            easy: Math.max(0, newUserEasyQuota || 3),
+            advanced: Math.max(0, newUserAdvancedQuota || 1)
+          };
 
       const res = await fetch('/api/admin/create-user', {
         method: 'POST',
@@ -421,8 +425,8 @@ export const AdminPortalModal: React.FC = () => {
         body: JSON.stringify({
           email: cleanEmail,
           name: newUserName.trim() || undefined,
-          plan: newUserPlan,
-          role: newUserPlan === 'LICENSED' ? 'LICENSED' : 'TRIAL',
+          plan: isGrantingPro ? 'PRO' : 'TRIAL',
+          role: isGrantingPro ? 'LICENSED' : 'TRIAL',
           quota,
           expiresAt,
         })
@@ -777,11 +781,10 @@ export const AdminPortalModal: React.FC = () => {
     const matchesSearch =
       u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (u.name && u.name.toLowerCase().includes(searchQuery.toLowerCase()));
-    if (!matchesSearch) return false;
     if (userRoleFilter === 'ALL') return true;
     if (userRoleFilter === 'ADMIN') return u.role === 'ADMIN';
-    if (userRoleFilter === 'LICENSED') return u.role === 'LICENSED' || u.plan === 'PRO';
-    if (userRoleFilter === 'TRIAL') return (u.role === 'TRIAL' || u.plan === 'TRIAL') && u.role !== 'ADMIN' && u.plan !== 'PRO';
+    if (userRoleFilter === 'LICENSED') return u.role === 'LICENSED' || u.plan === 'PRO' || u.plan === 'PREMIUM' || u.plan === 'SCHOOL' || u.plan === 'LICENSED' || u.quota?.easy === -1;
+    if (userRoleFilter === 'TRIAL') return (u.role === 'TRIAL' || u.plan === 'TRIAL') && u.role !== 'ADMIN' && u.plan !== 'PRO' && u.plan !== 'PREMIUM' && u.plan !== 'SCHOOL' && u.role !== 'LICENSED' && u.quota?.easy !== -1;
     if (userRoleFilter === 'BLOCKED') return Boolean(u.isBlocked || u.role === 'BLOCKED');
     return true;
   });
@@ -1031,7 +1034,7 @@ export const AdminPortalModal: React.FC = () => {
                     ĐÃ CẤP QUYỀN
                   </span>
                   <span className="text-2xl font-black text-emerald-950 mt-1 block">
-                    {stats?.licensedUsers ?? usersList.filter(u => u.role === 'LICENSED' || u.plan === 'LICENSED' || u.role === 'ADMIN').length}
+                    {stats?.licensedUsers ?? usersList.filter(u => u.role === 'LICENSED' || u.plan === 'PRO' || u.plan === 'PREMIUM' || u.plan === 'SCHOOL' || u.plan === 'LICENSED' || u.role === 'ADMIN' || u.quota?.easy === -1).length}
                   </span>
                   <span className="text-[11.5px] text-slate-400 mt-0.5 block">Không giới hạn</span>
                 </div>
@@ -1130,8 +1133,8 @@ export const AdminPortalModal: React.FC = () => {
                 {[
                   { id: 'ALL', label: `Tất cả (${usersList.length})` },
                   { id: 'ADMIN', label: `Quản trị (${usersList.filter(u => u.role === 'ADMIN').length})` },
-                  { id: 'LICENSED', label: `PRO / Bản quyền (${usersList.filter(u => u.role === 'LICENSED' || u.plan === 'PRO').length})` },
-                  { id: 'TRIAL', label: `Dùng thử (${usersList.filter(u => (u.role === 'TRIAL' || u.plan === 'TRIAL') && u.role !== 'ADMIN' && u.plan !== 'PRO').length})` },
+                  { id: 'LICENSED', label: `PRO / Bản quyền (${usersList.filter(u => u.role === 'LICENSED' || u.plan === 'PRO' || u.plan === 'PREMIUM' || u.plan === 'SCHOOL' || u.plan === 'LICENSED' || u.quota?.easy === -1).length})` },
+                  { id: 'TRIAL', label: `Dùng thử (${usersList.filter(u => (u.role === 'TRIAL' || u.plan === 'TRIAL') && u.role !== 'ADMIN' && u.plan !== 'PRO' && u.plan !== 'PREMIUM' && u.plan !== 'SCHOOL' && u.role !== 'LICENSED' && u.quota?.easy !== -1).length})` },
                   { id: 'BLOCKED', label: `Tạm khóa (${usersList.filter(u => u.isBlocked || u.role === 'BLOCKED').length})` },
                 ].map(tab => (
                   <button
@@ -1174,7 +1177,15 @@ export const AdminPortalModal: React.FC = () => {
                         filteredUsers.map((u) => {
                           const isSelf = Boolean(user?.email && u.email.toLowerCase() === user.email.toLowerCase());
                           const isUserAdmin = u.role === 'ADMIN';
-                          const isUserLicensed = u.plan === 'LICENSED' || isUserAdmin;
+                          const isUserLicensed =
+                            u.role === 'LICENSED' ||
+                            u.plan === 'PRO' ||
+                            u.plan === 'PREMIUM' ||
+                            u.plan === 'SCHOOL' ||
+                            u.plan === 'LICENSED' ||
+                            isUserAdmin ||
+                            u.quota?.easy === -1 ||
+                            (u.quota?.easy !== undefined && u.quota.easy >= 99999);
                           const isUserBlocked = u.isBlocked || u.role === 'BLOCKED';
 
                           return (
