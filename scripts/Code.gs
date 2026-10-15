@@ -751,9 +751,13 @@ function upsertUserInSheet(sheet, user) {
 
   var targetRow = -1;
   var existingRowValues = null;
+  var idCol = colMap['ID'] !== undefined ? colMap['ID'] : (colMap['USER_ID'] !== undefined ? colMap['USER_ID'] : -1);
+  var prevEmail = String(user.previousEmail || user.oldEmail || '').toLowerCase().trim();
 
   for (var r = 1; r < data.length; r++) {
-    if (String(data[r][emailCol] || '').toLowerCase().trim() === email) {
+    var rowEmail = String(data[r][emailCol] || '').toLowerCase().trim();
+    var rowId = idCol >= 0 ? String(data[r][idCol] || '').trim() : '';
+    if (rowEmail === email || (prevEmail && rowEmail === prevEmail) || (user.id && rowId && rowId === String(user.id).trim())) {
       targetRow = r + 1; // 1-indexed in sheet
       existingRowValues = data[r];
       break;

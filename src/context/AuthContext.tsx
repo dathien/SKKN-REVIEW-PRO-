@@ -214,11 +214,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         if (data?.isLoggedIn && data.user) {
-          setUser(data.user);
+          const userWithSession = {
+            ...data.user,
+            sessionToken: data.sessionToken || (userRef.current as any)?.sessionToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_session_token') : ''),
+          };
+          if (data.sessionToken) {
+            localStorage.setItem('skkn_session_token', data.sessionToken);
+          }
+          setUser(userWithSession);
           setRole(data.user.role);
           setPlan(data.user.plan);
           setQuota(data.user.quota);
-          localStorage.setItem('skkn_user', JSON.stringify(data.user));
+          localStorage.setItem('skkn_user', JSON.stringify(userWithSession));
         } else if (data?.quota) {
           setQuota(data.quota);
         }
@@ -381,11 +388,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const data = await resp.json();
       if (data.success && data.user) {
         if (currentGen !== authGenerationRef.current) return false;
-        setUser(data.user);
+        const userToSave = {
+          ...data.user,
+          sessionToken: data.sessionToken,
+        };
+        if (data.sessionToken) {
+          localStorage.setItem('skkn_session_token', data.sessionToken);
+        }
+        setUser(userToSave);
         setRole(data.user.role);
         setPlan(data.user.plan);
         setQuota(data.user.quota);
-        localStorage.setItem('skkn_user', JSON.stringify(data.user));
+        localStorage.setItem('skkn_user', JSON.stringify(userToSave));
         return true;
       }
       return false;

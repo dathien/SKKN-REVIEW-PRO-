@@ -1116,6 +1116,8 @@ export async function getAllUsersAndGuests() {
 export async function adminUpdateUser(params: {
   operatorEmail?: string;
   email: string;
+  name?: string;
+  newEmail?: string;
   role?: UserRole;
   plan?: LicensePlan;
   quota?: { easy: number; advanced: number };
@@ -1127,68 +1129,151 @@ export async function adminUpdateUser(params: {
     return { success: false, error: 'Không tìm thấy người dùng' };
   }
 
+  const isTargetRoot = ROOT_ADMIN_EMAILS.includes(user.email.toLowerCase());
+
   // ROOT ADMIN SAFETY: Không cho tự khóa hoặc tự hạ quyền chính mình
-  if (params.operatorEmail && params.operatorEmail.toLowerCase() === user.email.toLowerCase()) {
+  if (isTargetRoot) {
     if (params.isBlocked === true) {
       return {
         success: false,
-        error: 'Quy tắc an toàn Quản trị: Không thể tự khóa tài khoản Quản trị viên của chính mình.',
+        error: 'Quy tắc an toàn Quản trị: Không thể khóa tài khoản Root Admin.',
       };
     }
     if (params.role && params.role !== 'ADMIN') {
       return {
         success: false,
-        error: 'Quy tắc an toàn Quản trị: Không thể tự thu hồi quyền Quản trị viên của chính mình.',
+        error: 'Quy tắc an toàn Quản trị: Không thể tự thu hồi quyền Quản trị viên của Root Admin.',
       };
     }
   }
 
-  if (params.role !== undefined) user.role = params.role;
+  // Backup snapshot in case of failure
+  const oldUserSnapshot: UserAccount = JSON.parse(JSON.stringify(user));
+  const oldEmail = user.email.toLowerCase();
+
+  // 1. Cập nhật họ tên
+  if (params.name !== undefined && params.name.trim()) {
+    user.name = params.name.trim();
+  }
+
+  // 2. Thay đổi email có kiểm tra trùng và bảo toàn định danh tài khoản
+  let emailChanged = false;
+  let newEmailNormalized = '';
+  if (params.newEmail) {
+    newEmailNormalized = params.newEmail.trim().toLowerCase();
+    if (!newEmailNormalized || !newEmailNormalized.includes('@')) {
+      return { success: false, error: 'Địa chỉ email mới không hợp lệ.' };
+    }
+    if (newEmailNormalized !== oldEmail) {
+      if (isTargetRoot) {
+        return { success: false, error: 'Bảo mật: Không được phép thay đổi email của Root Admin.' };
+      }
+      // Kiểm tra trùng email
+      const existingUserWithNewEmail = findUserByEmailOrId(newEmailNormalized);
+      if (existingUserWithNewEmail && existingUserWithNewEmail.id !== user.id) {
+        return {
+          success: false,
+          error: `Email "${newEmailNormalized}" đã được sử dụng bởi một tài khoản khác trong hệ thống.`,
+        };
+      }
+
+      // Cập nhật email và bảo toàn định danh (user.id giữ nguyên)
+      user.email = newEmailNormalized;
+      emailChanged = true;
+      delete store.users[oldEmail];
+      store.users[newEmailNormalized] = user;
+
+      // Bảo toàn liên kết bản quyền nếu có
+      Object.values(store.licenses).forEach(lic => {
+        if (lic.assignedEmail && lic.assignedEmail.toLowerCase() === oldEmail) {
+          lic.assignedEmail = newEmailNormalized;
+        }
+      });
+    }
+  }
+
+  // 3. Cập nhật vai trò & gói bản quyền
+  if (params.role !== undefined) {
+    user.role = isTargetRoot ? 'ADMIN' : params.role;
+  }
   if (params.plan !== undefined) {
-    user.plan = params.plan;
-    if (params.plan === 'LICENSED' || params.plan === 'PRO' || params.plan === 'PREMIUM' || params.plan === 'SCHOOL') {
-      if (params.plan === 'LICENSED') user.plan = 'PRO';
+    const rawP = String(params.plan).toUpperCase().trim();
+    const normalizedPlan = (rawP === 'LICENSED' || rawP.includes('PRO')) ? 'PRO' : params.plan;
+    user.plan = isTargetRoot ? 'PRO' : normalizedPlan;
+
+    if (user.plan === 'PRO' || user.plan === 'PREMIUM' || user.plan === 'SCHOOL' || user.role === 'LICENSED') {
       if (user.role !== 'ADMIN') user.role = 'LICENSED';
       user.quota = { easy: -1, advanced: -1 };
       user.licenseExpiresAt = params.expiresAt !== undefined ? params.expiresAt : user.licenseExpiresAt;
-    } else if (params.plan === 'TRIAL') {
+    } else if (user.plan === 'TRIAL') {
       if (user.role !== 'ADMIN') user.role = 'TRIAL';
       user.licenseExpiresAt = null;
+      if (!params.quota) {
+        user.quota = {
+          easy: store.settings?.trialEasyLimit ?? 3,
+          advanced: store.settings?.trialAdvancedLimit ?? 1,
+        };
+      }
     }
   }
+
+  // 4. Gia hạn / cập nhật ngày hết hạn bản quyền
   if (params.expiresAt !== undefined) {
     user.licenseExpiresAt = params.expiresAt;
   }
-  if (params.quota !== undefined) user.quota = params.quota;
+
+  // 5. Cập nhật lượt Trial
+  if (params.quota !== undefined) {
+    user.quota = params.quota;
+  }
+
+  // 6. Khóa / Mở khóa
   if (params.isBlocked !== undefined) {
-    user.isBlocked = params.isBlocked;
-    if (params.isBlocked && user.role !== 'ADMIN') {
-      user.role = 'BLOCKED';
-    } else if (!params.isBlocked && user.role === 'BLOCKED') {
-      user.role = (user.plan === 'PRO' || user.plan === 'LICENSED' || user.plan === 'PREMIUM' || user.plan === 'SCHOOL') ? 'LICENSED' : 'TRIAL';
+    if (isTargetRoot) {
+      user.isBlocked = false;
+    } else {
+      user.isBlocked = params.isBlocked;
+      if (params.isBlocked) {
+        user.role = 'BLOCKED';
+      } else if (user.role === 'BLOCKED') {
+        user.role = (user.plan === 'PRO' || user.plan === 'LICENSED' || user.plan === 'PREMIUM' || user.plan === 'SCHOOL') ? 'LICENSED' : 'TRIAL';
+      }
     }
   }
 
+  user.lastActiveAt = new Date().toISOString();
   saveStore();
 
-  // Xác nhận đồng bộ lưu thành công từ Apps Script nếu có LICENSE_API_URL
+  // 7. Đồng bộ an toàn xuống Google Sheets
   if (process.env.LICENSE_API_URL) {
     const sheetRes = await syncUserToGoogleSheet(user, {
       operatorEmail: params.operatorEmail,
       explicitQuota: params.quota !== undefined,
+      previousEmail: emailChanged ? oldEmail : undefined,
     });
+
     if (!sheetRes.success) {
+      // Khi ghi thất bại, khôi phục lại dữ liệu cũ và báo lỗi cụ thể
+      if (emailChanged) {
+        delete store.users[user.email];
+      }
+      store.users[oldEmail] = oldUserSnapshot;
+      saveStore();
       return {
-        success: true,
-        user,
-        sheetSynced: false,
-        warning: `Cập nhật thành công vào cơ sở dữ liệu ứng dụng. Lưu ý: Google Sheets chưa ghi nhận (${sheetRes.error || 'Cần cập nhật Code.gs v2.7'}).`,
+        success: false,
+        error: `Lưu thất bại lên Google Sheets: ${sheetRes.error || 'Apps Script không phản hồi'}. Dữ liệu cũ đã được khôi phục nguyên vẹn.`,
       };
     }
-    return { success: true, user, sheetSynced: true, message: 'Đã cập nhật và xác nhận lưu thành công xuống Google Sheets USERS.' };
+
+    return {
+      success: true,
+      user,
+      sheetSynced: true,
+      message: 'Đã cập nhật và xác nhận lưu thành công xuống Google Sheets USERS.',
+    };
   }
 
-  return { success: true, user, sheetSynced: false };
+  return { success: true, user, sheetSynced: false, message: 'Đã cập nhật thông tin người dùng thành công.' };
 }
 
 export async function adminCreateUser(params: {
@@ -1291,12 +1376,13 @@ export async function adminCreateUser(params: {
 // ----------------- GOOGLE SHEETS USERS SYNCHRONIZATION -----------------
 export async function syncUserToGoogleSheet(
   user: UserAccount,
-  options?: { operatorEmail?: string; explicitQuota?: boolean } | string
+  options?: { operatorEmail?: string; explicitQuota?: boolean; previousEmail?: string } | string
 ): Promise<{ success: boolean; error?: string }> {
   if (!process.env.LICENSE_API_URL) return { success: false, error: 'Chưa cấu hình LICENSE_API_URL' };
   try {
     const operatorEmail = typeof options === 'string' ? options : options?.operatorEmail;
     const explicitQuota = typeof options === 'object' ? Boolean(options?.explicitQuota) : false;
+    const previousEmail = typeof options === 'object' ? options?.previousEmail : undefined;
 
     const resp = await fetch(process.env.LICENSE_API_URL, {
       method: 'POST',
@@ -1305,6 +1391,7 @@ export async function syncUserToGoogleSheet(
         action: 'saveUser',
         id: user.id,
         email: user.email,
+        previousEmail,
         name: user.name,
         role: user.role,
         plan: user.plan,

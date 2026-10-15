@@ -1,6 +1,7 @@
 // src/server/authStore.ts
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 var DATA_DIR = path.resolve("data");
 var STORE_FILE = path.join(DATA_DIR, "auth_store.json");
 var store = {
@@ -186,6 +187,20 @@ function findUserByEmailOrId(identifier) {
   }
   return null;
 }
+function getSessionSecret() {
+  return process.env.APPS_SCRIPT_SECRET || process.env.SESSION_SECRET || "skkn_secure_session_secret_2026";
+}
+function createAdminSession(email, role = "ADMIN") {
+  const cleanEmail = email.toLowerCase().trim();
+  const expiresAt = Date.now() + 24 * 60 * 60 * 1e3;
+  const payload = `${cleanEmail}|${role}|${expiresAt}`;
+  const sig = crypto.createHmac("sha256", getSessionSecret()).update(payload).digest("hex");
+  const token = `skkn_sess_${Buffer.from(payload).toString("base64url")}.${sig}`;
+  const g = globalThis;
+  g.__skkn_sessions = g.__skkn_sessions || {};
+  g.__skkn_sessions[token] = { email: cleanEmail, role, expiresAt };
+  return token;
+}
 function consumeQuota(params) {
   const { guestId, email, userId, mode } = params;
   if (email || userId) {
@@ -325,9 +340,14 @@ function handler(req, res) {
     if (reqIdentifier) {
       const user = findUserByEmailOrId(reqIdentifier);
       if (user) {
+        let sessionToken;
+        if (user.role === "ADMIN" || ROOT_ADMIN_EMAILS.includes(user.email.toLowerCase())) {
+          sessionToken = createAdminSession(user.email, user.role);
+        }
         return res.status(200).json({
           isLoggedIn: true,
           user,
+          sessionToken,
           role: user.role,
           plan: user.plan,
           quota: user.quota

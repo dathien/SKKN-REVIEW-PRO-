@@ -1,4 +1,4 @@
-import { findUserByEmailOrId, getOrCreateGuest, consumeQuota } from '../../src/server/authStore';
+import { findUserByEmailOrId, getOrCreateGuest, consumeQuota, createAdminSession, ROOT_ADMIN_EMAILS } from '../../src/server/authStore';
 import { extractSubpath, getRequestBody, handleCors } from './_lib/routeHelper';
 
 export default function handler(req: any, res: any) {
@@ -16,9 +16,14 @@ export default function handler(req: any, res: any) {
     if (reqIdentifier) {
       const user = findUserByEmailOrId(reqIdentifier);
       if (user) {
+        let sessionToken: string | undefined;
+        if (user.role === 'ADMIN' || ROOT_ADMIN_EMAILS.includes(user.email.toLowerCase())) {
+          sessionToken = createAdminSession(user.email, user.role);
+        }
         return res.status(200).json({
           isLoggedIn: true,
           user,
+          sessionToken,
           role: user.role,
           plan: user.plan,
           quota: user.quota,

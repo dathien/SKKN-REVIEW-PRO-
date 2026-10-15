@@ -13,14 +13,14 @@
       "licenseKey": "SKKN-ADMIN-SYSTEM",
       "licenseExpiresAt": null,
       "createdAt": "2026-10-07T00:29:18.129Z",
-      "lastActiveAt": "2026-10-12T02:36:06.819Z",
+      "lastActiveAt": "2026-10-15T06:37:52.918Z",
       "isBlocked": false,
       "picture": "https://lh3.googleusercontent.com/test"
     },
     "teacher1@gmail.com": {
       "id": "usr_1791332976299_ra51d",
       "email": "teacher1@gmail.com",
-      "name": "teacher1",
+      "name": "Teacher 1 Updated Name",
       "role": "LICENSED",
       "plan": "PRO",
       "quota": {
@@ -30,7 +30,7 @@
       "licenseKey": "SKKN-PRO-2025-VIP",
       "licenseExpiresAt": null,
       "createdAt": "2026-10-07T00:29:36.299Z",
-      "lastActiveAt": "2026-10-07T00:29:36.299Z",
+      "lastActiveAt": "2026-10-15T07:10:29.570Z",
       "isBlocked": false
     },
     "giaovien.test@gmail.com": {
@@ -110,7 +110,7 @@
       },
       "licenseExpiresAt": null,
       "createdAt": "2026-10-09T15:05:17.128Z",
-      "lastActiveAt": "2026-10-14T03:12:03.453Z",
+      "lastActiveAt": "2026-10-15T07:10:29.559Z",
       "isBlocked": false
     },
     "nguyenthithanhtam3410@gmail.com": {

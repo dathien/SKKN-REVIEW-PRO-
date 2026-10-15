@@ -144,10 +144,12 @@ export default async function handler(req: any, res: any) {
     // POST /api/admin/update-user
     if (subpath === 'update-user') {
       if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
-      const { email, role, plan, quota, isBlocked, expiresAt } = body || {};
+      const { email, name, newEmail, role, plan, quota, isBlocked, expiresAt } = body || {};
       const result = await adminUpdateUser({
         operatorEmail,
         email,
+        name,
+        newEmail,
         role,
         plan,
         quota,

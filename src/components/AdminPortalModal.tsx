@@ -34,7 +34,11 @@ import {
   Code,
   ArrowLeft,
   Database,
-  Sparkles
+  Sparkles,
+  Pencil,
+  Eye,
+  Mail,
+  User as UserIcon
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserAccount, GuestSession, SystemStats, SystemSettings, UserRole, LicensePlan, LicenseItem, LicenseStatus } from '../types';
@@ -81,6 +85,22 @@ export const AdminPortalModal: React.FC = () => {
   const [confirmRevokeUser, setConfirmRevokeUser] = useState<UserAccount | null>(null);
   const [confirmBlockUser, setConfirmBlockUser] = useState<UserAccount | null>(null);
 
+  // Modal chỉnh sửa người dùng toàn diện
+  const [editModalUser, setEditModalUser] = useState<UserAccount | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editRole, setEditRole] = useState<UserRole>('TRIAL');
+  const [editPlan, setEditPlan] = useState<'TRIAL' | 'PRO'>('TRIAL');
+  const [editHasExpiry, setEditHasExpiry] = useState(false);
+  const [editExpiryDate, setEditExpiryDate] = useState('');
+  const [editEasyQuota, setEditEasyQuota] = useState<number>(3);
+  const [editAdvancedQuota, setEditAdvancedQuota] = useState<number>(1);
+  const [editIsBlocked, setEditIsBlocked] = useState(false);
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+
+  // Modal xem chi tiết người dùng
+  const [detailModalUser, setDetailModalUser] = useState<UserAccount | null>(null);
+
   // Modal thêm người dùng mới
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState('');
@@ -118,17 +138,40 @@ export const AdminPortalModal: React.FC = () => {
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [settingsSyncStatus, setSettingsSyncStatus] = useState<string | null>(null);
 
+  const safeJson = async (res: Response | null) => {
+    if (!res) return null;
+    const ct = res.headers.get('content-type') || '';
+    if (!ct.includes('application/json')) {
+      return null;
+    }
+    try {
+      return await res.json();
+    } catch {
+      return null;
+    }
+  };
+
   const getAuthHeaders = () => {
     const sessionToken = (user as any)?.sessionToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_session_token') : '') || '';
     const googleCredential = (user as any)?.googleCredential || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_google_credential') : '') || '';
     const token = sessionToken || googleCredential;
+    let email = user?.email || '';
+    let id = user?.id || '';
+    if (!email && typeof localStorage !== 'undefined') {
+      try {
+        const cached = JSON.parse(localStorage.getItem('skkn_user') || '{}');
+        if (cached.email) email = cached.email;
+        if (cached.id) id = cached.id;
+      } catch {}
+    }
     return {
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
       ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       ...(sessionToken ? { 'x-session-token': sessionToken } : {}),
       ...(googleCredential ? { 'x-google-credential': googleCredential } : {}),
-      ...(user?.email ? { 'x-user-email': user.email } : {}),
-      ...(user?.id ? { 'x-user-id': user.id } : {})
+      ...(email ? { 'x-user-email': email } : {}),
+      ...(id ? { 'x-user-id': id } : {})
     };
   };
 
@@ -143,24 +186,36 @@ export const AdminPortalModal: React.FC = () => {
         fetch('/api/admin/licenses', { headers: getAuthHeaders() }).catch(() => null)
       ]);
 
-      if (statsRes.ok) {
-        const s = await statsRes.json();
-        setStats(s);
+      if (statsRes?.status === 403 || usersRes?.status === 403) {
+        setActionFeedback({
+          type: 'error',
+          text: 'Truy cập Cổng Quản trị bị từ chối: Yêu cầu đăng nhập với tài khoản Quản trị viên (ROLE = ADMIN).'
+        });
+        return;
       }
-      if (usersRes.ok) {
-        const u = await usersRes.json();
-        setUsersList(u.users || []);
-        setGuestsList(u.guests || []);
+
+      if (statsRes && statsRes.ok) {
+        const s = await safeJson(statsRes);
+        if (s) setStats(s);
+      }
+      if (usersRes && usersRes.ok) {
+        const u = await safeJson(usersRes);
+        if (u) {
+          setUsersList(u.users || []);
+          setGuestsList(u.guests || []);
+        }
       }
       if (settingsRes && settingsRes.ok) {
-        const setJson = await settingsRes.json();
-        if (setJson.settings) {
+        const setJson = await safeJson(settingsRes);
+        if (setJson?.settings) {
           setSettings(setJson.settings);
         }
       }
       if (licensesRes && licensesRes.ok) {
-        const licJson = await licensesRes.json();
-        setLicensesList(licJson.licenses || []);
+        const licJson = await safeJson(licensesRes);
+        if (licJson?.licenses) {
+          setLicensesList(licJson.licenses || []);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch admin data:', err);
@@ -202,7 +257,7 @@ export const AdminPortalModal: React.FC = () => {
           }
         })
       });
-      const data = await res.json();
+      const data = (await safeJson(res)) || {};
       if (res.ok && data.success) {
         setActionFeedback({
           type: 'success',
@@ -222,6 +277,82 @@ export const AdminPortalModal: React.FC = () => {
         text: 'Lỗi kết nối khi cập nhật số lượt.'
       });
     }
+  };
+
+  // 1B. Thao tác Chỉnh sửa thông tin toàn diện (Họ tên, Email, Gói, Hạn mức, Trạng thái)
+  const handleOpenEditModal = (target: UserAccount) => {
+    setEditModalUser(target);
+    setEditName(target.name || '');
+    setEditEmail(target.email);
+    setEditRole(target.role);
+    const isPro = target.plan === 'PRO' || target.role === 'LICENSED' || target.plan === 'PREMIUM' || target.plan === 'SCHOOL' || target.quota?.easy === -1;
+    setEditPlan(isPro ? 'PRO' : 'TRIAL');
+    setEditHasExpiry(Boolean(target.licenseExpiresAt));
+    setEditExpiryDate(target.licenseExpiresAt ? target.licenseExpiresAt.split('T')[0] : '');
+    setEditEasyQuota(target.quota?.easy === -1 ? (settings.trialEasyLimit ?? 3) : (target.quota?.easy ?? 3));
+    setEditAdvancedQuota(target.quota?.advanced === -1 ? (settings.trialAdvancedLimit ?? 1) : (target.quota?.advanced ?? 1));
+    setEditIsBlocked(Boolean(target.isBlocked || target.role === 'BLOCKED'));
+  };
+
+  const handleSaveEditUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editModalUser) return;
+    setIsSubmittingEdit(true);
+    setActionFeedback(null);
+    try {
+      const cleanNewEmail = editEmail.trim().toLowerCase();
+      const isEmailChanged = cleanNewEmail !== editModalUser.email.toLowerCase();
+      const isPro = editPlan === 'PRO';
+      const expiresAt = isPro && editHasExpiry && editExpiryDate ? new Date(editExpiryDate).toISOString() : null;
+      const quota = isPro
+        ? { easy: -1, advanced: -1 }
+        : {
+            easy: Math.max(0, editEasyQuota),
+            advanced: Math.max(0, editAdvancedQuota),
+          };
+
+      const res = await fetch('/api/admin/update-user', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          email: editModalUser.email,
+          newEmail: isEmailChanged ? cleanNewEmail : undefined,
+          name: editName.trim() || undefined,
+          role: editModalUser.role === 'ADMIN' ? 'ADMIN' : (isPro ? 'LICENSED' : (editIsBlocked ? 'BLOCKED' : 'TRIAL')),
+          plan: isPro ? 'PRO' : 'TRIAL',
+          quota,
+          isBlocked: editIsBlocked,
+          expiresAt,
+        }),
+      });
+
+      const data = (await safeJson(res)) || {};
+      if (res.ok && data.success) {
+        setActionFeedback({
+          type: 'success',
+          text: data.message || `Đã cập nhật thông tin tài khoản ${cleanNewEmail} thành công.`,
+        });
+        setEditModalUser(null);
+        fetchAdminData();
+      } else {
+        setActionFeedback({
+          type: 'error',
+          text: data.error || 'Cập nhật tài khoản thất bại.',
+        });
+      }
+    } catch {
+      setActionFeedback({
+        type: 'error',
+        text: 'Lỗi kết nối khi cập nhật tài khoản.',
+      });
+    } finally {
+      setIsSubmittingEdit(false);
+    }
+  };
+
+  // 1C. Thao tác Xem chi tiết người dùng
+  const handleOpenDetailModal = (target: UserAccount) => {
+    setDetailModalUser(target);
   };
 
   // 2. Thao tác Cấp quyền sử dụng (LICENSED)
@@ -245,7 +376,7 @@ export const AdminPortalModal: React.FC = () => {
           expiresAt
         })
       });
-      const data = await res.json();
+      const data = (await safeJson(res)) || {};
       if (res.ok && data.success) {
         setActionFeedback({
           type: 'success',
@@ -280,7 +411,7 @@ export const AdminPortalModal: React.FC = () => {
           expiresAt: null
         })
       });
-      const data = await res.json();
+      const data = (await safeJson(res)) || {};
       if (res.ok && data.success) {
         setActionFeedback({
           type: 'success',
@@ -328,7 +459,7 @@ export const AdminPortalModal: React.FC = () => {
           isBlocked: false
         })
       });
-      const data = await res.json();
+      const data = (await safeJson(res)) || {};
       if (res.ok && data.success) {
         setActionFeedback({
           type: 'success',
@@ -360,7 +491,7 @@ export const AdminPortalModal: React.FC = () => {
           isBlocked: true
         })
       });
-      const data = await res.json();
+      const data = (await safeJson(res)) || {};
       if (res.ok && data.success) {
         setActionFeedback({
           type: 'success',
@@ -432,7 +563,7 @@ export const AdminPortalModal: React.FC = () => {
         })
       });
 
-      const data = await res.json();
+      const data = (await safeJson(res)) || {};
       if (res.ok && data.success) {
         setActionFeedback({
           type: 'success',
@@ -467,7 +598,7 @@ export const AdminPortalModal: React.FC = () => {
         headers: getAuthHeaders(),
         body: JSON.stringify(settings)
       });
-      const data = await res.json();
+      const data = (await safeJson(res)) || {};
       if (res.ok && data.success) {
         setActionFeedback({
           type: 'success',
@@ -516,7 +647,7 @@ export const AdminPortalModal: React.FC = () => {
           customerNote: createCustomerNote.trim() || undefined,
         })
       });
-      const data = await res.json();
+      const data = (await safeJson(res)) || {};
       if (res.ok && data.success) {
         setActionFeedback({
           type: 'success',
@@ -552,7 +683,7 @@ export const AdminPortalModal: React.FC = () => {
         headers: getAuthHeaders(),
         body: JSON.stringify({ key: confirmResetDevicesLicense.key })
       });
-      const data = await res.json();
+      const data = (await safeJson(res)) || {};
       if (res.ok && data.success) {
         setActionFeedback({
           type: 'success',
@@ -584,7 +715,7 @@ export const AdminPortalModal: React.FC = () => {
         headers: getAuthHeaders(),
         body: JSON.stringify({ key: target.key, status: nextStatus })
       });
-      const data = await res.json();
+      const data = (await safeJson(res)) || {};
       if (res.ok && data.success) {
         setActionFeedback({
           type: 'success',
@@ -615,7 +746,7 @@ export const AdminPortalModal: React.FC = () => {
         headers: getAuthHeaders(),
         body: JSON.stringify({ key: confirmDeleteLicense.key })
       });
-      const data = await res.json();
+      const data = (await safeJson(res)) || {};
       if (res.ok && data.success) {
         setActionFeedback({
           type: 'success',
@@ -647,7 +778,7 @@ export const AdminPortalModal: React.FC = () => {
         headers: getAuthHeaders(),
         body: JSON.stringify(resolveStrategy ? { resolveStrategy, confirmConflicts: true } : {})
       });
-      const data = await res.json();
+      const data = (await safeJson(res)) || {};
       if (res.ok && data.success) {
         if (data.hasConflicts && data.conflicts && data.conflicts.length > 0) {
           setSyncConflicts(data.conflicts);
@@ -689,7 +820,7 @@ export const AdminPortalModal: React.FC = () => {
         headers: getAuthHeaders(),
         body: JSON.stringify({ email: confirmDeleteUser.email })
       });
-      const data = await res.json();
+      const data = (await safeJson(res)) || {};
       if (res.ok && data.success) {
         setActionFeedback({
           type: 'success',
@@ -1284,6 +1415,26 @@ export const AdminPortalModal: React.FC = () => {
                               {/* Cột 6: THAO TÁC */}
                               <td className="py-3 px-4 text-right">
                                 <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                                  {/* Xem chi tiết */}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenDetailModal(u)}
+                                    className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                                    title="Xem chi tiết tài khoản"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                  </button>
+
+                                  {/* Chỉnh sửa thông tin */}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenEditModal(u)}
+                                    className="p-1 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors cursor-pointer"
+                                    title="Chỉnh sửa thông tin người dùng"
+                                  >
+                                    <Pencil className="w-4 h-4" />
+                                  </button>
+
                                   {isUserBlocked ? (
                                     /* Tài khoản bị khóa: Chỉ hiện Mở khóa */
                                     <button
@@ -2270,6 +2421,360 @@ export const AdminPortalModal: React.FC = () => {
                     className="flex-1 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-[13px] rounded-xl shadow-xs transition-colors cursor-pointer"
                   >
                     Xác nhận khóa
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Con 1B: CHỈNH SỬA THÔNG TIN NGƯỜI DÙNG TOÀN DIỆN */}
+        {editModalUser && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+            <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+              <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-900 text-white">
+                <div className="flex items-center gap-2">
+                  <Pencil className="w-4.5 h-4.5 text-purple-400" />
+                  <h4 className="text-[15px] font-bold">CHỈNH SỬA NGƯỜI DÙNG</h4>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditModalUser(null)}
+                  className="text-slate-400 hover:text-white p-1 rounded-lg cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveEditUser} className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+                {/* Họ và tên */}
+                <div>
+                  <label className="block text-[12.5px] font-bold text-slate-700 mb-1.5">
+                    Họ và tên:
+                  </label>
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    placeholder="Nhập họ và tên người dùng"
+                    className="w-full px-3.5 py-2 text-[13.5px] rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 text-slate-900"
+                  />
+                </div>
+
+                {/* Địa chỉ Email */}
+                <div>
+                  <label className="block text-[12.5px] font-bold text-slate-700 mb-1.5">
+                    Địa chỉ Email Google:
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    disabled={editModalUser.role === 'ADMIN'}
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    className="w-full px-3.5 py-2 text-[13.5px] rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
+                  />
+                  {editModalUser.role === 'ADMIN' ? (
+                    <p className="text-[11.5px] text-amber-600 mt-1">
+                      🛡️ Bảo mật: Không thể thay đổi địa chỉ Email của Quản trị viên.
+                    </p>
+                  ) : editEmail.trim().toLowerCase() !== editModalUser.email.toLowerCase() ? (
+                    <p className="text-[11.5px] text-purple-600 mt-1 font-semibold">
+                      ℹ️ Đổi email sẽ chuyển quyền, lịch sử và bảo toàn định danh tài khoản sang email mới.
+                    </p>
+                  ) : (
+                    <p className="text-[11.5px] text-slate-400 mt-1">
+                      Bảo toàn mã ID định danh tài khoản khi thay đổi địa chỉ email.
+                    </p>
+                  )}
+                </div>
+
+                {/* Gói / Quyền sử dụng */}
+                <div>
+                  <label className="block text-[12.5px] font-bold text-slate-700 mb-1.5">
+                    Gói quyền sử dụng:
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditPlan('PRO')}
+                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        editPlan === 'PRO'
+                          ? 'border-purple-600 bg-purple-50/50 text-purple-900 font-bold ring-1 ring-purple-500'
+                          : 'border-slate-200 hover:border-slate-300 text-slate-700'
+                      }`}
+                    >
+                      <div className="text-[13px]">Gói PRO</div>
+                      <div className="text-[11px] text-slate-500 font-normal">Không giới hạn lượt</div>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={editModalUser.role === 'ADMIN'}
+                      onClick={() => setEditPlan('TRIAL')}
+                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        editPlan === 'TRIAL'
+                          ? 'border-purple-600 bg-purple-50/50 text-purple-900 font-bold ring-1 ring-purple-500'
+                          : 'border-slate-200 hover:border-slate-300 text-slate-700'
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                      <div className="text-[13px]">Gói Dùng thử</div>
+                      <div className="text-[11px] text-slate-500 font-normal">Giới hạn số lượt</div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Nếu chọn PRO: Tùy chọn thời hạn */}
+                {editPlan === 'PRO' && (
+                  <div className="p-3 bg-purple-50/40 border border-purple-200 rounded-xl space-y-2.5">
+                    <div className="text-[12px] font-bold text-purple-900">Thời hạn gói PRO:</div>
+                    <label className="flex items-center gap-2 text-[12.5px] text-slate-700 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editHasExpiry}
+                        onChange={(e) => setEditHasExpiry(e.target.checked)}
+                        className="rounded text-purple-600"
+                      />
+                      <span>Có ngày hết hạn cụ thể</span>
+                    </label>
+                    {editHasExpiry && (
+                      <input
+                        type="date"
+                        value={editExpiryDate}
+                        onChange={(e) => setEditExpiryDate(e.target.value)}
+                        className="w-full px-3 py-1.5 text-[13px] rounded-lg border border-purple-300 text-slate-900 font-semibold"
+                      />
+                    )}
+                    {!editHasExpiry && (
+                      <p className="text-[11.5px] text-emerald-700 font-medium">
+                        ✓ Hiệu lực vĩnh viễn (Không thời hạn)
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Nếu chọn TRIAL: Cấu hình số lượt */}
+                {editPlan === 'TRIAL' && (
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                    <div className="text-[12px] font-bold text-slate-700">Điều chỉnh số lượt khả dụng:</div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11.5px] text-slate-500 mb-1">Cơ bản:</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={editEasyQuota}
+                          onChange={(e) => setEditEasyQuota(parseInt(e.target.value) || 0)}
+                          className="w-full px-2.5 py-1.5 text-[13px] font-bold rounded-lg border border-slate-300 text-slate-900"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11.5px] text-slate-500 mb-1">Chuyên sâu:</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={editAdvancedQuota}
+                          onChange={(e) => setEditAdvancedQuota(parseInt(e.target.value) || 0)}
+                          className="w-full px-2.5 py-1.5 text-[13px] font-bold rounded-lg border border-slate-300 text-slate-900"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Trạng thái tài khoản */}
+                <div>
+                  <label className="block text-[12.5px] font-bold text-slate-700 mb-1.5">
+                    Trạng thái hoạt động:
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditIsBlocked(false)}
+                      className={`p-2 rounded-xl border text-center transition-all cursor-pointer ${
+                        !editIsBlocked
+                          ? 'border-emerald-600 bg-emerald-50 text-emerald-800 font-bold'
+                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="text-[12.5px] flex items-center justify-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Hoạt động</span>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={editModalUser.role === 'ADMIN'}
+                      onClick={() => setEditIsBlocked(true)}
+                      className={`p-2 rounded-xl border text-center transition-all cursor-pointer ${
+                        editIsBlocked
+                          ? 'border-rose-600 bg-rose-50 text-rose-800 font-bold'
+                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                      <div className="text-[12.5px] flex items-center justify-center gap-1">
+                        <Lock className="w-3.5 h-3.5 text-rose-600" />
+                        <span>Tạm khóa</span>
+                      </div>
+                    </button>
+                  </div>
+                  {editModalUser.role === 'ADMIN' && (
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Quản trị viên luôn ở trạng thái Hoạt động.
+                    </p>
+                  )}
+                </div>
+
+                {/* Nút hành động */}
+                <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setEditModalUser(null)}
+                    className="flex-1 py-2 text-slate-600 bg-slate-100 hover:bg-slate-200 font-bold text-[13px] rounded-xl transition-colors cursor-pointer"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingEdit}
+                    className="flex-1 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold text-[13px] rounded-xl shadow-xs transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>{isSubmittingEdit ? 'Đang lưu...' : 'LƯU THAY ĐỔI'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Con 1C: XEM CHI TIẾT NGƯỜI DÙNG */}
+        {detailModalUser && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+            <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+              <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-900 text-white">
+                <div className="flex items-center gap-2">
+                  <UserIcon className="w-5 h-5 text-purple-400" />
+                  <h4 className="text-[15px] font-bold">CHI TIẾT TÀI KHOẢN NGƯỜI DÙNG</h4>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDetailModalUser(null)}
+                  className="text-slate-400 hover:text-white p-1 rounded-lg cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
+                {/* Header profile info */}
+                <div className="flex items-center gap-3.5 p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-500 text-white flex items-center justify-center font-bold text-lg shadow-xs shrink-0">
+                    {(detailModalUser.name || detailModalUser.email).charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h5 className="font-bold text-slate-900 text-[15px] truncate">{detailModalUser.name || 'Chưa cập nhật tên'}</h5>
+                    <div className="text-[12.5px] text-slate-500 truncate font-mono flex items-center gap-1 mt-0.5">
+                      <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span>{detailModalUser.email}</span>
+                    </div>
+                  </div>
+                  <div>
+                    {detailModalUser.isBlocked || detailModalUser.role === 'BLOCKED' ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                        <Lock className="w-3 h-3" /> Đã khóa
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                        <CheckCircle2 className="w-3 h-3" /> Hoạt động
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Details grid */}
+                <div className="grid grid-cols-2 gap-3 text-[12.5px]">
+                  <div className="p-3 bg-white rounded-xl border border-slate-200">
+                    <span className="text-slate-400 block text-[11px] font-semibold uppercase">Vai trò</span>
+                    <span className="font-bold text-slate-800 mt-1 block">
+                      {detailModalUser.role === 'ADMIN' ? '👑 Quản trị viên (ADMIN)' : detailModalUser.role === 'LICENSED' ? '⭐ Bản quyền (LICENSED)' : '👤 Người dùng (TRIAL)'}
+                    </span>
+                  </div>
+
+                  <div className="p-3 bg-white rounded-xl border border-slate-200">
+                    <span className="text-slate-400 block text-[11px] font-semibold uppercase">Gói sử dụng</span>
+                    <span className="font-bold text-slate-800 mt-1 block">
+                      {detailModalUser.plan === 'PRO' || detailModalUser.role === 'LICENSED' || detailModalUser.quota?.easy === -1
+                        ? 'Đã cấp quyền (PRO / Vĩnh viễn)'
+                        : 'Gói trải nghiệm (TRIAL)'}
+                    </span>
+                  </div>
+
+                  <div className="p-3 bg-white rounded-xl border border-slate-200 col-span-2">
+                    <span className="text-slate-400 block text-[11px] font-semibold uppercase">Hạn mức & Số lượt còn lại</span>
+                    <div className="mt-1 font-bold text-slate-800">
+                      {detailModalUser.plan === 'PRO' || detailModalUser.role === 'LICENSED' || detailModalUser.quota?.easy === -1 ? (
+                        <span className="text-emerald-700 flex items-center gap-1.5">
+                          <Sparkles className="w-4 h-4 text-emerald-500" />
+                          Không giới hạn (UNLIMITED - Cơ bản & Chuyên sâu)
+                        </span>
+                      ) : (
+                        <div className="flex items-center gap-4 text-[13px]">
+                          <span>Cơ bản: <strong className="text-purple-700">{detailModalUser.quota?.easy ?? 0} lượt</strong></span>
+                          <span>Chuyên sâu: <strong className="text-indigo-700">{detailModalUser.quota?.advanced ?? 0} lượt</strong></span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {detailModalUser.licenseKey && (
+                    <div className="p-3 bg-white rounded-xl border border-slate-200 col-span-2">
+                      <span className="text-slate-400 block text-[11px] font-semibold uppercase">Mã bản quyền kích hoạt</span>
+                      <span className="font-mono font-bold text-purple-700 mt-1 block text-[13px]">{detailModalUser.licenseKey}</span>
+                    </div>
+                  )}
+
+                  {detailModalUser.licenseExpiresAt && (
+                    <div className="p-3 bg-white rounded-xl border border-slate-200 col-span-2">
+                      <span className="text-slate-400 block text-[11px] font-semibold uppercase">Thời hạn hiệu lực</span>
+                      <span className="font-semibold text-slate-800 mt-1 block">
+                        Đến ngày: {new Date(detailModalUser.licenseExpiresAt).toLocaleDateString('vi-VN')}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="p-3 bg-slate-50/70 rounded-xl border border-slate-200">
+                    <span className="text-slate-400 block text-[11px] font-semibold uppercase">ID Định danh</span>
+                    <span className="font-mono text-slate-600 mt-1 block text-[11.5px] truncate">{detailModalUser.id}</span>
+                  </div>
+
+                  <div className="p-3 bg-slate-50/70 rounded-xl border border-slate-200">
+                    <span className="text-slate-400 block text-[11px] font-semibold uppercase">Hoạt động gần nhất</span>
+                    <span className="text-slate-600 mt-1 block text-[11.5px]">
+                      {detailModalUser.lastActiveAt ? new Date(detailModalUser.lastActiveAt).toLocaleString('vi-VN') : 'Chưa có'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Footer Buttons */}
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setDetailModalUser(null)}
+                    className="px-4 py-2 text-slate-600 bg-slate-100 hover:bg-slate-200 font-bold text-[13px] rounded-xl transition-colors cursor-pointer"
+                  >
+                    Đóng
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const target = detailModalUser;
+                      setDetailModalUser(null);
+                      handleOpenEditModal(target);
+                    }}
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold text-[13px] rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                    <span>Chỉnh sửa tài khoản</span>
                   </button>
                 </div>
               </div>

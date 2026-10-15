@@ -585,62 +585,122 @@ async function adminUpdateUser(params) {
   if (!user) {
     return { success: false, error: "Kh\xF4ng t\xECm th\u1EA5y ng\u01B0\u1EDDi d\xF9ng" };
   }
-  if (params.operatorEmail && params.operatorEmail.toLowerCase() === user.email.toLowerCase()) {
+  const isTargetRoot = ROOT_ADMIN_EMAILS.includes(user.email.toLowerCase());
+  if (isTargetRoot) {
     if (params.isBlocked === true) {
       return {
         success: false,
-        error: "Quy t\u1EAFc an to\xE0n Qu\u1EA3n tr\u1ECB: Kh\xF4ng th\u1EC3 t\u1EF1 kh\xF3a t\xE0i kho\u1EA3n Qu\u1EA3n tr\u1ECB vi\xEAn c\u1EE7a ch\xEDnh m\xECnh."
+        error: "Quy t\u1EAFc an to\xE0n Qu\u1EA3n tr\u1ECB: Kh\xF4ng th\u1EC3 kh\xF3a t\xE0i kho\u1EA3n Root Admin."
       };
     }
     if (params.role && params.role !== "ADMIN") {
       return {
         success: false,
-        error: "Quy t\u1EAFc an to\xE0n Qu\u1EA3n tr\u1ECB: Kh\xF4ng th\u1EC3 t\u1EF1 thu h\u1ED3i quy\u1EC1n Qu\u1EA3n tr\u1ECB vi\xEAn c\u1EE7a ch\xEDnh m\xECnh."
+        error: "Quy t\u1EAFc an to\xE0n Qu\u1EA3n tr\u1ECB: Kh\xF4ng th\u1EC3 t\u1EF1 thu h\u1ED3i quy\u1EC1n Qu\u1EA3n tr\u1ECB vi\xEAn c\u1EE7a Root Admin."
       };
     }
   }
-  if (params.role !== void 0) user.role = params.role;
+  const oldUserSnapshot = JSON.parse(JSON.stringify(user));
+  const oldEmail = user.email.toLowerCase();
+  if (params.name !== void 0 && params.name.trim()) {
+    user.name = params.name.trim();
+  }
+  let emailChanged = false;
+  let newEmailNormalized = "";
+  if (params.newEmail) {
+    newEmailNormalized = params.newEmail.trim().toLowerCase();
+    if (!newEmailNormalized || !newEmailNormalized.includes("@")) {
+      return { success: false, error: "\u0110\u1ECBa ch\u1EC9 email m\u1EDBi kh\xF4ng h\u1EE3p l\u1EC7." };
+    }
+    if (newEmailNormalized !== oldEmail) {
+      if (isTargetRoot) {
+        return { success: false, error: "B\u1EA3o m\u1EADt: Kh\xF4ng \u0111\u01B0\u1EE3c ph\xE9p thay \u0111\u1ED5i email c\u1EE7a Root Admin." };
+      }
+      const existingUserWithNewEmail = findUserByEmailOrId(newEmailNormalized);
+      if (existingUserWithNewEmail && existingUserWithNewEmail.id !== user.id) {
+        return {
+          success: false,
+          error: `Email "${newEmailNormalized}" \u0111\xE3 \u0111\u01B0\u1EE3c s\u1EED d\u1EE5ng b\u1EDFi m\u1ED9t t\xE0i kho\u1EA3n kh\xE1c trong h\u1EC7 th\u1ED1ng.`
+        };
+      }
+      user.email = newEmailNormalized;
+      emailChanged = true;
+      delete store.users[oldEmail];
+      store.users[newEmailNormalized] = user;
+      Object.values(store.licenses).forEach((lic) => {
+        if (lic.assignedEmail && lic.assignedEmail.toLowerCase() === oldEmail) {
+          lic.assignedEmail = newEmailNormalized;
+        }
+      });
+    }
+  }
+  if (params.role !== void 0) {
+    user.role = isTargetRoot ? "ADMIN" : params.role;
+  }
   if (params.plan !== void 0) {
-    user.plan = params.plan;
-    if (params.plan === "LICENSED" || params.plan === "PRO" || params.plan === "PREMIUM" || params.plan === "SCHOOL") {
-      if (params.plan === "LICENSED") user.plan = "PRO";
+    const rawP = String(params.plan).toUpperCase().trim();
+    const normalizedPlan = rawP === "LICENSED" || rawP.includes("PRO") ? "PRO" : params.plan;
+    user.plan = isTargetRoot ? "PRO" : normalizedPlan;
+    if (user.plan === "PRO" || user.plan === "PREMIUM" || user.plan === "SCHOOL" || user.role === "LICENSED") {
       if (user.role !== "ADMIN") user.role = "LICENSED";
       user.quota = { easy: -1, advanced: -1 };
       user.licenseExpiresAt = params.expiresAt !== void 0 ? params.expiresAt : user.licenseExpiresAt;
-    } else if (params.plan === "TRIAL") {
+    } else if (user.plan === "TRIAL") {
       if (user.role !== "ADMIN") user.role = "TRIAL";
       user.licenseExpiresAt = null;
+      if (!params.quota) {
+        user.quota = {
+          easy: store.settings?.trialEasyLimit ?? 3,
+          advanced: store.settings?.trialAdvancedLimit ?? 1
+        };
+      }
     }
   }
   if (params.expiresAt !== void 0) {
     user.licenseExpiresAt = params.expiresAt;
   }
-  if (params.quota !== void 0) user.quota = params.quota;
+  if (params.quota !== void 0) {
+    user.quota = params.quota;
+  }
   if (params.isBlocked !== void 0) {
-    user.isBlocked = params.isBlocked;
-    if (params.isBlocked && user.role !== "ADMIN") {
-      user.role = "BLOCKED";
-    } else if (!params.isBlocked && user.role === "BLOCKED") {
-      user.role = user.plan === "PRO" || user.plan === "LICENSED" || user.plan === "PREMIUM" || user.plan === "SCHOOL" ? "LICENSED" : "TRIAL";
+    if (isTargetRoot) {
+      user.isBlocked = false;
+    } else {
+      user.isBlocked = params.isBlocked;
+      if (params.isBlocked) {
+        user.role = "BLOCKED";
+      } else if (user.role === "BLOCKED") {
+        user.role = user.plan === "PRO" || user.plan === "LICENSED" || user.plan === "PREMIUM" || user.plan === "SCHOOL" ? "LICENSED" : "TRIAL";
+      }
     }
   }
+  user.lastActiveAt = (/* @__PURE__ */ new Date()).toISOString();
   saveStore();
   if (process.env.LICENSE_API_URL) {
     const sheetRes = await syncUserToGoogleSheet(user, {
       operatorEmail: params.operatorEmail,
-      explicitQuota: params.quota !== void 0
+      explicitQuota: params.quota !== void 0,
+      previousEmail: emailChanged ? oldEmail : void 0
     });
     if (!sheetRes.success) {
+      if (emailChanged) {
+        delete store.users[user.email];
+      }
+      store.users[oldEmail] = oldUserSnapshot;
+      saveStore();
       return {
-        success: true,
-        user,
-        sheetSynced: false,
-        warning: `C\u1EADp nh\u1EADt th\xE0nh c\xF4ng v\xE0o c\u01A1 s\u1EDF d\u1EEF li\u1EC7u \u1EE9ng d\u1EE5ng. L\u01B0u \xFD: Google Sheets ch\u01B0a ghi nh\u1EADn (${sheetRes.error || "C\u1EA7n c\u1EADp nh\u1EADt Code.gs v2.7"}).`
+        success: false,
+        error: `L\u01B0u th\u1EA5t b\u1EA1i l\xEAn Google Sheets: ${sheetRes.error || "Apps Script kh\xF4ng ph\u1EA3n h\u1ED3i"}. D\u1EEF li\u1EC7u c\u0169 \u0111\xE3 \u0111\u01B0\u1EE3c kh\xF4i ph\u1EE5c nguy\xEAn v\u1EB9n.`
       };
     }
-    return { success: true, user, sheetSynced: true, message: "\u0110\xE3 c\u1EADp nh\u1EADt v\xE0 x\xE1c nh\u1EADn l\u01B0u th\xE0nh c\xF4ng xu\u1ED1ng Google Sheets USERS." };
+    return {
+      success: true,
+      user,
+      sheetSynced: true,
+      message: "\u0110\xE3 c\u1EADp nh\u1EADt v\xE0 x\xE1c nh\u1EADn l\u01B0u th\xE0nh c\xF4ng xu\u1ED1ng Google Sheets USERS."
+    };
   }
-  return { success: true, user, sheetSynced: false };
+  return { success: true, user, sheetSynced: false, message: "\u0110\xE3 c\u1EADp nh\u1EADt th\xF4ng tin ng\u01B0\u1EDDi d\xF9ng th\xE0nh c\xF4ng." };
 }
 async function adminCreateUser(params) {
   const email = params.email.trim().toLowerCase();
@@ -724,6 +784,7 @@ async function syncUserToGoogleSheet(user, options) {
   try {
     const operatorEmail = typeof options === "string" ? options : options?.operatorEmail;
     const explicitQuota = typeof options === "object" ? Boolean(options?.explicitQuota) : false;
+    const previousEmail = typeof options === "object" ? options?.previousEmail : void 0;
     const resp = await fetch(process.env.LICENSE_API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -731,6 +792,7 @@ async function syncUserToGoogleSheet(user, options) {
         action: "saveUser",
         id: user.id,
         email: user.email,
+        previousEmail,
         name: user.name,
         role: user.role,
         plan: user.plan,
@@ -1250,10 +1312,12 @@ async function handler(req, res) {
     }
     if (subpath === "update-user") {
       if (req.method !== "POST") return res.status(405).json({ error: "Method Not Allowed" });
-      const { email, role, plan, quota, isBlocked, expiresAt } = body || {};
+      const { email, name, newEmail, role, plan, quota, isBlocked, expiresAt } = body || {};
       const result = await adminUpdateUser({
         operatorEmail,
         email,
+        name,
+        newEmail,
         role,
         plan,
         quota,
