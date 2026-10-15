@@ -302,48 +302,71 @@ export const AdminPortalModal: React.FC = () => {
     try {
       const cleanNewEmail = editEmail.trim().toLowerCase();
       const isEmailChanged = cleanNewEmail !== editModalUser.email.toLowerCase();
+      const initialIsPro = editModalUser.plan === 'PRO' || editModalUser.role === 'LICENSED' || editModalUser.quota?.easy === -1;
       const isPro = editPlan === 'PRO';
-      const expiresAt = isPro && editHasExpiry && editExpiryDate ? new Date(editExpiryDate).toISOString() : null;
-      const quota = isPro
-        ? { easy: -1, advanced: -1 }
-        : {
-            easy: Math.max(0, editEasyQuota),
-            advanced: Math.max(0, editAdvancedQuota),
-          };
+      const isPlanChanged = isPro !== initialIsPro;
+
+      const initialEasy = editModalUser.quota?.easy === -1 ? (settings.trialEasyLimit ?? 3) : (editModalUser.quota?.easy ?? 3);
+      const initialAdv = editModalUser.quota?.advanced === -1 ? (settings.trialAdvancedLimit ?? 1) : (editModalUser.quota?.advanced ?? 1);
+      const isQuotaChanged = !isPro && (editEasyQuota !== initialEasy || editAdvancedQuota !== initialAdv);
+
+      const initialBlocked = Boolean(editModalUser.isBlocked || editModalUser.role === 'BLOCKED');
+      const isBlockedChanged = editIsBlocked !== initialBlocked;
+
+      const initialExpiry = editModalUser.licenseExpiresAt ? editModalUser.licenseExpiresAt.split('T')[0] : '';
+      const isExpiryChanged = (editHasExpiry ? editExpiryDate : '') !== initialExpiry;
+
+      const payload: any = {
+        email: editModalUser.email,
+      };
+
+      if (isEmailChanged) {
+        payload.newEmail = cleanNewEmail;
+      }
+      if (editName.trim() !== (editModalUser.name || '').trim()) {
+        payload.name = editName.trim();
+      }
+      if (isPlanChanged) {
+        payload.plan = isPro ? 'PRO' : 'TRIAL';
+        payload.role = editModalUser.role === 'ADMIN' ? 'ADMIN' : (isPro ? 'LICENSED' : 'TRIAL');
+      }
+      if (isQuotaChanged) {
+        payload.quota = {
+          easy: Math.max(0, editEasyQuota),
+          advanced: Math.max(0, editAdvancedQuota),
+        };
+      }
+      if (isBlockedChanged) {
+        payload.isBlocked = editIsBlocked;
+      }
+      if (isExpiryChanged) {
+        payload.expiresAt = isPro && editHasExpiry && editExpiryDate ? new Date(editExpiryDate).toISOString() : null;
+      }
 
       const res = await fetch('/api/admin/update-user', {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify({
-          email: editModalUser.email,
-          newEmail: isEmailChanged ? cleanNewEmail : undefined,
-          name: editName.trim() || undefined,
-          role: editModalUser.role === 'ADMIN' ? 'ADMIN' : (isPro ? 'LICENSED' : (editIsBlocked ? 'BLOCKED' : 'TRIAL')),
-          plan: isPro ? 'PRO' : 'TRIAL',
-          quota,
-          isBlocked: editIsBlocked,
-          expiresAt,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = (await safeJson(res)) || {};
-      if (res.ok && data.success) {
+      if (res.ok && data.success && data.sheetSynced !== false) {
         setActionFeedback({
           type: 'success',
           text: data.message || `Đã cập nhật thông tin tài khoản ${cleanNewEmail} thành công.`,
         });
         setEditModalUser(null);
-        fetchAdminData();
+        await fetchAdminData();
       } else {
         setActionFeedback({
           type: 'error',
-          text: data.error || 'Cập nhật tài khoản thất bại.',
+          text: data.error || data.warning || 'Cập nhật tài khoản thất bại lên Google Sheets.',
         });
       }
     } catch {
       setActionFeedback({
         type: 'error',
-        text: 'Lỗi kết nối khi cập nhật tài khoản.',
+        text: 'Lỗi kết nối khi cập nhật tài khoản. Vui lòng thử lại.',
       });
     } finally {
       setIsSubmittingEdit(false);
@@ -910,8 +933,10 @@ export const AdminPortalModal: React.FC = () => {
 
   const filteredUsers = usersList.filter(u => {
     const matchesSearch =
-      u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (u.name && u.name.toLowerCase().includes(searchQuery.toLowerCase()));
+      !searchQuery.trim() ||
+      u.email.toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
+      Boolean(u.name && u.name.toLowerCase().includes(searchQuery.toLowerCase().trim()));
+    if (!matchesSearch) return false;
     if (userRoleFilter === 'ALL') return true;
     if (userRoleFilter === 'ADMIN') return u.role === 'ADMIN';
     if (userRoleFilter === 'LICENSED') return u.role === 'LICENSED' || u.plan === 'PRO' || u.plan === 'PREMIUM' || u.plan === 'SCHOOL' || u.plan === 'LICENSED' || u.quota?.easy === -1;
@@ -1040,13 +1065,24 @@ export const AdminPortalModal: React.FC = () => {
               )}
               <span>{actionFeedback.text}</span>
             </div>
-            <button
-              type="button"
-              onClick={() => setActionFeedback(null)}
-              className="text-xs underline hover:no-underline cursor-pointer ml-3"
-            >
-              Đóng
-            </button>
+            <div className="flex items-center gap-2.5 shrink-0 ml-3">
+              {actionFeedback.type === 'error' && (
+                <button
+                  type="button"
+                  onClick={() => fetchAdminData()}
+                  className="text-xs font-bold underline hover:no-underline cursor-pointer text-rose-800"
+                >
+                  Thử lại
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setActionFeedback(null)}
+                className="text-xs underline hover:no-underline cursor-pointer"
+              >
+                Đóng
+              </button>
+            </div>
           </div>
         )}
 

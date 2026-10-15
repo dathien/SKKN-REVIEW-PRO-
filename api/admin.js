@@ -470,7 +470,7 @@ async function checkSheetCompatibility() {
   try {
     const url = new URL(process.env.LICENSE_API_URL);
     url.searchParams.set("action", "inspectSchema");
-    const resp = await fetch(url.toString(), { method: "GET", signal: AbortSignal.timeout(4e3) });
+    const resp = await fetch(url.toString(), { method: "GET", signal: AbortSignal.timeout(15e3) });
     if (resp.ok) {
       const data = await resp.json().catch(() => null);
       if (data && data.usersSchema) {
@@ -487,7 +487,7 @@ async function checkSheetCompatibility() {
     }
     const pingUrl = new URL(process.env.LICENSE_API_URL);
     pingUrl.searchParams.set("action", "ping");
-    const pingResp = await fetch(pingUrl.toString(), { method: "GET", signal: AbortSignal.timeout(4e3) });
+    const pingResp = await fetch(pingUrl.toString(), { method: "GET", signal: AbortSignal.timeout(15e3) });
     if (pingResp.ok) {
       const pingData = await pingResp.json().catch(() => null);
       if (pingData?.success) {
@@ -526,7 +526,7 @@ async function getAllUsersAndGuests() {
           isBackendAuthorized: true,
           serverSecret: process.env.APPS_SCRIPT_SECRET || ""
         }),
-        signal: AbortSignal.timeout(3e3)
+        signal: AbortSignal.timeout(15e3)
       });
       if (resp.ok) {
         const data = await resp.json().catch(() => null);
@@ -570,6 +570,7 @@ async function getAllUsersAndGuests() {
             }
           }
         });
+        saveStore();
       }
     } catch (_) {
     }
@@ -581,7 +582,14 @@ async function getAllUsersAndGuests() {
   };
 }
 async function adminUpdateUser(params) {
-  const user = findUserByEmailOrId(params.email);
+  let user = findUserByEmailOrId(params.email);
+  if (!user && process.env.LICENSE_API_URL) {
+    try {
+      await getAllUsersAndGuests();
+      user = findUserByEmailOrId(params.email);
+    } catch {
+    }
+  }
   if (!user) {
     return { success: false, error: "Kh\xF4ng t\xECm th\u1EA5y ng\u01B0\u1EDDi d\xF9ng" };
   }
@@ -693,6 +701,15 @@ async function adminUpdateUser(params) {
         error: `L\u01B0u th\u1EA5t b\u1EA1i l\xEAn Google Sheets: ${sheetRes.error || "Apps Script kh\xF4ng ph\u1EA3n h\u1ED3i"}. D\u1EEF li\u1EC7u c\u0169 \u0111\xE3 \u0111\u01B0\u1EE3c kh\xF4i ph\u1EE5c nguy\xEAn v\u1EB9n.`
       };
     }
+    if (sheetRes.verifiedUser) {
+      if (sheetRes.verifiedUser.name) {
+        user.name = sheetRes.verifiedUser.name;
+      }
+      if (sheetRes.verifiedUser.id) {
+        user.id = sheetRes.verifiedUser.id;
+      }
+    }
+    saveStore();
     return {
       success: true,
       user,
@@ -785,37 +802,40 @@ async function syncUserToGoogleSheet(user, options) {
     const operatorEmail = typeof options === "string" ? options : options?.operatorEmail;
     const explicitQuota = typeof options === "object" ? Boolean(options?.explicitQuota) : false;
     const previousEmail = typeof options === "object" ? options?.previousEmail : void 0;
+    const payload = {
+      action: "saveUser",
+      id: user.id,
+      email: user.email,
+      previousEmail,
+      name: user.name,
+      role: user.role,
+      plan: user.plan,
+      explicitQuota,
+      licenseKey: user.licenseKey || "",
+      licenseExpiresAt: user.licenseExpiresAt || "",
+      isBlocked: Boolean(user.isBlocked),
+      createdAt: user.createdAt,
+      lastActiveAt: user.lastActiveAt,
+      operatorEmail: operatorEmail || "dathien2412@gmail.com",
+      isBackendAuthorized: true,
+      serverSecret: process.env.APPS_SCRIPT_SECRET || ""
+    };
+    if (explicitQuota) {
+      payload.quotaEasy = user.quota?.easy ?? (user.plan === "PRO" ? -1 : 3);
+      payload.quotaAdvanced = user.quota?.advanced ?? (user.plan === "PRO" ? -1 : 1);
+    }
     const resp = await fetch(process.env.LICENSE_API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "saveUser",
-        id: user.id,
-        email: user.email,
-        previousEmail,
-        name: user.name,
-        role: user.role,
-        plan: user.plan,
-        quotaEasy: user.quota?.easy ?? (user.plan === "PRO" ? -1 : 3),
-        quotaAdvanced: user.quota?.advanced ?? (user.plan === "PRO" ? -1 : 1),
-        explicitQuota,
-        licenseKey: user.licenseKey || "",
-        licenseExpiresAt: user.licenseExpiresAt || "",
-        isBlocked: Boolean(user.isBlocked),
-        createdAt: user.createdAt,
-        lastActiveAt: user.lastActiveAt,
-        operatorEmail: operatorEmail || "dathien2412@gmail.com",
-        isBackendAuthorized: true,
-        serverSecret: process.env.APPS_SCRIPT_SECRET || ""
-      }),
-      signal: AbortSignal.timeout(6e3)
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(15e3)
     });
     if (resp.ok) {
       const data = await resp.json().catch(() => null);
       if (data && data.success === false) {
         return { success: false, error: data.error || "Google Apps Script t\u1EEB ch\u1ED1i ghi d\u1EEF li\u1EC7u" };
       }
-      return { success: Boolean(data?.success ?? true) };
+      return { success: Boolean(data?.success ?? true), verifiedUser: data?.user };
     }
     return { success: false, error: `HTTP ${resp.status}` };
   } catch (err) {
@@ -837,7 +857,7 @@ async function deleteUserFromGoogleSheet(email, options) {
         // Mặc định chỉ khóa (soft-delete), tạm vô hiệu hóa hard-delete qua API
         serverSecret: process.env.APPS_SCRIPT_SECRET || ""
       }),
-      signal: AbortSignal.timeout(6e3)
+      signal: AbortSignal.timeout(15e3)
     });
     if (resp.ok) {
       const data = await resp.json().catch(() => null);
@@ -867,7 +887,7 @@ async function syncAllUsersToGoogleSheet(operatorEmail) {
         isBackendAuthorized: true,
         serverSecret: process.env.APPS_SCRIPT_SECRET || ""
       }),
-      signal: AbortSignal.timeout(12e3)
+      signal: AbortSignal.timeout(2e4)
     });
     if (resp.ok) {
       const data = await resp.json().catch(() => null);

@@ -994,7 +994,7 @@ export async function checkSheetCompatibility(): Promise<{
     const url = new URL(process.env.LICENSE_API_URL);
     // 1. Thử gọi action inspectSchema (Code.gs v2.7+)
     url.searchParams.set('action', 'inspectSchema');
-    const resp = await fetch(url.toString(), { method: 'GET', signal: AbortSignal.timeout(4000) });
+    const resp = await fetch(url.toString(), { method: 'GET', signal: AbortSignal.timeout(15000) });
     if (resp.ok) {
       const data = await resp.json().catch(() => null);
       if (data && data.usersSchema) {
@@ -1013,7 +1013,7 @@ export async function checkSheetCompatibility(): Promise<{
     // 2. Fallback: Kiểm tra bằng ping hoặc getUser
     const pingUrl = new URL(process.env.LICENSE_API_URL);
     pingUrl.searchParams.set('action', 'ping');
-    const pingResp = await fetch(pingUrl.toString(), { method: 'GET', signal: AbortSignal.timeout(4000) });
+    const pingResp = await fetch(pingUrl.toString(), { method: 'GET', signal: AbortSignal.timeout(15000) });
     if (pingResp.ok) {
       const pingData = await pingResp.json().catch(() => null);
       if (pingData?.success) {
@@ -1054,7 +1054,7 @@ export async function getAllUsersAndGuests() {
           isBackendAuthorized: true,
           serverSecret: process.env.APPS_SCRIPT_SECRET || '',
         }),
-        signal: AbortSignal.timeout(3000),
+        signal: AbortSignal.timeout(15000),
       });
       if (resp.ok) {
         const data = await resp.json().catch(() => null);
@@ -1100,9 +1100,10 @@ export async function getAllUsersAndGuests() {
             }
           }
         });
+        saveStore();
       }
     } catch (_) {
-      // Silently continue if LICENSE_API_URL is unavailable or offline
+      // Silently continue with existing store if LICENSE_API_URL is unavailable or offline
     }
   }
 
@@ -1124,7 +1125,13 @@ export async function adminUpdateUser(params: {
   isBlocked?: boolean;
   expiresAt?: string | null;
 }): Promise<{ success: boolean; user?: UserAccount; error?: string; sheetSynced?: boolean; warning?: string; message?: string }> {
-  const user = findUserByEmailOrId(params.email);
+  let user = findUserByEmailOrId(params.email);
+  if (!user && process.env.LICENSE_API_URL) {
+    try {
+      await getAllUsersAndGuests();
+      user = findUserByEmailOrId(params.email);
+    } catch {}
+  }
   if (!user) {
     return { success: false, error: 'Không tìm thấy người dùng' };
   }
@@ -1265,6 +1272,17 @@ export async function adminUpdateUser(params: {
       };
     }
 
+    // Đọc lại và đồng bộ chính xác dữ liệu đã được xác nhận ghi từ Google Sheets
+    if (sheetRes.verifiedUser) {
+      if (sheetRes.verifiedUser.name) {
+        user.name = sheetRes.verifiedUser.name;
+      }
+      if (sheetRes.verifiedUser.id) {
+        user.id = sheetRes.verifiedUser.id;
+      }
+    }
+    saveStore();
+
     return {
       success: true,
       user,
@@ -1377,44 +1395,49 @@ export async function adminCreateUser(params: {
 export async function syncUserToGoogleSheet(
   user: UserAccount,
   options?: { operatorEmail?: string; explicitQuota?: boolean; previousEmail?: string } | string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; verifiedUser?: any }> {
   if (!process.env.LICENSE_API_URL) return { success: false, error: 'Chưa cấu hình LICENSE_API_URL' };
   try {
     const operatorEmail = typeof options === 'string' ? options : options?.operatorEmail;
     const explicitQuota = typeof options === 'object' ? Boolean(options?.explicitQuota) : false;
     const previousEmail = typeof options === 'object' ? options?.previousEmail : undefined;
 
+    const payload: any = {
+      action: 'saveUser',
+      id: user.id,
+      email: user.email,
+      previousEmail,
+      name: user.name,
+      role: user.role,
+      plan: user.plan,
+      explicitQuota,
+      licenseKey: user.licenseKey || '',
+      licenseExpiresAt: user.licenseExpiresAt || '',
+      isBlocked: Boolean(user.isBlocked),
+      createdAt: user.createdAt,
+      lastActiveAt: user.lastActiveAt,
+      operatorEmail: operatorEmail || 'dathien2412@gmail.com',
+      isBackendAuthorized: true,
+      serverSecret: process.env.APPS_SCRIPT_SECRET || '',
+    };
+
+    if (explicitQuota) {
+      payload.quotaEasy = user.quota?.easy ?? (user.plan === 'PRO' ? -1 : 3);
+      payload.quotaAdvanced = user.quota?.advanced ?? (user.plan === 'PRO' ? -1 : 1);
+    }
+
     const resp = await fetch(process.env.LICENSE_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'saveUser',
-        id: user.id,
-        email: user.email,
-        previousEmail,
-        name: user.name,
-        role: user.role,
-        plan: user.plan,
-        quotaEasy: user.quota?.easy ?? (user.plan === 'PRO' ? -1 : 3),
-        quotaAdvanced: user.quota?.advanced ?? (user.plan === 'PRO' ? -1 : 1),
-        explicitQuota,
-        licenseKey: user.licenseKey || '',
-        licenseExpiresAt: user.licenseExpiresAt || '',
-        isBlocked: Boolean(user.isBlocked),
-        createdAt: user.createdAt,
-        lastActiveAt: user.lastActiveAt,
-        operatorEmail: operatorEmail || 'dathien2412@gmail.com',
-        isBackendAuthorized: true,
-        serverSecret: process.env.APPS_SCRIPT_SECRET || '',
-      }),
-      signal: AbortSignal.timeout(6000),
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(15000),
     });
     if (resp.ok) {
       const data = await resp.json().catch(() => null);
       if (data && data.success === false) {
         return { success: false, error: data.error || 'Google Apps Script từ chối ghi dữ liệu' };
       }
-      return { success: Boolean(data?.success ?? true) };
+      return { success: Boolean(data?.success ?? true), verifiedUser: data?.user };
     }
     return { success: false, error: `HTTP ${resp.status}` };
   } catch (err: any) {
@@ -1439,7 +1462,7 @@ export async function deleteUserFromGoogleSheet(
         permanent: false, // Mặc định chỉ khóa (soft-delete), tạm vô hiệu hóa hard-delete qua API
         serverSecret: process.env.APPS_SCRIPT_SECRET || '',
       }),
-      signal: AbortSignal.timeout(6000),
+      signal: AbortSignal.timeout(15000),
     });
     if (resp.ok) {
       const data = await resp.json().catch(() => null);
@@ -1476,7 +1499,7 @@ export async function syncAllUsersToGoogleSheet(operatorEmail?: string): Promise
         isBackendAuthorized: true,
         serverSecret: process.env.APPS_SCRIPT_SECRET || '',
       }),
-      signal: AbortSignal.timeout(12000),
+      signal: AbortSignal.timeout(20000),
     });
 
     if (resp.ok) {

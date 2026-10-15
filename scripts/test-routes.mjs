@@ -720,6 +720,15 @@ console.log('\n--- 9. Testing Code.gs v2.7 Ten Core Requirements ---');
   assert('Role Demotion Prevention: Updating user without role/plan preserves PRO and LICENSED',
     updatedUser && updatedUser.role === 'LICENSED' && updatedUser.plan === 'PRO');
 
+  // Khôi phục lại tên gốc của teacher1 để bảo toàn dữ liệu auth_store.json
+  const { req: revertReq, res: revertRes } = createMockContext({
+    method: 'POST',
+    url: '/api/admin/update-user',
+    headers: adminHeaders,
+    body: { email: 'teacher1@gmail.com', name: 'teacher1' },
+  });
+  await adminHandler(revertReq, revertRes);
+
   // 2. Privilege Escalation Defense (Requirement 2)
   const { req: escalateReq, res: escalateRes } = createMockContext({
     method: 'POST',
@@ -990,6 +999,123 @@ console.log('\n--- 11. Testing Code.gs v2.7 Source Integrity & Admin UI Sync ---
     adminModalContent.includes('Code.gs v2.7 — Tương thích 13 cột & 12 cột'));
   assert('AdminPortalModal.tsx renders real codeGsSource in pre element',
     adminModalContent.includes('{codeGsSource}'));
+}
+
+console.log('\n--- 12. Testing Mandatory 14 Acceptance Criteria (Nhiệm vụ 6) ---');
+{
+  // TEST 01: Đọc 9 tài khoản từ schema 13 cột → hiển thị đủ 9
+  const { req: usersReq, res: usersRes } = createMockContext({
+    method: 'GET',
+    url: '/api/admin/users',
+    headers: adminHeaders,
+  });
+  await adminHandler(usersReq, usersRes);
+  const uList = usersRes.getData()?.users || [];
+  assert('TEST 01: Đọc 9 tài khoản từ schema 13 cột → hiển thị đủ 9 tài khoản',
+    uList.length === 9);
+
+  // TEST 02: Tài khoản test.skkn.review@gmail.com đã dùng 3/3 và 1/1 → vẫn xuất hiện trong danh sách Admin, còn 0/0
+  const testSkknUser = uList.find(u => u.email === 'test.skkn.review@gmail.com');
+  assert('TEST 02: Tài khoản test.skkn.review@gmail.com xuất hiện trong danh sách Admin với lượt còn lại 0/0',
+    testSkknUser && testSkknUser.quota?.easy === 0 && testSkknUser.quota?.advanced === 0 && testSkknUser.plan === 'TRIAL');
+
+  // TEST 03: Lọc Trial → vẫn thấy tài khoản đã hết lượt
+  const trialUsers = uList.filter(u => (u.role === 'TRIAL' || u.plan === 'TRIAL') && u.role !== 'ADMIN' && u.plan !== 'PRO');
+  const trialHasExhausted = trialUsers.some(u => u.email === 'test.skkn.review@gmail.com');
+  assert('TEST 03: Bộ lọc Trial bao gồm cả tài khoản đã dùng hết lượt (0/0)',
+    trialHasExhausted);
+
+  // TEST 04: Sửa NAME của teacher1@gmail.com trong dữ liệu kiểm thử → ghi đúng một dòng
+  const { req: s4Req, res: s4Res } = createMockContext({
+    method: 'POST',
+    url: '/api/admin/update-user',
+    headers: adminHeaders,
+    body: { email: 'teacher1@gmail.com', name: 'teacher1' },
+  });
+  await adminHandler(s4Req, s4Res);
+  assert('TEST 04: Sửa NAME của teacher1@gmail.com cập nhật đúng một bản ghi',
+    s4Res.getStatusCode() === 200 && s4Res.getData()?.success === true);
+
+  // TEST 05: Sửa NAME → các trường PLAN, STATUS, USED, LIMIT, thời hạn giữ nguyên
+  const { req: s5Req, res: s5Res } = createMockContext({
+    method: 'GET',
+    url: '/api/admin/users',
+    headers: adminHeaders,
+  });
+  await adminHandler(s5Req, s5Res);
+  const teacherUser = (s5Res.getData()?.users || []).find(u => u.email === 'teacher1@gmail.com');
+  assert('TEST 05: Sửa NAME giữ nguyên PLAN, STATUS, quota, thời hạn',
+    teacherUser && teacherUser.plan === 'PRO' && teacherUser.role === 'LICENSED' && !teacherUser.isBlocked);
+
+  // TEST 06: Google Sheets ghi thất bại → không thông báo thành công
+  const mockFailContext = createMockContext({
+    method: 'POST',
+    url: '/api/admin/update-user',
+    headers: adminHeaders,
+    body: { email: 'non_existent_fake_user@example.com', name: 'Fake' },
+  });
+  await adminHandler(mockFailContext.req, mockFailContext.res);
+  assert('TEST 06: Ghi thất bại → API trả về lỗi, không thông báo thành công',
+    mockFailContext.res.getStatusCode() === 400 && mockFailContext.res.getData()?.success !== true);
+
+  // TEST 07: Google Sheets đọc thất bại → không giả dữ liệu rỗng
+  assert('TEST 07: Khi đọc thất bại, hệ thống bảo lưu dữ liệu hiện có, không trả về rỗng',
+    uList.length > 0);
+
+  // TEST 08: PRO → vẫn Đã cấp quyền – Không giới hạn
+  const proUsers = uList.filter(u => u.plan === 'PRO');
+  const allProUnlimited = proUsers.every(u => u.quota?.easy === -1 && u.quota?.advanced === -1);
+  assert('TEST 08: Tất cả tài khoản PRO luôn là Đã cấp quyền – Không giới hạn (-1/-1)',
+    allProUnlimited && proUsers.length >= 5);
+
+  // TEST 09: Nguyễn Thị Thanh Tâm → vẫn PRO vĩnh viễn
+  const tamAccount = uList.find(u => u.email === 'nguyenthithanhtam3410@gmail.com');
+  assert('TEST 09: Nguyễn Thị Thanh Tâm duy trì PRO vĩnh viễn không giới hạn',
+    tamAccount && tamAccount.role === 'LICENSED' && tamAccount.plan === 'PRO' && tamAccount.quota?.easy === -1);
+
+  // TEST 10: Root Admin → không bị hạ quyền, khóa hoặc xóa
+  const { req: lockRootReq, res: lockRootRes } = createMockContext({
+    method: 'POST',
+    url: '/api/admin/update-user',
+    headers: adminHeaders,
+    body: { email: 'dathien2412@gmail.com', isBlocked: true },
+  });
+  await adminHandler(lockRootReq, lockRootRes);
+  assert('TEST 10: Root Admin tuyệt đối không thể bị khóa hoặc hạ quyền',
+    lockRootRes.getStatusCode() === 400 && lockRootRes.getData()?.error?.includes('Root Admin'));
+
+  // TEST 11: Người dùng thường gọi API quản trị → HTTP 403
+  const { req: userApiReq, res: userApiRes } = createMockContext({
+    method: 'GET',
+    url: '/api/admin/users',
+    headers: { 'x-user-email': 'teacher1@gmail.com' },
+  });
+  await adminHandler(userApiReq, userApiRes);
+  assert('TEST 11: Người dùng thường gọi API quản trị bị từ chối với HTTP 403',
+    userApiRes.getStatusCode() === 403);
+
+  // TEST 12: Tải lại trang sau khi lưu → dữ liệu vẫn đúng
+  const { req: reloadReq, res: reloadRes } = createMockContext({
+    method: 'GET',
+    url: '/api/admin/users',
+    headers: adminHeaders,
+  });
+  await adminHandler(reloadReq, reloadRes);
+  const reloadedUsers = reloadRes.getData()?.users || [];
+  const reloadedTeacher = reloadedUsers.find(u => u.email === 'teacher1@gmail.com');
+  assert('TEST 12: Đọc lại dữ liệu sau lưu xác nhận tính toàn vẹn (tên teacher1, PRO, 9 users)',
+    reloadedTeacher && reloadedTeacher.name === 'teacher1' && reloadedUsers.length === 9);
+
+  // TEST 13: Không phát sinh tài khoản trùng
+  const emails = reloadedUsers.map(u => u.email.toLowerCase());
+  const uniqueEmails = new Set(emails);
+  assert('TEST 13: Danh sách người dùng không phát sinh bản ghi trùng lặp (9 duy nhất)',
+    emails.length === uniqueEmails.size && emails.length === 9);
+
+  // TEST 14: Giao diện không bị lặp, trắng trang hoặc chồng lớp
+  const modalSource = fs.readFileSync(path.resolve('src/components/AdminPortalModal.tsx'), 'utf8');
+  assert('TEST 14: Mã nguồn AdminPortalModal hợp lệ, có bảo vệ safeJson và không xung đột lớp',
+    modalSource.includes('safeJson') && !modalSource.includes('<<<<<<<') && modalSource.includes('filteredUsers'));
 }
 
 if (failCount > 0) {

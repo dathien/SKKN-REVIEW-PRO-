@@ -922,6 +922,13 @@ function upsertUserInSheet(sheet, user) {
     }
   }
 
+  // Đảm bảo ghi bền vững ngay lập tức và đọc lại đúng dữ liệu để xác nhận
+  SpreadsheetApp.flush();
+  var verifiedUser = findUserInSheet(sheet, email);
+  if (verifiedUser) {
+    return verifiedUser;
+  }
+
   return {
     id: id,
     email: email,
