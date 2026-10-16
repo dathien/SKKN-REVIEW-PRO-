@@ -28,6 +28,14 @@
     {
       "source": "/api/admin/:path*",
       "destination": "/api/admin?__subpath=:path*"
+    },
+    {
+      "source": "/quan-tri",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
     }
   ]
 }

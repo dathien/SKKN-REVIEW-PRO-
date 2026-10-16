@@ -538,8 +538,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const closeAuthModal = () => setIsAuthModalOpen(false);
-  const openAdminModal = () => setIsAdminModalOpen(true);
-  const closeAdminModal = () => setIsAdminModalOpen(false);
+  const openAdminModal = () => {
+    if (typeof window !== 'undefined') {
+      if (window.location.pathname !== '/quan-tri') {
+        window.history.pushState({}, '', '/quan-tri');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      }
+    }
+    setIsAdminModalOpen(true);
+  };
+  const closeAdminModal = () => {
+    if (typeof window !== 'undefined') {
+      if (window.location.pathname === '/quan-tri' || window.location.pathname.startsWith('/quan-tri')) {
+        window.history.pushState({}, '', '/');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      }
+    }
+    setIsAdminModalOpen(false);
+  };
 
   const openQuotaModal = (mode: 'easy' | 'advanced') => {
     setQuotaExceededMode(mode);

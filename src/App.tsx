@@ -12,7 +12,7 @@ import { CorePrinciplesModal } from './components/CorePrinciplesModal';
 import { DocumentProfileDrawer } from './components/DocumentProfileDrawer';
 import { ProfileSelectorModal } from './components/ProfileSelectorModal';
 import { UploadWorkspace } from './components/UploadWorkspace';
-import { CheckCircle2, FileText, ShieldAlert } from 'lucide-react';
+import { CheckCircle2, FileText, ShieldAlert, Shield } from 'lucide-react';
 import { FriendlyErrorInfo, classifyError, sleep, getRetryDelay } from './utils/aiErrorHandler';
 import { extractGeminiOutput, parseAnalysisResponse, normalizeAnalysisResult } from './utils/analysisPipeline';
 
@@ -67,20 +67,23 @@ export default function App() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [appMode, setAppMode] = useState<AppMode>('easy');
   const [rescoreError, setRescoreError] = useState<{ message: string; retryable?: boolean } | null>(null);
-  const [adminAccessDenied, setAdminAccessDenied] = useState<boolean>(false);
-
-  // Xử lý truy cập đường dẫn /quan-tri: Chỉ ROLE = ADMIN mới được truy cập, ngược lại hiển thị 403
-  useEffect(() => {
-    const isQuanTriPath = window.location.pathname === '/quan-tri' || window.location.pathname.startsWith('/quan-tri');
-    if (!isQuanTriPath || isAuthLoading) return;
-
-    if (role === 'ADMIN') {
-      setAdminAccessDenied(false);
-      openAdminModal();
-    } else {
-      setAdminAccessDenied(true);
+  // Theo dõi tuyến đường trình duyệt để chuyển đổi trang độc lập /quan-tri
+  const [currentPath, setCurrentPath] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return window.location.pathname;
     }
-  }, [role, isAuthLoading, openAdminModal]);
+    return '/';
+  });
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const isQuanTriPath = currentPath === '/quan-tri' || currentPath.startsWith('/quan-tri');
 
   // Auto-dismiss completion toast after 7s (Item 8)
   useEffect(() => {
@@ -547,6 +550,52 @@ export default function App() {
     }
   };
 
+  // Render trang quản trị độc lập /quan-tri chiếm trọn màn hình, không hiển thị trang SKKN phía sau
+  if (isQuanTriPath) {
+    if (isAuthLoading) {
+      return (
+        <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 text-white font-sans select-none">
+          <div className="w-14 h-14 rounded-2xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center mb-4 shadow-xl">
+            <Shield className="w-7 h-7 text-purple-400 animate-pulse" />
+          </div>
+          <h3 className="text-lg font-bold text-white mb-2 tracking-tight">ĐANG XÁC THỰC QUYỀN QUẢN TRỊ...</h3>
+          <p className="text-sm text-slate-400">Hệ thống đang kiểm tra phiên làm việc với Google Sheets USERS</p>
+        </div>
+      );
+    }
+
+    if (role !== 'ADMIN' && !isAdmin) {
+      return (
+        <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 font-sans select-none">
+          <div className="bg-slate-900 border border-rose-500/30 rounded-2xl p-8 max-w-md w-full shadow-2xl text-center">
+            <div className="w-16 h-16 mx-auto rounded-full bg-rose-500/10 text-rose-400 flex items-center justify-center mb-4 border border-rose-500/20">
+              <ShieldAlert className="w-8 h-8" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">403 - TRUY CẬP BỊ TỪ CHỐI</h3>
+            <p className="text-slate-300 text-sm mb-6 leading-relaxed">
+              Bạn không có quyền truy cập trang quản trị <code className="px-1.5 py-0.5 rounded bg-slate-800 text-rose-300 font-mono text-xs">/quan-tri</code>. Hệ thống yêu cầu tài khoản được cấp quyền quản trị (<code className="px-1.5 py-0.5 rounded bg-slate-800 text-rose-300 font-mono text-xs">USERS.ROLE = "ADMIN"</code>) trong cơ sở dữ liệu.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.history.pushState({}, '', '/');
+                  window.dispatchEvent(new PopStateEvent('popstate'));
+                }
+              }}
+              className="w-full py-3 px-4 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold transition-colors cursor-pointer shadow-md"
+            >
+              Quay lại Trang Chủ SKKN
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Role = ADMIN: Hiển thị toàn bộ trang quản trị độc lập
+    return <AdminPortalModal />;
+  }
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-100 font-sans text-slate-800">
       {/* Left Sidebar */}
@@ -888,34 +937,6 @@ export default function App() {
 
       {/* Quota Exceeded Notification Modal */}
       <QuotaExceededModal />
-
-      {/* Admin Portal Modal */}
-      <AdminPortalModal />
-
-      {/* 403 Forbidden Modal khi truy cập /quan-tri mà role != ADMIN */}
-      {adminAccessDenied && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-rose-500/40 rounded-2xl p-6 max-w-md w-full shadow-2xl text-center">
-            <div className="w-14 h-14 mx-auto rounded-full bg-rose-500/10 text-rose-400 flex items-center justify-center mb-4 border border-rose-500/20">
-              <ShieldAlert className="w-8 h-8" />
-            </div>
-            <h3 className="text-xl font-bold text-white mb-2">403 - TRUY CẬP BỊ TỪ CHỐI</h3>
-            <p className="text-slate-300 text-sm mb-6 leading-relaxed">
-              Bạn không có quyền truy cập trang quản trị <code className="px-1 py-0.5 rounded bg-slate-800 text-rose-300 font-mono">/quan-tri</code>. Hệ thống yêu cầu tài khoản được cấp quyền quản trị (<code className="px-1 py-0.5 rounded bg-slate-800 text-rose-300 font-mono">USERS.ROLE = "ADMIN"</code>) trong cơ sở dữ liệu.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setAdminAccessDenied(false);
-                window.history.pushState({}, '', '/');
-              }}
-              className="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-semibold transition-colors cursor-pointer"
-            >
-              Quay lại Trang Chủ
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
