@@ -13,14 +13,14 @@
       "licenseKey": "SKKN-ADMIN-SYSTEM",
       "licenseExpiresAt": null,
       "createdAt": "2026-10-07T00:29:18.129Z",
-      "lastActiveAt": "2026-10-15T06:37:52.918Z",
+      "lastActiveAt": "2026-10-21T01:33:28.883Z",
       "isBlocked": false,
-      "picture": "https://lh3.googleusercontent.com/test"
+      "picture": "https://lh3.googleusercontent.com/a/ACg8ocJ_uW-RC5IuVcgYYhb8i9A16OPkteLCs4CLI63kdGbWptuEgXbj=s96-c"
     },
     "teacher1@gmail.com": {
       "id": "usr_1791332976299_ra51d",
       "email": "teacher1@gmail.com",
-      "name": "teacher1",
+      "name": "Teacher 1 Sync Test",
       "role": "LICENSED",
       "plan": "PRO",
       "quota": {
@@ -30,13 +30,13 @@
       "licenseKey": "SKKN-PRO-2025-VIP",
       "licenseExpiresAt": null,
       "createdAt": "2026-10-07T00:29:36.299Z",
-      "lastActiveAt": "2026-10-16T10:21:48.645Z",
+      "lastActiveAt": "2026-10-21T01:33:28.822Z",
       "isBlocked": false
     },
     "giaovien.test@gmail.com": {
       "id": "usr_1791361588777_veinc",
       "email": "giaovien.test@gmail.com",
-      "name": "giaovien.test",
+      "name": "Cô Mai Lan",
       "role": "LICENSED",
       "plan": "PRO",
       "quota": {
@@ -47,7 +47,7 @@
       "licenseExpiresAt": null,
       "freeAccess": false,
       "createdAt": "2026-10-07T08:26:28.778Z",
-      "lastActiveAt": "2026-10-07T08:26:28.778Z",
+      "lastActiveAt": "2026-10-21T01:33:28.857Z",
       "isBlocked": false
     },
     "giaovien.moi.2026@gmail.com": {
@@ -95,13 +95,13 @@
       "licenseExpiresAt": null,
       "freeAccess": false,
       "createdAt": "2026-10-09T15:04:50.633Z",
-      "lastActiveAt": "2026-10-12T02:36:06.815Z",
+      "lastActiveAt": "2026-10-21T01:33:28.764Z",
       "isBlocked": false
     },
     "new_teacher@school.edu.vn": {
       "id": "usr_1791558317128_02tl8",
       "email": "new_teacher@school.edu.vn",
-      "name": "New Teacher",
+      "name": "Thầy Bình",
       "role": "LICENSED",
       "plan": "PRO",
       "quota": {
@@ -110,8 +110,9 @@
       },
       "licenseExpiresAt": null,
       "createdAt": "2026-10-09T15:05:17.128Z",
-      "lastActiveAt": "2026-10-16T10:21:48.604Z",
-      "isBlocked": false
+      "lastActiveAt": "2026-10-21T01:33:28.874Z",
+      "isBlocked": false,
+      "freeAccess": false
     },
     "nguyenthithanhtam3410@gmail.com": {
       "id": "usr_thanhtam_3410",
@@ -216,6 +217,16 @@
       "createdAt": "2026-10-07T12:03:16.178Z",
       "lastActiveAt": "2026-10-07T12:03:16.178Z",
       "analysisCount": 0
+    },
+    "guest_test_999": {
+      "guestId": "guest_test_999",
+      "quota": {
+        "easy": 3,
+        "advanced": 1
+      },
+      "createdAt": "2026-10-16T12:59:52.998Z",
+      "lastActiveAt": "2026-10-16T12:59:52.998Z",
+      "analysisCount": 0
     }
   },
   "licenses": {
@@ -281,7 +292,7 @@
     }
   },
   "stats": {
-    "totalAnalyses": 0
+    "totalAnalyses": 68
   },
   "settings": {
     "guestEasyLimit": 3,

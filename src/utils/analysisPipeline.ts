@@ -14,7 +14,8 @@ import {
   PriorityLevel,
   EvidenceChainItem,
   DataAnomalyItem,
-  CouncilQuestion
+  CouncilQuestion,
+  SuggestionRewrite
 } from '../types';
 
 /**
@@ -476,6 +477,81 @@ export function normalizeAnalysisResult(
     }));
   }
 
+  // 10. Suggestions Rewrite: Đảm bảo 100% issue đều có bản đề xuất 3 mức độ cụ thể (không phải lời hướng dẫn)
+  const cleanOrSynthesizeParagraph = (text: string | undefined, origText: string, loc: string, tier: 'light' | 'academic' | 'deep'): string => {
+    const raw = (text || '').trim();
+    const isInstructional = !raw ||
+      raw.startsWith('Chỉnh sửa diễn đạt tại') ||
+      raw.startsWith('Viết lại theo văn phong') ||
+      raw.startsWith('Tái cấu trúc lập luận tại') ||
+      raw.startsWith('Tác giả nên') ||
+      raw.startsWith('Cần sửa') ||
+      raw.startsWith('Cần viết lại');
+
+    if (!isInstructional) return raw;
+
+    const orig = (origText || '').trim();
+    if (tier === 'light') {
+      return orig
+        ? orig.replace(/tuyệt đối|chắc chắn 100%|ngay lập tức|hoàn toàn/gi, 'rõ rệt').replace(/nổ lực/g, 'nỗ lực')
+        : `Quá trình triển khai giải pháp tại ${loc} bước đầu ghi nhận sự chuyển biến tích cực của học sinh trong các giờ học [GV điền: số liệu thực tế].`;
+    } else if (tier === 'academic') {
+      return orig
+        ? `Việc áp dụng giải pháp tại ${loc} nhằm nâng cao tính chủ động và năng lực thực hành của học sinh, đáp ứng mục tiêu của Chương trình GDPT 2018. Kết quả đánh giá được kiểm chứng khách quan qua tiến trình học tập.`
+        : `Việc thực hiện sáng kiến tại ${loc} đáp ứng mục tiêu phát triển phẩm chất và năng lực cho học sinh theo Chương trình GDPT 2018; các chỉ số đánh giá được đối chiếu thận trọng và có minh chứng đính kèm.`;
+    } else {
+      return orig
+        ? `Nhằm bảo đảm tính khoa học tại ${loc}, tiến trình thực nghiệm sư phạm được triển khai theo chuỗi lập luận: khảo sát thực trạng, can thiệp phương pháp mới và kiểm tra đánh giá đối chứng [GV bổ sung: lớp và số liệu đối chứng] tại Phụ lục.`
+        : `Tiến trình giải pháp tại ${loc} được cấu trúc chặt chẽ theo chuỗi lập luận: xác định vấn đề thực tiễn -> can thiệp sư phạm -> thu thập dữ liệu đối chứng [GV điền: số liệu thực tế] để khẳng định hiệu quả khoa học.`;
+    }
+  };
+
+  const rawSuggestions: SuggestionRewrite[] = Array.isArray(data.suggestions) ? data.suggestions : [];
+  const suggestionsMap = new Map<string, SuggestionRewrite>();
+  
+  for (const s of rawSuggestions) {
+    if (s && s.id) {
+      const loc = s.targetSection || 'đoạn văn';
+      suggestionsMap.set(s.id, {
+        ...s,
+        lightRevision: cleanOrSynthesizeParagraph(s.lightRevision, s.originalText, loc, 'light'),
+        academicRevision: cleanOrSynthesizeParagraph(s.academicRevision, s.originalText, loc, 'academic'),
+        deepRevision: cleanOrSynthesizeParagraph(s.deepRevision, s.originalText, loc, 'deep'),
+      });
+    }
+  }
+
+  redTeamCards.forEach((card) => {
+    const existing = suggestionsMap.get(card.id) || suggestionsMap.get(`sug-${card.id}`) ||
+      Array.from(suggestionsMap.values()).find(s => s.targetSection === card.location || (card.location && s.targetSection?.includes(card.location)));
+    
+    if (!existing) {
+      const quote = (card.relatedQuote || (card as any).excerpt || card.existingEvidence || '').trim();
+      const loc = card.location || 'Toàn văn sáng kiến';
+      const sugId = `sug-${card.id}`;
+      
+      const synthesized: SuggestionRewrite = {
+        id: sugId,
+        targetSection: loc,
+        originalText: quote || `Đoạn văn liên quan tại ${loc}`,
+        problem: card.issueDetected || 'Cần chuẩn hóa văn phong và số liệu đối chứng',
+        whyRevise: card.whyItMatters || 'Khắc phục điểm yếu để bảo toàn điểm số theo Rubric.',
+        basis: card.criticismBasis || 'Tiêu chuẩn đánh giá sáng kiến kinh nghiệm ngành Giáo dục & Đào tạo.',
+        category: card.issueType || 'Phản biện học thuật',
+        revisionGoal: 'Chuẩn hóa văn phong, thống nhất số liệu và củng cố căn cứ khoa học.',
+        howToRevise: card.resolutionGuidance || 'Thay thế đoạn văn bằng bản đề xuất đã được chuẩn hóa.',
+        lightRevision: cleanOrSynthesizeParagraph('', quote, loc, 'light'),
+        academicRevision: cleanOrSynthesizeParagraph('', quote, loc, 'academic'),
+        deepRevision: cleanOrSynthesizeParagraph('', quote, loc, 'deep'),
+        missingEvidenceAlert: card.requiredEvidence || 'Cần chuẩn bị minh chứng kèm theo tại Phụ lục.',
+        insertPosition: loc
+      };
+      suggestionsMap.set(sugId, synthesized);
+    }
+  });
+
+  const finalSuggestions = Array.from(suggestionsMap.values());
+
   // 9. Assembling final result
   const finalResult: SKKNAnalysisResult = {
     metadata,
@@ -506,7 +582,7 @@ export function normalizeAnalysisResult(
       similarityFindings: [],
       referenceChecks: []
     },
-    suggestions: Array.isArray(data.suggestions) ? data.suggestions : [],
+    suggestions: finalSuggestions,
     councilQuestions: Array.isArray(data.councilQuestions) && data.councilQuestions.length > 0
       ? data.councilQuestions
       : redTeamCards.slice(0, 4).map((c, i): CouncilQuestion => ({

@@ -38,11 +38,49 @@ import {
   Pencil,
   Eye,
   Mail,
-  User as UserIcon
+  User as UserIcon,
+  CalendarPlus,
+  AlertCircle,
+  CalendarRange
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserAccount, GuestSession, SystemStats, SystemSettings, UserRole, LicensePlan, LicenseItem, LicenseStatus } from '../types';
 import codeGsSource from '../../scripts/Code.gs?raw';
+
+// Thuật toán cộng tháng theo lịch chuẩn xác (xử lý ngày 28/29/30/31 và năm nhuận)
+export function addCalendarMonths(startDateStr: string, months: number): string {
+  if (!startDateStr || months <= 0) return startDateStr;
+  const parts = startDateStr.split('-').map(Number);
+  const year = parts[0];
+  const month = parts[1] - 1; // 0-indexed
+  const day = parts[2];
+
+  const totalMonths = year * 12 + month + months;
+  const targetYear = Math.floor(totalMonths / 12);
+  const targetMonth = totalMonths % 12;
+
+  // Số ngày tối đa của tháng đích
+  const maxDays = new Date(targetYear, targetMonth + 1, 0).getDate();
+  const targetDay = Math.min(day, maxDays);
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${targetYear}-${pad(targetMonth + 1)}-${pad(targetDay)}`;
+}
+
+export function formatCalendarDate(isoOrDateStr?: string | null): string {
+  if (!isoOrDateStr) return 'Vĩnh viễn';
+  try {
+    const d = new Date(isoOrDateStr);
+    if (isNaN(d.getTime())) return isoOrDateStr;
+    return d.toLocaleDateString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  } catch {
+    return isoOrDateStr;
+  }
+}
 
 export const AdminPortalModal: React.FC = () => {
   const { isAdminModalOpen, closeAdminModal, user } = useAuth();
@@ -79,8 +117,13 @@ export const AdminPortalModal: React.FC = () => {
   const [quotaAdvancedInput, setQuotaAdvancedInput] = useState<number>(1);
 
   const [grantModalUser, setGrantModalUser] = useState<UserAccount | null>(null);
-  const [grantHasExpiry, setGrantHasExpiry] = useState<boolean>(false);
-  const [grantExpiryDate, setGrantExpiryDate] = useState<string>('');
+  const [grantModalTitle, setGrantModalTitle] = useState<string>('CẤP QUYỀN SỬ DỤNG PRO');
+  const [grantType, setGrantType] = useState<'MONTHLY' | 'LIFETIME'>('MONTHLY');
+  const [grantMonths, setGrantMonths] = useState<number>(1);
+  const [grantStartDate, setGrantStartDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [grantExtendMode, setGrantExtendMode] = useState<'EXTEND_FROM_CURRENT' | 'RESET_FROM_START'>('EXTEND_FROM_CURRENT');
+  const [grantStep, setGrantStep] = useState<'FORM' | 'CONFIRM'>('FORM');
+  const [isSubmittingGrant, setIsSubmittingGrant] = useState<boolean>(false);
 
   const [confirmRevokeUser, setConfirmRevokeUser] = useState<UserAccount | null>(null);
   const [confirmBlockUser, setConfirmBlockUser] = useState<UserAccount | null>(null);
@@ -390,17 +433,81 @@ export const AdminPortalModal: React.FC = () => {
     setDetailModalUser(target);
   };
 
-  // 2. Thao tác Cấp quyền sử dụng (LICENSED)
-  const handleOpenGrantModal = (target: UserAccount) => {
+  // 2. Thao tác Cấp quyền & Gia hạn thành viên PRO
+  const targetCurrentExpiry = grantModalUser?.licenseExpiresAt ? grantModalUser.licenseExpiresAt.split('T')[0] : '';
+  const isTargetCurrentExpired = Boolean(
+    grantModalUser?.licenseExpiresAt &&
+    new Date(grantModalUser.licenseExpiresAt).getTime() < Date.now()
+  );
+  const isTargetCurrentActive = Boolean(
+    grantModalUser?.licenseExpiresAt && !isTargetCurrentExpired
+  );
+
+  const targetExpiryLabel = !grantModalUser
+    ? ''
+    : !grantModalUser.licenseExpiresAt
+    ? (grantModalUser.plan === 'PRO' || grantModalUser.role === 'LICENSED' || grantModalUser.quota?.easy === -1 ? 'PRO Vĩnh viễn (Không thời hạn)' : 'Chưa có (Gói Trial)')
+    : isTargetCurrentExpired
+    ? `Đã hết hạn (${formatCalendarDate(grantModalUser.licenseExpiresAt)})`
+    : `Còn hạn đến ${formatCalendarDate(grantModalUser.licenseExpiresAt)}`;
+
+  let effectiveBaseDate = grantStartDate || new Date().toISOString().split('T')[0];
+  if (grantType === 'MONTHLY' && isTargetCurrentActive && grantExtendMode === 'EXTEND_FROM_CURRENT') {
+    effectiveBaseDate = targetCurrentExpiry;
+  }
+
+  const computedExpiryDateStr = grantType === 'LIFETIME'
+    ? null
+    : addCalendarMonths(effectiveBaseDate, grantMonths);
+
+  const handleOpenGrantModal = (target: UserAccount, modeType: 'GRANT' | 'EXTEND' | 'EDIT' = 'GRANT') => {
     setGrantModalUser(target);
-    setGrantHasExpiry(Boolean(target.licenseExpiresAt));
-    setGrantExpiryDate(target.licenseExpiresAt ? target.licenseExpiresAt.split('T')[0] : '');
+    setGrantStep('FORM');
+    setIsSubmittingGrant(false);
+
+    const isTargetPro = target.plan === 'PRO' || target.role === 'LICENSED' || target.quota?.easy === -1;
+    const hasExpiry = Boolean(target.licenseExpiresAt);
+    const isTargetExpired = hasExpiry ? (new Date(target.licenseExpiresAt!).getTime() < Date.now()) : false;
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    setGrantStartDate(todayStr);
+
+    if (modeType === 'EXTEND') {
+      setGrantModalTitle('GIA HẠN THÀNH VIÊN PRO');
+      setGrantType('MONTHLY');
+      setGrantMonths(1);
+      setGrantExtendMode(hasExpiry && !isTargetExpired ? 'EXTEND_FROM_CURRENT' : 'RESET_FROM_START');
+    } else if (isTargetPro) {
+      setGrantModalTitle('CHỈNH QUYỀN & THỜI HẠN PRO');
+      if (!hasExpiry) {
+        setGrantType('LIFETIME');
+        setGrantMonths(1);
+        setGrantExtendMode('RESET_FROM_START');
+      } else {
+        setGrantType('MONTHLY');
+        setGrantMonths(1);
+        setGrantExtendMode(isTargetExpired ? 'RESET_FROM_START' : 'EXTEND_FROM_CURRENT');
+      }
+    } else {
+      setGrantModalTitle('CẤP QUYỀN THÀNH VIÊN PRO');
+      setGrantType('MONTHLY');
+      setGrantMonths(1);
+      setGrantExtendMode('RESET_FROM_START');
+    }
   };
 
   const handleSaveGrant = async () => {
     if (!grantModalUser) return;
+    setIsSubmittingGrant(true);
     try {
-      const expiresAt = grantHasExpiry && grantExpiryDate ? new Date(grantExpiryDate).toISOString() : null;
+      let expiresAt: string | null = null;
+      if (grantType === 'MONTHLY' && computedExpiryDateStr) {
+        // Build end-of-day ISO string (23:59:59.999 in local timezone)
+        const [y, m, d] = computedExpiryDateStr.split('-').map(Number);
+        const endOfDay = new Date(y, m - 1, d, 23, 59, 59, 999);
+        expiresAt = endOfDay.toISOString();
+      }
+
       const res = await fetch('/api/admin/update-user', {
         method: 'POST',
         headers: getAuthHeaders(),
@@ -413,11 +520,13 @@ export const AdminPortalModal: React.FC = () => {
       });
       const data = (await safeJson(res)) || {};
       if (res.ok && data.success) {
+        const expiryLabel = expiresAt ? `đến ngày ${new Date(expiresAt).toLocaleDateString('vi-VN')}` : 'Vĩnh viễn';
         setActionFeedback({
           type: 'success',
-          text: `Đã cấp quyền sử dụng không giới hạn cho tài khoản ${grantModalUser.email}.`
+          text: `Đã cập nhật quyền thành viên PRO cho tài khoản ${grantModalUser.email} (${expiryLabel}).`
         });
         setGrantModalUser(null);
+        setGrantStep('FORM');
         fetchAdminData();
       } else {
         setActionFeedback({
@@ -430,6 +539,8 @@ export const AdminPortalModal: React.FC = () => {
         type: 'error',
         text: 'Lỗi kết nối khi cấp quyền sử dụng.'
       });
+    } finally {
+      setIsSubmittingGrant(false);
     }
   };
 
@@ -949,10 +1060,49 @@ export const AdminPortalModal: React.FC = () => {
       u.email.toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
       Boolean(u.name && u.name.toLowerCase().includes(searchQuery.toLowerCase().trim()));
     if (!matchesSearch) return false;
+
     if (userRoleFilter === 'ALL') return true;
     if (userRoleFilter === 'ADMIN') return u.role === 'ADMIN';
-    if (userRoleFilter === 'LICENSED') return u.role === 'LICENSED' || u.plan === 'PRO' || u.plan === 'PREMIUM' || u.plan === 'SCHOOL' || u.plan === 'LICENSED' || u.quota?.easy === -1;
-    if (userRoleFilter === 'TRIAL') return (u.role === 'TRIAL' || u.plan === 'TRIAL') && u.role !== 'ADMIN' && u.plan !== 'PRO' && u.plan !== 'PREMIUM' && u.plan !== 'SCHOOL' && u.role !== 'LICENSED' && u.quota?.easy !== -1;
+
+    const isLicensed =
+      u.role === 'LICENSED' ||
+      u.plan === 'PRO' ||
+      u.plan === 'PREMIUM' ||
+      u.plan === 'SCHOOL' ||
+      u.plan === 'LICENSED' ||
+      u.quota?.easy === -1;
+
+    if (userRoleFilter === 'LICENSED') return isLicensed;
+
+    if (userRoleFilter === 'PRO_PERMANENT') {
+      return isLicensed && !u.licenseExpiresAt;
+    }
+
+    if (userRoleFilter === 'PRO_ACTIVE') {
+      return isLicensed && Boolean(u.licenseExpiresAt && new Date(u.licenseExpiresAt).getTime() >= Date.now());
+    }
+
+    if (userRoleFilter === 'PRO_EXPIRING') {
+      if (!isLicensed || !u.licenseExpiresAt) return false;
+      const t = new Date(u.licenseExpiresAt).getTime();
+      const d = Math.ceil((t - Date.now()) / (1000 * 60 * 60 * 24));
+      return t >= Date.now() && d <= 30;
+    }
+
+    if (userRoleFilter === 'PRO_EXPIRED') {
+      return isLicensed && Boolean(u.licenseExpiresAt && new Date(u.licenseExpiresAt).getTime() < Date.now());
+    }
+
+    if (userRoleFilter === 'TRIAL') {
+      return (u.role === 'TRIAL' || u.plan === 'TRIAL') &&
+        u.role !== 'ADMIN' &&
+        u.plan !== 'PRO' &&
+        u.plan !== 'PREMIUM' &&
+        u.plan !== 'SCHOOL' &&
+        u.role !== 'LICENSED' &&
+        u.quota?.easy !== -1;
+    }
+
     if (userRoleFilter === 'BLOCKED') return Boolean(u.isBlocked || u.role === 'BLOCKED');
     return true;
   });
@@ -1311,28 +1461,58 @@ export const AdminPortalModal: React.FC = () => {
                 </div>
               </div>
 
-              {/* Bộ lọc nhanh vai trò */}
+              {/* Bộ lọc nhanh vai trò & thời hạn */}
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-                {[
-                  { id: 'ALL', label: `Tất cả (${usersList.length})` },
-                  { id: 'ADMIN', label: `Quản trị (${usersList.filter(u => u.role === 'ADMIN').length})` },
-                  { id: 'LICENSED', label: `PRO / Bản quyền (${usersList.filter(u => u.role === 'LICENSED' || u.plan === 'PRO' || u.plan === 'PREMIUM' || u.plan === 'SCHOOL' || u.plan === 'LICENSED' || u.quota?.easy === -1).length})` },
-                  { id: 'TRIAL', label: `Dùng thử (${usersList.filter(u => (u.role === 'TRIAL' || u.plan === 'TRIAL') && u.role !== 'ADMIN' && u.plan !== 'PRO' && u.plan !== 'PREMIUM' && u.plan !== 'SCHOOL' && u.role !== 'LICENSED' && u.quota?.easy !== -1).length})` },
-                  { id: 'BLOCKED', label: `Tạm khóa (${usersList.filter(u => u.isBlocked || u.role === 'BLOCKED').length})` },
-                ].map(tab => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setUserRoleFilter(tab.id)}
-                    className={`px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all cursor-pointer whitespace-nowrap ${
-                      userRoleFilter === tab.id
-                        ? 'bg-purple-600 text-white shadow-xs'
-                        : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
+                {(() => {
+                  const nowMs = Date.now();
+                  const countAll = usersList.length;
+                  const countProPerm = usersList.filter(u => {
+                    const isLic = u.role === 'LICENSED' || u.plan === 'PRO' || u.plan === 'PREMIUM' || u.plan === 'SCHOOL' || u.quota?.easy === -1;
+                    return isLic && !u.licenseExpiresAt;
+                  }).length;
+                  const countProActive = usersList.filter(u => {
+                    const isLic = u.role === 'LICENSED' || u.plan === 'PRO' || u.plan === 'PREMIUM' || u.plan === 'SCHOOL' || u.quota?.easy === -1;
+                    return isLic && u.licenseExpiresAt && new Date(u.licenseExpiresAt).getTime() >= nowMs;
+                  }).length;
+                  const countProExpiring = usersList.filter(u => {
+                    const isLic = u.role === 'LICENSED' || u.plan === 'PRO' || u.plan === 'PREMIUM' || u.plan === 'SCHOOL' || u.quota?.easy === -1;
+                    if (!isLic || !u.licenseExpiresAt) return false;
+                    const t = new Date(u.licenseExpiresAt).getTime();
+                    const d = Math.ceil((t - nowMs) / (1000 * 60 * 60 * 24));
+                    return t >= nowMs && d <= 30;
+                  }).length;
+                  const countProExpired = usersList.filter(u => {
+                    const isLic = u.role === 'LICENSED' || u.plan === 'PRO' || u.plan === 'PREMIUM' || u.plan === 'SCHOOL' || u.quota?.easy === -1;
+                    return isLic && u.licenseExpiresAt && new Date(u.licenseExpiresAt).getTime() < nowMs;
+                  }).length;
+                  const countTrial = usersList.filter(u => (u.role === 'TRIAL' || u.plan === 'TRIAL') && u.role !== 'ADMIN' && u.plan !== 'PRO' && u.plan !== 'PREMIUM' && u.plan !== 'SCHOOL' && u.role !== 'LICENSED' && u.quota?.easy !== -1).length;
+                  const countBlocked = usersList.filter(u => u.isBlocked || u.role === 'BLOCKED').length;
+
+                  const filterTabs = [
+                    { id: 'ALL', label: `Tất cả (${countAll})` },
+                    { id: 'PRO_PERMANENT', label: `PRO Vĩnh viễn (${countProPerm})` },
+                    { id: 'PRO_ACTIVE', label: `PRO Còn hạn (${countProActive})` },
+                    { id: 'PRO_EXPIRING', label: `Sắp hết hạn (${countProExpiring})` },
+                    { id: 'PRO_EXPIRED', label: `Đã hết hạn (${countProExpired})` },
+                    { id: 'TRIAL', label: `Dùng thử (${countTrial})` },
+                    { id: 'BLOCKED', label: `Đã khóa (${countBlocked})` },
+                  ];
+
+                  return filterTabs.map(tab => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setUserRoleFilter(tab.id)}
+                      className={`px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+                        userRoleFilter === tab.id
+                          ? 'bg-purple-600 text-white shadow-xs'
+                          : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ));
+                })()}
               </div>
 
               {/* Bảng Danh sách Người dùng */}
@@ -1344,7 +1524,7 @@ export const AdminPortalModal: React.FC = () => {
                         <th className="py-3 px-4">NGƯỜI DÙNG</th>
                         <th className="py-3 px-3">VAI TRÒ</th>
                         <th className="py-3 px-3">QUYỀN SỬ DỤNG</th>
-                        <th className="py-3 px-3">LƯỢT CÒN LẠI</th>
+                        <th className="py-3 px-3">THỜI HẠN / LƯỢT</th>
                         <th className="py-3 px-3">TRẠNG THÁI</th>
                         <th className="py-3 px-4 text-right">THAO TÁC</th>
                       </tr>
@@ -1369,7 +1549,13 @@ export const AdminPortalModal: React.FC = () => {
                             isUserAdmin ||
                             u.quota?.easy === -1 ||
                             (u.quota?.easy !== undefined && u.quota.easy >= 99999);
-                          const isUserBlocked = u.isBlocked || u.role === 'BLOCKED';
+                          const isUserBlocked = Boolean(u.isBlocked || u.role === 'BLOCKED');
+
+                          const hasExpiry = Boolean(u.licenseExpiresAt);
+                          const expiryTime = hasExpiry ? new Date(u.licenseExpiresAt!).getTime() : null;
+                          const isExpired = Boolean(hasExpiry && expiryTime && expiryTime < Date.now());
+                          const daysLeft = hasExpiry && expiryTime ? Math.ceil((expiryTime - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+                          const isExpiringSoon = Boolean(!isExpired && daysLeft !== null && daysLeft <= 15);
 
                           return (
                             <tr key={u.id || u.email} className="hover:bg-slate-50/70 transition-colors">
@@ -1416,14 +1602,32 @@ export const AdminPortalModal: React.FC = () => {
 
                               {/* Cột 3: QUYỀN SỬ DỤNG */}
                               <td className="py-3 px-3">
-                                {u.freeAccess ? (
+                                {isUserAdmin ? (
+                                  <span className="px-2 py-0.5 rounded text-[11.5px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                                    ADMIN (PRO)
+                                  </span>
+                                ) : u.freeAccess ? (
                                   <span className="px-2 py-0.5 rounded text-[11.5px] font-bold bg-cyan-100 text-cyan-800 border border-cyan-200">
-                                    Miễn phí theo chương trình
+                                    Miễn phí CT
                                   </span>
                                 ) : isUserLicensed ? (
-                                  <span className="px-2 py-0.5 rounded text-[11.5px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                    Đã cấp quyền
-                                  </span>
+                                  !hasExpiry ? (
+                                    <span className="px-2 py-0.5 rounded text-[11.5px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                      PRO Vĩnh viễn
+                                    </span>
+                                  ) : isExpired ? (
+                                    <span className="px-2 py-0.5 rounded text-[11.5px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                      PRO Hết hạn
+                                    </span>
+                                  ) : isExpiringSoon ? (
+                                    <span className="px-2 py-0.5 rounded text-[11.5px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                      PRO Sắp hết hạn
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 py-0.5 rounded text-[11.5px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                      PRO Còn hạn
+                                    </span>
+                                  )
                                 ) : (
                                   <span className="px-2 py-0.5 rounded text-[11.5px] font-medium bg-blue-100 text-blue-800 border border-blue-200">
                                     Trải nghiệm
@@ -1431,19 +1635,31 @@ export const AdminPortalModal: React.FC = () => {
                                 )}
                               </td>
 
-                              {/* Cột 4: LƯỢT CÒN LẠI */}
+                              {/* Cột 4: THỜI HẠN / LƯỢT CÒN LẠI */}
                               <td className="py-3 px-3">
-                                {u.freeAccess ? (
-                                  <span className="text-cyan-700 font-medium">Miễn phí trong chương trình</span>
-                                ) : isUserLicensed ? (
+                                {isUserAdmin || (isUserLicensed && !hasExpiry) ? (
                                   <div>
                                     <span className="text-emerald-700 font-bold block">Không giới hạn</span>
-                                    {u.licenseExpiresAt && (
-                                      <span className="text-[11px] text-slate-400 block">
-                                        Đến: {new Date(u.licenseExpiresAt).toLocaleDateString('vi-VN')}
-                                      </span>
-                                    )}
+                                    <span className="text-[11px] text-slate-400 block">Vĩnh viễn</span>
                                   </div>
+                                ) : isUserLicensed && hasExpiry ? (
+                                  isExpired ? (
+                                    <div>
+                                      <span className="text-rose-600 font-bold block text-[12px]">Đã hết hạn</span>
+                                      <span className="text-[11px] text-rose-500 block">
+                                        Ngày: {new Date(u.licenseExpiresAt!).toLocaleDateString('vi-VN')}
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <div>
+                                      <span className="text-emerald-700 font-bold block">Không giới hạn</span>
+                                      <span className={`text-[11px] block font-medium ${isExpiringSoon ? 'text-amber-600 font-bold' : 'text-slate-500'}`}>
+                                        Đến: {new Date(u.licenseExpiresAt!).toLocaleDateString('vi-VN')} {daysLeft !== null ? `(còn ${daysLeft} ngày)` : ''}
+                                      </span>
+                                    </div>
+                                  )
+                                ) : u.freeAccess ? (
+                                  <span className="text-cyan-700 font-medium">Miễn phí trong CT</span>
                                 ) : (
                                   <span className="font-semibold text-slate-800">
                                     Cơ bản: {u.quota?.easy ?? 0} | Chuyên sâu: {u.quota?.advanced ?? 0}
@@ -1499,11 +1715,21 @@ export const AdminPortalModal: React.FC = () => {
                                       <span>Mở khóa</span>
                                     </button>
                                   ) : isUserLicensed ? (
-                                    /* Tài khoản LICENSED: Chỉnh quyền, Thu hồi quyền, Khóa */
+                                    /* Tài khoản LICENSED: Gia hạn, Chỉnh quyền, Thu hồi quyền, Khóa */
                                     <>
                                       <button
                                         type="button"
-                                        onClick={() => handleOpenGrantModal(u)}
+                                        onClick={() => handleOpenGrantModal(u, 'EXTEND')}
+                                        className="px-2.5 py-1 text-[12px] font-bold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-300 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                                        title="Gia hạn thời hạn quyền sử dụng PRO"
+                                      >
+                                        <CalendarPlus className="w-3.5 h-3.5 text-emerald-600" />
+                                        <span>Gia hạn</span>
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenGrantModal(u, 'EDIT')}
                                         className="px-2.5 py-1 text-[12px] font-bold bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 rounded-lg transition-colors cursor-pointer"
                                         title="Chỉnh thời hạn quyền sử dụng"
                                       >
@@ -1557,11 +1783,12 @@ export const AdminPortalModal: React.FC = () => {
 
                                       <button
                                         type="button"
-                                        onClick={() => handleOpenGrantModal(u)}
-                                        className="px-2.5 py-1 text-[12px] font-bold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-300 rounded-lg transition-colors cursor-pointer"
-                                        title="Cấp quyền không giới hạn"
+                                        onClick={() => handleOpenGrantModal(u, 'GRANT')}
+                                        className="px-2.5 py-1 text-[12px] font-bold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-300 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                                        title="Cấp quyền thành viên PRO"
                                       >
-                                        Cấp quyền
+                                        <Award className="w-3.5 h-3.5 text-emerald-600" />
+                                        <span>Cấp quyền</span>
                                       </button>
 
                                       {!isSelf && (
@@ -1804,8 +2031,19 @@ export const AdminPortalModal: React.FC = () => {
                               {/* Cột 4: THỜI HẠN */}
                               <td className="py-3 px-3">
                                 {lic.expiresAt ? (
-                                  <div className="text-[12.5px] text-slate-700 font-medium">
-                                    {new Date(lic.expiresAt).toLocaleDateString('vi-VN')}
+                                  <div>
+                                    <span className="text-[12.5px] text-slate-800 font-semibold block">
+                                      {new Date(lic.expiresAt).toLocaleDateString('vi-VN')}
+                                    </span>
+                                    {new Date(lic.expiresAt).getTime() < Date.now() ? (
+                                      <span className="text-[11px] text-rose-600 font-semibold block">
+                                        Đã hết hạn
+                                      </span>
+                                    ) : (
+                                      <span className="text-[11px] text-slate-500 block">
+                                        Còn {Math.ceil((new Date(lic.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} ngày
+                                      </span>
+                                    )}
                                   </div>
                                 ) : (
                                   <span className="px-2 py-0.5 rounded text-[11.5px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
@@ -2329,12 +2567,25 @@ export const AdminPortalModal: React.FC = () => {
           </div>
         )}
 
-        {/* Modal Con 2: CẤP QUYỀN SỬ DỤNG (Mục XIII) */}
+        {/* Modal Con 2: CẤP QUYỀN / GIA HẠN THÀNH VIÊN PRO (Mục XIII) */}
         {grantModalUser && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-            <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-              <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                <h4 className="text-[15px] font-bold text-slate-900">CẤP QUYỀN SỬ DỤNG</h4>
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-xs select-none">
+            <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+              {/* Header Modal */}
+              <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                    <Award className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-[15px] font-bold text-slate-900 leading-tight">
+                      {grantModalTitle}
+                    </h4>
+                    <span className="text-[11.5px] text-slate-500">
+                      Cấp quyền hoặc gia hạn gói thành viên PRO
+                    </span>
+                  </div>
+                </div>
                 <button
                   type="button"
                   onClick={() => setGrantModalUser(null)}
@@ -2344,72 +2595,294 @@ export const AdminPortalModal: React.FC = () => {
                 </button>
               </div>
 
-              <div className="p-5 space-y-4">
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-[12.5px]">
-                  <span className="text-slate-500 block">Tài khoản được cấp quyền:</span>
-                  <strong className="text-slate-900 block truncate">{grantModalUser.name || grantModalUser.email}</strong>
-                  <span className="text-slate-400 block truncate">{grantModalUser.email}</span>
-                </div>
-
-                <div className="space-y-3">
-                  <label className="block text-[12.5px] font-semibold text-slate-700 mb-1">
-                    Thời hạn quyền sử dụng:
-                  </label>
-
-                  <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="grantDuration"
-                      checked={!grantHasExpiry}
-                      onChange={() => setGrantHasExpiry(false)}
-                      className="w-4 h-4 text-purple-600"
-                    />
-                    <div>
-                      <span className="text-[13px] font-bold text-slate-800 block">Không giới hạn – Không thời hạn</span>
-                      <span className="text-[11.5px] text-slate-500">Hiệu lực vĩnh viễn cho tài khoản</span>
+              {grantStep === 'FORM' ? (
+                /* BƯỚC 1: THIẾT LẬP THỜI HẠN PRO */
+                <div className="p-5 space-y-4 max-h-[82vh] overflow-y-auto">
+                  {/* Thông tin tài khoản & Thời hạn hiện tại */}
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-[12.5px] space-y-1">
+                    <div className="flex justify-between items-start">
+                      <span className="text-slate-500">Tài khoản:</span>
+                      <strong className="text-slate-900 text-right truncate max-w-[240px]">
+                        {grantModalUser.name || grantModalUser.email}
+                      </strong>
                     </div>
-                  </label>
+                    <div className="flex justify-between items-center text-slate-500">
+                      <span>Email:</span>
+                      <span className="text-slate-700 font-mono text-[11.5px] truncate max-w-[240px]">
+                        {grantModalUser.email}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center pt-1 border-t border-slate-200/60 text-[12px]">
+                      <span className="text-slate-500">Thời hạn hiện tại:</span>
+                      <span className={`font-semibold ${isTargetCurrentExpired ? 'text-rose-600' : isTargetCurrentActive ? 'text-emerald-700' : 'text-slate-700'}`}>
+                        {targetExpiryLabel}
+                      </span>
+                    </div>
+                  </div>
 
-                  <label className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="grantDuration"
-                      checked={grantHasExpiry}
-                      onChange={() => setGrantHasExpiry(true)}
-                      className="w-4 h-4 text-purple-600 mt-1"
-                    />
-                    <div className="flex-1">
-                      <span className="text-[13px] font-bold text-slate-800 block">Không giới hạn đến ngày:</span>
-                      {grantHasExpiry && (
+                  {/* Lựa chọn loại quyền PRO: Vĩnh viễn hay Theo tháng */}
+                  <div className="space-y-2">
+                    <label className="block text-[12.5px] font-bold text-slate-700">
+                      Chế độ thời hạn PRO:
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className={`flex items-start gap-2 p-3 rounded-xl border cursor-pointer transition-all ${
+                        grantType === 'MONTHLY'
+                          ? 'border-emerald-600 bg-emerald-50/50 ring-1 ring-emerald-500 text-emerald-950'
+                          : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                      }`}>
                         <input
-                          type="date"
-                          value={grantExpiryDate}
-                          onChange={(e) => setGrantExpiryDate(e.target.value)}
-                          min={new Date().toISOString().split('T')[0]}
-                          className="mt-2 w-full px-2.5 py-1.5 text-[13px] rounded-lg border border-slate-300 font-semibold text-slate-900"
+                          type="radio"
+                          name="grantTypeOption"
+                          checked={grantType === 'MONTHLY'}
+                          onChange={() => setGrantType('MONTHLY')}
+                          className="w-4 h-4 text-emerald-600 mt-0.5"
                         />
-                      )}
-                    </div>
-                  </label>
-                </div>
+                        <div>
+                          <span className="text-[13px] font-bold block">PRO Theo tháng</span>
+                          <span className="text-[11px] text-slate-500 block mt-0.5">Thời hạn theo lịch chuẩn</span>
+                        </div>
+                      </label>
 
-                <div className="flex items-center gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setGrantModalUser(null)}
-                    className="flex-1 py-2 text-slate-600 bg-slate-100 hover:bg-slate-200 font-bold text-[13px] rounded-xl transition-colors cursor-pointer"
-                  >
-                    Hủy
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSaveGrant}
-                    className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[13px] rounded-xl shadow-xs transition-colors cursor-pointer"
-                  >
-                    LƯU QUYỀN SỬ DỤNG
-                  </button>
+                      <label className={`flex items-start gap-2 p-3 rounded-xl border cursor-pointer transition-all ${
+                        grantType === 'LIFETIME'
+                          ? 'border-purple-600 bg-purple-50/50 ring-1 ring-purple-500 text-purple-950'
+                          : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                      }`}>
+                        <input
+                          type="radio"
+                          name="grantTypeOption"
+                          checked={grantType === 'LIFETIME'}
+                          onChange={() => setGrantType('LIFETIME')}
+                          className="w-4 h-4 text-purple-600 mt-0.5"
+                        />
+                        <div>
+                          <span className="text-[13px] font-bold block">PRO Vĩnh viễn</span>
+                          <span className="text-[11px] text-slate-500 block mt-0.5">Không giới hạn trọn đời</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  {grantType === 'MONTHLY' && (
+                    <div className="space-y-3.5 pt-1 border-t border-slate-100">
+                      {/* Chọn số tháng (Nút chọn nhanh & Input số nguyên dương bất kỳ) */}
+                      <div>
+                        <label className="block text-[12.5px] font-bold text-slate-700 mb-1.5">
+                          Số tháng sử dụng (nguyên dương):
+                        </label>
+                        {/* Nút chọn nhanh */}
+                        <div className="flex items-center gap-1.5 flex-wrap mb-2">
+                          {[
+                            { m: 1, label: '1 tháng' },
+                            { m: 3, label: '3 tháng' },
+                            { m: 6, label: '6 tháng' },
+                            { m: 12, label: '12 tháng (1 năm)' },
+                            { m: 24, label: '24 tháng (2 năm)' }
+                          ].map(item => (
+                            <button
+                              key={item.m}
+                              type="button"
+                              onClick={() => setGrantMonths(item.m)}
+                              className={`px-2.5 py-1 text-[12px] font-bold rounded-lg transition-colors cursor-pointer ${
+                                grantMonths === item.m
+                                  ? 'bg-emerald-600 text-white shadow-xs'
+                                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                              }`}
+                            >
+                              {item.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Input số tháng tùy ý */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-[12px] text-slate-500 shrink-0">Hoặc nhập số tháng:</span>
+                          <input
+                            type="number"
+                            min="1"
+                            max="120"
+                            value={grantMonths}
+                            onChange={(e) => setGrantMonths(Math.max(1, parseInt(e.target.value) || 1))}
+                            className="w-24 px-2.5 py-1.5 text-center text-[13.5px] font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 text-slate-900"
+                          />
+                          <span className="text-[12px] text-slate-600 font-semibold">tháng</span>
+                        </div>
+                      </div>
+
+                      {/* Chế độ Gia hạn (nếu tài khoản đang có thời hạn còn hiệu lực) */}
+                      {isTargetCurrentActive ? (
+                        <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-200/80 space-y-2">
+                          <label className="block text-[12px] font-bold text-blue-950">
+                            Phương thức gia hạn:
+                          </label>
+                          <div className="space-y-1.5 text-[12px]">
+                            <label className="flex items-start gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="extendMode"
+                                checked={grantExtendMode === 'EXTEND_FROM_CURRENT'}
+                                onChange={() => setGrantExtendMode('EXTEND_FROM_CURRENT')}
+                                className="w-3.5 h-3.5 text-blue-600 mt-0.5"
+                              />
+                              <div>
+                                <span className="font-bold text-slate-800 block">
+                                  Gia hạn tiếp nối từ hạn hiện tại ({formatCalendarDate(targetCurrentExpiry)})
+                                </span>
+                                <span className="text-slate-500 text-[11px] block">
+                                  Cộng thêm {grantMonths} tháng vào sau ngày hết hạn cũ
+                                </span>
+                              </div>
+                            </label>
+
+                            <label className="flex items-start gap-2 cursor-pointer pt-1 border-t border-blue-100">
+                              <input
+                                type="radio"
+                                name="extendMode"
+                                checked={grantExtendMode === 'RESET_FROM_START'}
+                                onChange={() => setGrantExtendMode('RESET_FROM_START')}
+                                className="w-3.5 h-3.5 text-blue-600 mt-0.5"
+                              />
+                              <div>
+                                <span className="font-bold text-slate-800 block">
+                                  Cấp lại thời hạn mới từ ngày bắt đầu
+                                </span>
+                                <span className="text-slate-500 text-[11px] block">
+                                  Tính lại mốc bắt đầu mới theo ngày đã chọn
+                                </span>
+                              </div>
+                            </label>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {/* Ngày bắt đầu (hiển thị khi tính từ mốc mới hoặc tài khoản mới/hết hạn) */}
+                      {(!isTargetCurrentActive || grantExtendMode === 'RESET_FROM_START') && (
+                        <div>
+                          <label className="block text-[12.5px] font-bold text-slate-700 mb-1">
+                            Ngày bắt đầu tính:
+                          </label>
+                          <input
+                            type="date"
+                            value={grantStartDate}
+                            onChange={(e) => setGrantStartDate(e.target.value)}
+                            className="w-full px-3 py-1.5 text-[13px] rounded-lg border border-slate-300 font-semibold text-slate-900 focus:outline-none focus:border-emerald-600"
+                          />
+                        </div>
+                      )}
+
+                      {/* Bảng xem trước thời hạn trước khi lưu */}
+                      <div className="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200 space-y-1.5 text-[12px]">
+                        <div className="flex justify-between items-center text-slate-600">
+                          <span>Mốc bắt đầu tính:</span>
+                          <span className="font-semibold text-slate-800">{formatCalendarDate(effectiveBaseDate)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-slate-600">
+                          <span>Thời gian cộng thêm:</span>
+                          <span className="font-bold text-emerald-800">{grantMonths} tháng (lịch chính xác)</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-1.5 border-t border-emerald-200/80">
+                          <span className="font-bold text-emerald-950">Thời hạn mới sau khi lưu:</span>
+                          <span className="font-extrabold text-[13.5px] text-emerald-700">
+                            {formatCalendarDate(computedExpiryDateStr)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {grantType === 'LIFETIME' && (
+                    <div className="p-3.5 bg-purple-50/70 rounded-xl border border-purple-200 text-[12.5px] space-y-1 text-purple-900">
+                      <div className="font-bold flex items-center gap-1.5 text-purple-950">
+                        <Check className="w-4 h-4 text-purple-700" />
+                        <span>Quyền PRO Vĩnh viễn (Không thời hạn)</span>
+                      </div>
+                      <p className="text-[12px] text-purple-800/90 leading-relaxed">
+                        Tài khoản được sử dụng không giới hạn lượt và không bao giờ hết hạn. Các tài khoản PRO vĩnh viễn hiện có được bảo toàn tuyệt đối.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setGrantModalUser(null)}
+                      className="flex-1 py-2 text-slate-600 bg-slate-100 hover:bg-slate-200 font-bold text-[13px] rounded-xl transition-colors cursor-pointer"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGrantStep('CONFIRM')}
+                      className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[13px] rounded-xl shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      <span>Tiếp tục xác nhận</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                /* BƯỚC 2: XÁC NHẬN TRƯỚC KHI GHI DỮ LIỆU */
+                <div className="p-5 space-y-4">
+                  <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 space-y-3">
+                    <div className="flex items-center gap-2 text-amber-950 font-bold text-[14px]">
+                      <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+                      <span>Xác nhận ghi dữ liệu thành viên PRO</span>
+                    </div>
+                    <p className="text-[12.5px] text-amber-900 leading-relaxed">
+                      Thầy/Cô vui lòng kiểm tra kỹ thông tin trước khi lưu xuống hệ thống và Google Sheets:
+                    </p>
+
+                    <div className="bg-white p-3 rounded-lg border border-amber-200/80 text-[12px] space-y-2">
+                      <div className="flex justify-between items-start">
+                        <span className="text-slate-500">Tài khoản:</span>
+                        <span className="font-bold text-slate-900 text-right truncate max-w-[200px]">
+                          {grantModalUser.name || grantModalUser.email}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-500">Email:</span>
+                        <span className="font-mono text-[11.5px] text-slate-700">{grantModalUser.email}</span>
+                      </div>
+                      <div className="flex justify-between items-center pt-1 border-t border-slate-100">
+                        <span className="text-slate-500">Thời hạn cũ:</span>
+                        <span className="font-semibold text-slate-700">{targetExpiryLabel}</span>
+                      </div>
+                      <div className="flex justify-between items-center pt-1 border-t border-slate-100">
+                        <span className="text-slate-500 font-bold">Thời hạn mới:</span>
+                        <span className="font-extrabold text-[13px] text-emerald-700">
+                          {grantType === 'LIFETIME'
+                            ? 'PRO Vĩnh viễn (Không thời hạn)'
+                            : `${formatCalendarDate(computedExpiryDateStr)} (${grantMonths} tháng)`}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setGrantStep('FORM')}
+                      disabled={isSubmittingGrant}
+                      className="flex-1 py-2 text-slate-700 bg-slate-100 hover:bg-slate-200 font-bold text-[13px] rounded-xl transition-colors cursor-pointer"
+                    >
+                      Quay lại sửa
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveGrant}
+                      disabled={isSubmittingGrant}
+                      className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[13px] rounded-xl shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      {isSubmittingGrant ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Check className="w-4 h-4" />
+                      )}
+                      <span>XÁC NHẬN & LƯU</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -2785,14 +3258,28 @@ export const AdminPortalModal: React.FC = () => {
                     </div>
                   )}
 
-                  {detailModalUser.licenseExpiresAt && (
-                    <div className="p-3 bg-white rounded-xl border border-slate-200 col-span-2">
-                      <span className="text-slate-400 block text-[11px] font-semibold uppercase">Thời hạn hiệu lực</span>
-                      <span className="font-semibold text-slate-800 mt-1 block">
-                        Đến ngày: {new Date(detailModalUser.licenseExpiresAt).toLocaleDateString('vi-VN')}
-                      </span>
-                    </div>
-                  )}
+                  <div className="p-3 bg-white rounded-xl border border-slate-200 col-span-2">
+                    <span className="text-slate-400 block text-[11px] font-semibold uppercase">Thời hạn hiệu lực PRO</span>
+                    <span className="font-semibold text-slate-800 mt-1 block">
+                      {detailModalUser.licenseExpiresAt ? (
+                        new Date(detailModalUser.licenseExpiresAt).getTime() < Date.now() ? (
+                          <span className="text-rose-600 font-bold">
+                            Đã hết hạn vào ngày {new Date(detailModalUser.licenseExpiresAt).toLocaleDateString('vi-VN')}
+                          </span>
+                        ) : (
+                          <span className="text-emerald-700 font-bold">
+                            Đến ngày: {new Date(detailModalUser.licenseExpiresAt).toLocaleDateString('vi-VN')} (còn {Math.ceil((new Date(detailModalUser.licenseExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} ngày)
+                          </span>
+                        )
+                      ) : (
+                        <span className="text-emerald-700 font-bold">
+                          {detailModalUser.plan === 'PRO' || detailModalUser.role === 'LICENSED' || detailModalUser.quota?.easy === -1
+                            ? 'Vĩnh viễn (Không thời hạn)'
+                            : 'Chưa kích hoạt gói PRO'}
+                        </span>
+                      )}
+                    </span>
+                  </div>
 
                   <div className="p-3 bg-slate-50/70 rounded-xl border border-slate-200">
                     <span className="text-slate-400 block text-[11px] font-semibold uppercase">ID Định danh</span>

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { UserAccount, UserQuota, UserRole, LicensePlan } from '../types';
-import { fetchGoogleClientId, DEFAULT_GOOGLE_CLIENT_ID } from '../utils/googleIdentity';
+import { fetchGoogleClientId, DEFAULT_GOOGLE_CLIENT_ID, isValidGoogleClientId } from '../utils/googleIdentity';
 
 interface AuthContextType {
   user: UserAccount | null;
@@ -145,9 +145,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return 'GUEST';
   });
 
-  const [googleClientId, setGoogleClientId] = useState<string>(
-    () => (import.meta.env.VITE_GOOGLE_CLIENT_ID || DEFAULT_GOOGLE_CLIENT_ID)
-  );
+  const [googleClientId, setGoogleClientId] = useState<string>(() => {
+    const buildEnv = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
+    if (isValidGoogleClientId(buildEnv)) return buildEnv;
+    return DEFAULT_GOOGLE_CLIENT_ID;
+  });
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Modals
@@ -169,11 +171,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     abortControllerRef.current = controller;
 
     try {
-      // 1. Get Client ID (chỉ gọi nếu chưa có trong build-time env)
-      if (!googleClientId) {
+      // 1. Get Client ID (chỉ gọi nếu chưa có trong build-time env hoặc không hợp lệ)
+      if (!isValidGoogleClientId(googleClientId)) {
         try {
           const cid = await fetchGoogleClientId(4000);
-          if (cid && currentGen === authGenerationRef.current) {
+          if (isValidGoogleClientId(cid) && currentGen === authGenerationRef.current) {
             setGoogleClientId(cid);
           }
         } catch {}
@@ -512,26 +514,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const hasQuotaForMode = (mode: 'easy' | 'advanced'): boolean => {
-    if (
+    if (role === 'BLOCKED' || Boolean(user?.isBlocked)) return false;
+    if (role === 'ADMIN' || (user?.email && user.email.toLowerCase() === 'dathien2412@gmail.com')) return true;
+
+    const isPro =
       role === 'LICENSED' ||
-      role === 'ADMIN' ||
       role === 'FREE_ACCESS' ||
       Boolean(user?.freeAccess) ||
       plan === 'PRO' ||
       plan === 'SCHOOL' ||
-      plan === 'PREMIUM'
-    ) return true;
-    if (role === 'BLOCKED') return false;
+      plan === 'PREMIUM';
+
+    if (isPro) {
+      if (user?.licenseExpiresAt) {
+        const expiryTime = new Date(user.licenseExpiresAt).getTime();
+        if (!isNaN(expiryTime) && expiryTime < Date.now()) {
+          return false;
+        }
+      }
+      return true;
+    }
+
     return (quota[mode] ?? 0) > 0;
   };
 
   const openAuthModal = (tab: 'login' | 'license' = 'login') => {
     setAuthModalTab(tab);
     setIsAuthModalOpen(true);
-    if (!googleClientId) {
+    if (!isValidGoogleClientId(googleClientId)) {
       fetchGoogleClientId(8000)
         .then((cid) => {
-          if (cid) setGoogleClientId(cid);
+          if (isValidGoogleClientId(cid)) setGoogleClientId(cid);
         })
         .catch(() => {});
     }

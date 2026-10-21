@@ -19,6 +19,7 @@ import {
   initializeGoogleIdentityOnce,
   resetGoogleAuthCache,
   DEFAULT_GOOGLE_CLIENT_ID,
+  isValidGoogleClientId,
 } from '../utils/googleIdentity';
 
 declare global {
@@ -47,6 +48,7 @@ export const AuthModal: React.FC = () => {
     closeAuthModal,
     openAdminModal,
     loginWithGoogleCredential,
+    loginWithEmailDemo,
     logout,
     refreshStatus,
     activateLicense
@@ -61,6 +63,10 @@ export const AuthModal: React.FC = () => {
   const [googleAuthStatus, setGoogleAuthStatus] = useState<GoogleAuthStatus>('LOADING_CONFIG');
   const [googleAuthErrorMsg, setGoogleAuthErrorMsg] = useState<string | null>(null);
   const [isSubmittingGoogle, setIsSubmittingGoogle] = useState(false);
+  const [showEmailSignIn, setShowEmailSignIn] = useState(false);
+  const [emailInput, setEmailInput] = useState('');
+  const [nameInput, setNameInput] = useState('');
+  const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
   const googleBtnRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -98,10 +104,10 @@ export const AuthModal: React.FC = () => {
     setGoogleAuthErrorMsg(null);
     setAuthError(null);
 
-    // 1. LOADING_CONFIG: Nạp Google Client ID (luôn có DEFAULT_GOOGLE_CLIENT_ID fallback)
+    // 1. LOADING_CONFIG: Nạp Google Client ID (luôn có DEFAULT_GOOGLE_CLIENT_ID fallback hợp lệ)
     setGoogleAuthStatus('LOADING_CONFIG');
     let clientId = googleClientId;
-    if (!clientId) {
+    if (!clientId || !isValidGoogleClientId(clientId)) {
       try {
         clientId = await fetchGoogleClientId(4000);
       } catch {
@@ -109,7 +115,7 @@ export const AuthModal: React.FC = () => {
       }
     }
 
-    if (!clientId) {
+    if (!clientId || !isValidGoogleClientId(clientId)) {
       clientId = DEFAULT_GOOGLE_CLIENT_ID;
     }
 
@@ -229,6 +235,30 @@ export const AuthModal: React.FC = () => {
     }
   };
 
+  // Xử lý đăng nhập email dự phòng khi gặp sự cố Google OAuth
+  const handleEmailSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanEmail = emailInput.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      setAuthError('Vui lòng nhập địa chỉ email hợp lệ.');
+      return;
+    }
+    setIsSubmittingEmail(true);
+    setAuthError(null);
+    try {
+      const ok = await loginWithEmailDemo(cleanEmail, nameInput.trim() || undefined);
+      if (!ok) {
+        setAuthError('Không thể đăng nhập bằng email. Vui lòng kiểm tra lại.');
+      } else {
+        closeAuthModal();
+      }
+    } catch {
+      setAuthError('Đã xảy ra lỗi khi đăng nhập.');
+    } finally {
+      setIsSubmittingEmail(false);
+    }
+  };
+
   if (!isAuthModalOpen) return null;
 
   const handleRefresh = async () => {
@@ -242,6 +272,12 @@ export const AuthModal: React.FC = () => {
 
   const isFreeAccess = role === 'FREE_ACCESS' || Boolean(user?.freeAccess);
   const isLicensed = role === 'LICENSED' || (isLoggedIn && role === 'ADMIN');
+  const isLicenseExpired = Boolean(
+    isLicensed &&
+    role !== 'ADMIN' &&
+    user?.licenseExpiresAt &&
+    new Date(user.licenseExpiresAt).getTime() < Date.now()
+  );
 
   const formatExpiryDate = (isoStr?: string | null) => {
     if (!isoStr) return null;
@@ -360,20 +396,39 @@ export const AuthModal: React.FC = () => {
                     Quyền sử dụng: Không giới hạn trong thời gian chương trình.
                   </p>
                 </div>
+              ) : isLicenseExpired ? (
+                /* 3A. PRO HẾT HẠN */
+                <div className="p-4 bg-amber-50 border border-amber-300 rounded-xl space-y-2.5">
+                  <div className="flex items-center gap-2 text-amber-950 font-bold text-[14px]">
+                    <AlertTriangle className="w-4.5 h-4.5 text-amber-600 shrink-0" />
+                    <span>Gói PRO đã hết hạn sử dụng</span>
+                  </div>
+                  <p className="text-[13px] text-amber-900 leading-relaxed">
+                    Tài khoản của Thầy/Cô đã hết hạn PRO vào ngày <strong>{formatExpiryDate(user?.licenseExpiresAt)}</strong>.
+                  </p>
+                  <div className="p-2.5 bg-white/90 rounded-lg border border-amber-200 text-[12px] text-slate-700 leading-relaxed">
+                    Vui lòng liên hệ Quản trị viên hệ thống để gia hạn quyền sử dụng không giới hạn.
+                  </div>
+                </div>
               ) : isLicensed ? (
-                /* 3. LICENSED */
+                /* 3B. PRO CÒN HIỆU LỰC / VĨNH VIỄN */
                 <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-1.5">
                   <div className="flex items-center gap-2 text-emerald-950 font-bold text-[14px]">
                     <CheckCircle2 className="w-4.5 h-4.5 text-emerald-700 shrink-0" />
-                    <span>Đã được cấp quyền</span>
+                    <span>Đã được cấp quyền thành viên PRO</span>
                   </div>
                   <p className="text-[13px] text-emerald-800 font-medium">
                     Quyền sử dụng: <strong>Không giới hạn</strong>
                   </p>
-                  {user?.licenseExpiresAt && (
+                  {user?.licenseExpiresAt ? (
                     <p className="text-[12.5px] text-emerald-700 flex items-center gap-1.5">
                       <Clock className="w-3.5 h-3.5" />
                       <span>Có hiệu lực đến: {formatExpiryDate(user.licenseExpiresAt)}</span>
+                    </p>
+                  ) : (
+                    <p className="text-[12.5px] text-emerald-700 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Thời hạn: <strong>Vĩnh viễn</strong> (Không giới hạn)</span>
                     </p>
                   )}
                 </div>
@@ -606,6 +661,64 @@ export const AuthModal: React.FC = () => {
                     )}
                   </div>
                 )}
+
+                {/* Tùy chọn đăng nhập bằng Email dự phòng */}
+                <div className="w-full max-w-xs text-center mt-2">
+                  {!showEmailSignIn ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowEmailSignIn(true)}
+                      className="text-[12.5px] font-medium text-slate-500 hover:text-blue-600 transition-colors cursor-pointer"
+                    >
+                      Đăng nhập nhanh bằng Email (Dự phòng)
+                    </button>
+                  ) : (
+                    <form onSubmit={handleEmailSignIn} className="space-y-2.5 text-left p-3.5 bg-slate-50 rounded-xl border border-slate-200 mt-2">
+                      <div>
+                        <label className="block text-[12px] font-semibold text-slate-700 mb-1">
+                          Email tài khoản (Google Workspace / Gmail):
+                        </label>
+                        <input
+                          type="email"
+                          value={emailInput}
+                          onChange={(e) => setEmailInput(e.target.value)}
+                          placeholder="nguyenvana@gmail.com"
+                          required
+                          className="w-full px-3 py-1.5 text-[13px] border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[12px] font-semibold text-slate-700 mb-1">
+                          Họ và tên (Tùy chọn):
+                        </label>
+                        <input
+                          type="text"
+                          value={nameInput}
+                          onChange={(e) => setNameInput(e.target.value)}
+                          placeholder="Thầy/Cô Nguyễn Văn A"
+                          className="w-full px-3 py-1.5 text-[13px] border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          type="submit"
+                          disabled={isSubmittingEmail}
+                          className="flex-1 py-1.5 px-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[13px] rounded-lg shadow-xs transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                        >
+                          {isSubmittingEmail ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                          <span>Đăng nhập</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowEmailSignIn(false)}
+                          className="py-1.5 px-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-[13px] rounded-lg transition-colors cursor-pointer"
+                        >
+                          Hủy
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
               </div>
 
               {/* Thông tin Guest hiện tại */}

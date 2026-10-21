@@ -143,6 +143,22 @@ function loadStore() {
   initDefaultData();
   saveStore();
 }
+function reloadStoreFromDisk() {
+  try {
+    if (fs.existsSync(STORE_FILE)) {
+      const content = fs.readFileSync(STORE_FILE, "utf-8");
+      const parsed = JSON.parse(content);
+      if (parsed && parsed.users) {
+        store.users = parsed.users;
+        if (parsed.guests) store.guests = parsed.guests;
+        if (parsed.licenses) store.licenses = parsed.licenses;
+        if (parsed.stats) store.stats = parsed.stats;
+        if (parsed.settings) store.settings = parsed.settings;
+      }
+    }
+  } catch (_) {
+  }
+}
 function saveStore() {
   try {
     if (!fs.existsSync(DATA_DIR)) {
@@ -155,6 +171,7 @@ function saveStore() {
 }
 function findUserByEmailOrId(identifier) {
   if (!identifier) return null;
+  reloadStoreFromDisk();
   const lower = identifier.toLowerCase();
   for (const key of Object.keys(store.users)) {
     const u = store.users[key];
@@ -515,6 +532,7 @@ async function checkSheetCompatibility() {
   }
 }
 async function getAllUsersAndGuests() {
+  reloadStoreFromDisk();
   if (process.env.LICENSE_API_URL) {
     try {
       const resp = await fetch(process.env.LICENSE_API_URL, {
@@ -1186,18 +1204,22 @@ function extractSubpath(req, basePath) {
     if (cleaned) return cleaned;
   }
   const prefix = basePath.endsWith("/") ? basePath : `${basePath}/`;
+  if (typeof req.originalUrl === "string") {
+    const pathname = req.originalUrl.split("?")[0];
+    if (pathname.startsWith(prefix)) {
+      const sub = pathname.slice(prefix.length).replace(/^\/+|\/+$/g, "");
+      if (sub) return sub;
+    }
+  }
   if (typeof req.url === "string") {
     const pathname = req.url.split("?")[0];
     if (pathname.startsWith(prefix)) {
       const sub = pathname.slice(prefix.length).replace(/^\/+|\/+$/g, "");
       if (sub) return sub;
     }
-  }
-  if (typeof req.originalUrl === "string") {
-    const pathname = req.originalUrl.split("?")[0];
-    if (pathname.startsWith(prefix)) {
-      const sub = pathname.slice(prefix.length).replace(/^\/+|\/+$/g, "");
-      if (sub) return sub;
+    const stripped = pathname.replace(/^\/+|\/+$/g, "");
+    if (stripped && !stripped.startsWith("api/")) {
+      return stripped;
     }
   }
   const headerKeys = ["x-matched-path", "x-forwarded-uri", "x-original-uri", "x-rewrite-url"];

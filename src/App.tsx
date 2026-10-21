@@ -32,6 +32,8 @@ import { SuggestionsView } from './components/views/SuggestionsView';
 import { CouncilSimulatorView } from './components/views/CouncilSimulatorView';
 import { RescoreView } from './components/views/RescoreView';
 import { ReportView } from './components/views/ReportView';
+import { MyEvaluationsView } from './components/views/MyEvaluationsView';
+import { AcademicRebuttalView } from './components/views/AcademicRebuttalView';
 
 // Auth & Modals
 import { useAuth } from './context/AuthContext';
@@ -48,11 +50,13 @@ import {
   RedTeamCard,
   UploadedFileItem,
   SuggestionRewrite,
-  CouncilQuestion
+  CouncilQuestion,
+  EvaluationItem,
+  ChangeSetItem
 } from './types';
 
 export default function App() {
-  const { user, guestId, role, hasQuotaForMode, openQuotaModal, updateUserQuota, isAdmin, openAdminModal, isLoading: isAuthLoading } = useAuth();
+  const { user, guestId, role, hasQuotaForMode, openQuotaModal, updateUserQuota, isAdmin, openAdminModal, isLoading: isAuthLoading, isLoggedIn, openAuthModal } = useAuth();
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [selectedSampleIndex, setSelectedSampleIndex] = useState<number>(0);
   const [analysis, setAnalysis] = useState<SKKNAnalysisResult>(sampleInitiative1);
@@ -117,6 +121,189 @@ export default function App() {
   const [pendingInitialFile, setPendingInitialFile] = useState<File | null>(null);
   const [uploadInitialMethod, setUploadInitialMethod] = useState<'file' | 'paste'>('file');
 
+  // Quản lý lưu trữ hồ sơ cá nhân & Bản gốc v1 bất biến vs Bản nháp (Requirement B & C)
+  const [currentEvaluationId, setCurrentEvaluationId] = useState<string | null>(() => {
+    if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem('skkn_current_eval_id') || null;
+    }
+    return null;
+  });
+  const [originalSkknText, setOriginalSkknText] = useState<string>('');
+  const [draftSkknText, setDraftSkknText] = useState<string>('');
+  const [originalDocxBuffer, setOriginalDocxBuffer] = useState<ArrayBuffer | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error' | 'guest'>('idle');
+  const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
+  const [lastSavedMetadata, setLastSavedMetadata] = useState<{
+    originalFileName?: string;
+    originalFileSize?: number;
+    originalFileBase64?: string;
+    wordCount?: number;
+    title?: string;
+    subject?: string;
+    gradeLevel?: string;
+    originalText?: string;
+    draftText?: string;
+  } | null>(null);
+
+  // Academic Rebuttal dedicated page state (Section II)
+  const [viewingRebuttalCardId, setViewingRebuttalCardId] = useState<string | null>(null);
+  const [rebuttalReturnTab, setRebuttalReturnTab] = useState<ActiveTab>('dashboard');
+  const [targetSuggestionCardId, setTargetSuggestionCardId] = useState<string | null>(null);
+
+  const handleOpenAcademicRebuttal = (card: RedTeamCard, returnTab: ActiveTab = activeTab) => {
+    setViewingRebuttalCardId(card.id);
+    setRebuttalReturnTab(returnTab);
+  };
+
+  const handleGoToSuggestionForCard = (card: RedTeamCard) => {
+    setViewingRebuttalCardId(null);
+    setIsViewingProfileDetail(false);
+    setActiveTab('suggestions');
+    setTargetSuggestionCardId(card.id);
+  };
+
+  // Tự động đóng các trang chi tiết khi đổi tab chính
+  useEffect(() => {
+    setViewingRebuttalCardId(null);
+    setIsViewingProfileDetail(false);
+  }, [activeTab]);
+
+  // Tự động lưu hồ sơ sau khi thẩm định thành công
+  const autoSaveEvaluation = async (
+    resultToSave: SKKNAnalysisResult,
+    extraMeta?: {
+      originalFileName?: string;
+      originalFileSize?: number;
+      originalFileBase64?: string;
+      wordCount?: number;
+      title?: string;
+      subject?: string;
+      gradeLevel?: string;
+      originalText?: string;
+      draftText?: string;
+    }
+  ) => {
+    const meta = extraMeta || lastSavedMetadata || {};
+    if (extraMeta) {
+      setLastSavedMetadata(extraMeta);
+    }
+
+    if (!isLoggedIn && !user?.email) {
+      console.log('[AUTO-SAVE] Người dùng chưa đăng nhập, kết quả được lưu trong phiên hiện tại.');
+      setSaveStatus('guest');
+      return;
+    }
+
+    setSaveStatus('saving');
+    setSaveErrorMessage(null);
+
+    try {
+      const sessionToken = (user as any)?.sessionToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_session_token') : '') || '';
+      const googleCredential = (user as any)?.googleCredential || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_google_credential') : '') || '';
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'x-user-email': user?.email || '',
+      };
+      if (sessionToken) {
+        headers['x-session-token'] = sessionToken;
+        headers['authorization'] = `Bearer ${sessionToken}`;
+      }
+      if (googleCredential) {
+        headers['x-google-credential'] = googleCredential;
+      }
+
+      const calculatedScore = typeof (resultToSave as any)?.overallScore === 'number'
+        ? (resultToSave as any).overallScore
+        : (resultToSave.rubricCriteria?.reduce((acc, c) => acc + (c.proposedScore ?? 0), 0) ?? 0);
+
+      const docTitle = meta.title || resultToSave.metadata?.title || 'Hồ sơ Sáng kiến kinh nghiệm';
+      const docSubject = meta.subject || resultToSave.metadata?.subject || 'Chung';
+      const docGradeLevel = meta.gradeLevel || resultToSave.metadata?.gradeLevel || '';
+
+      const payloadOriginalText = originalSkknText || meta.originalText || '';
+      const payloadDraftText = draftSkknText || originalSkknText || meta.draftText || meta.originalText || '';
+      const payloadChangeSet = resultToSave.changeSet || [];
+
+      if (currentEvaluationId) {
+        // Cập nhật bản ghi hiện tại - không tạo trùng lặp (Requirement B.4)
+        const resp = await fetch('/api/user/evaluations/save-result', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            evaluationId: currentEvaluationId,
+            analysisResult: {
+              ...resultToSave,
+              changeSet: payloadChangeSet,
+            },
+            title: docTitle,
+            subject: docSubject,
+            score: calculatedScore,
+            originalText: payloadOriginalText,
+            draftText: payloadDraftText,
+            changeSet: payloadChangeSet,
+          }),
+        });
+
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.success) {
+          throw new Error(data.error || `Lỗi máy chủ (${resp.status})`);
+        }
+
+        setSaveStatus('saved');
+        console.log('[AUTO-SAVE] Cập nhật thành công hồ sơ hiện tại:', currentEvaluationId);
+      } else {
+        // Tạo mới bản ghi (Requirement B.1, B.2)
+        const resp = await fetch('/api/user/evaluations/create', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            title: docTitle,
+            subject: docSubject,
+            gradeLevel: docGradeLevel,
+            score: calculatedScore,
+            originalFileName: meta.originalFileName || '',
+            originalFileSize: meta.originalFileSize || 0,
+            wordCount: meta.wordCount || 0,
+            originalFileBase64: meta.originalFileBase64 || '',
+            originalText: payloadOriginalText,
+            draftText: payloadDraftText,
+            changeSet: payloadChangeSet,
+            analysisResult: {
+              ...resultToSave,
+              changeSet: payloadChangeSet,
+            },
+          }),
+        });
+
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.success) {
+          throw new Error(data.error || `Lỗi máy chủ (${resp.status})`);
+        }
+
+        if (data.evaluation?.id) {
+          setCurrentEvaluationId(data.evaluation.id);
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('skkn_current_eval_id', data.evaluation.id);
+          }
+        }
+        setSaveStatus('saved');
+        console.log('[AUTO-SAVE] Tạo mới và lưu thành công hồ sơ vào kho:', data.evaluation?.id);
+      }
+    } catch (err: any) {
+      console.error('[AUTO-SAVE] Lỗi khi lưu trữ hồ sơ:', err);
+      setSaveStatus('error');
+      setSaveErrorMessage(err.message || 'Không thể lưu hồ sơ vào cơ sở dữ liệu.');
+    }
+  };
+
+  // Tự động đồng bộ lưu trữ khi người dùng đăng nhập sau khi đã chấm
+  useEffect(() => {
+    if (isLoggedIn && customAnalysis && !currentEvaluationId && !isDemoMode) {
+      autoSaveEvaluation(customAnalysis, lastSavedMetadata || undefined);
+    }
+  }, [isLoggedIn, user?.email]);
+
   // Navigate to Profile Detail in Main Content (Requirement 2 & 3)
   const handleViewProfileDetail = () => {
     setIsProfileDrawerOpen(false);
@@ -132,9 +319,13 @@ export default function App() {
     if (index === 0) {
       setIsDemoMode(true);
       setAnalysis(sampleInitiative1);
+      setCurrentEvaluationId(null);
+      setSaveStatus('idle');
     } else if (index === 1) {
       setIsDemoMode(true);
       setAnalysis(sampleInitiative2);
+      setCurrentEvaluationId(null);
+      setSaveStatus('idle');
     } else if (index === 2 && customAnalysis) {
       setIsDemoMode(false);
       setAnalysis(customAnalysis);
@@ -178,6 +369,30 @@ export default function App() {
         )
       }) : null);
     }
+
+    if (currentEvaluationId && isLoggedIn && user?.email) {
+      try {
+        const sessionToken = (user as any)?.sessionToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_session_token') : '') || '';
+        const updatedCards = analysis.redTeamCards.map(c =>
+          c.id === id ? { ...c, status, userNotes: notes !== undefined ? notes : c.userNotes } : c
+        );
+        fetch('/api/user/evaluations/save-result', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-session-token': sessionToken,
+            'x-user-email': user.email,
+          },
+          body: JSON.stringify({
+            evaluationId: currentEvaluationId,
+            analysisResult: {
+              ...analysis,
+              redTeamCards: updatedCards,
+            },
+          }),
+        }).catch(err => console.error('Lỗi lưu trạng thái vấn đề:', err));
+      } catch (_) {}
+    }
   };
 
   // Perform AI Analysis from server with Automatic Retry, Timeout, Classification & Preservation
@@ -185,7 +400,16 @@ export default function App() {
     skknText: string,
     rubricText: string,
     evidenceFiles: UploadedFileItem[],
-    notes: string
+    notes: string,
+    extraMetadata?: {
+      originalFileName?: string;
+      originalFileSize?: number;
+      originalFileBase64?: string;
+      wordCount?: number;
+      title?: string;
+      subject?: string;
+      gradeLevel?: string;
+    }
   ) => {
     // 7. Double request prevention: block any concurrent triggers
     if (isAnalyzingRef.current) {
@@ -331,6 +555,8 @@ export default function App() {
           success = true;
           setAnalysis(parsedResult);
           setCustomAnalysis(parsedResult);
+          setOriginalSkknText(skknText);
+          setDraftSkknText(skknText);
           setIsDemoMode(false);
           setSelectedSampleIndex(2);
           setIsUploadWorkspace(false);
@@ -345,6 +571,9 @@ export default function App() {
 
           const issuesCount = parsedResult.redTeamCards.length;
           setCompletionToast({ count: issuesCount });
+
+          // Tự động lưu hồ sơ vào hệ thống lưu trữ bền vững (Requirement B)
+          autoSaveEvaluation(parsedResult, extraMetadata);
 
           console.log('[STAGE: RENDER] Hiển thị KẾT QUẢ ĐÁNH GIÁ và VIỆC CẦN XỬ LÝ');
           setTimeout(() => {
@@ -438,6 +667,172 @@ export default function App() {
       return newSuggestion;
     } finally {
       setIsGeneratingSuggestion(false);
+    }
+  };
+
+  // Áp dụng thay đổi từ Gợi ý sửa vào Bản nháp hồ sơ (Requirement B)
+  const handleApplyChange = async (changeItem: ChangeSetItem) => {
+    // 1. Cập nhật changeSet trong analysis và customAnalysis
+    let nextChangeSet: ChangeSetItem[] = [];
+    setAnalysis(prev => {
+      const existing = prev.changeSet || [];
+      const idx = existing.findIndex(c => c.changeId === changeItem.changeId || (changeItem.issueId && c.issueId === changeItem.issueId));
+      if (idx >= 0) {
+        nextChangeSet = [...existing];
+        nextChangeSet[idx] = changeItem;
+      } else {
+        nextChangeSet = [...existing, changeItem];
+      }
+      return {
+        ...prev,
+        changeSet: nextChangeSet
+      };
+    });
+
+    if (customAnalysis) {
+      setCustomAnalysis(prev => {
+        if (!prev) return null;
+        const existing = prev.changeSet || [];
+        const idx = existing.findIndex(c => c.changeId === changeItem.changeId || (changeItem.issueId && c.issueId === changeItem.issueId));
+        let updated: ChangeSetItem[];
+        if (idx >= 0) {
+          updated = [...existing];
+          updated[idx] = changeItem;
+        } else {
+          updated = [...existing, changeItem];
+        }
+        return {
+          ...prev,
+          changeSet: updated
+        };
+      });
+    }
+
+    // 2. Cập nhật bản nháp draftSkknText (Bảo vệ originalSkknText v1 bất biến) (Requirement B.2, B.3, C)
+    let newDraft = draftSkknText || originalSkknText || '';
+    if (changeItem.originalText && changeItem.approvedText) {
+      const rawOrig = changeItem.originalText.trim();
+      const approvedTrim = changeItem.approvedText.trim();
+      if (newDraft && newDraft.includes(rawOrig)) {
+        newDraft = newDraft.replace(rawOrig, approvedTrim);
+      } else if (newDraft && changeItem.proposedText && newDraft.includes(changeItem.proposedText.trim())) {
+        newDraft = newDraft.replace(changeItem.proposedText.trim(), approvedTrim);
+      } else if (newDraft) {
+        const normalizedDraft = newDraft.replace(/\r\n/g, '\n');
+        const normalizedOrig = rawOrig.replace(/\r\n/g, '\n');
+        if (normalizedDraft.includes(normalizedOrig)) {
+          newDraft = normalizedDraft.replace(normalizedOrig, approvedTrim);
+        } else {
+          newDraft = `${newDraft}\n\n[ĐÃ ÁP DỤNG THAY ĐỔI TẠI ${changeItem.location}]:\n${approvedTrim}`;
+        }
+      } else {
+        newDraft = originalSkknText ? originalSkknText.replace(rawOrig, approvedTrim) : approvedTrim;
+      }
+      setDraftSkknText(newDraft);
+    }
+
+    // 3. Tự động lưu bản nháp và changeSet vào server nếu hồ sơ đã được lưu (Requirement B.9)
+    if (currentEvaluationId && isLoggedIn && user?.email) {
+      try {
+        const sessionToken = (user as any)?.sessionToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_session_token') : '') || '';
+        const googleCredential = (user as any)?.googleCredential || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_google_credential') : '') || '';
+
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+          'x-user-email': user.email,
+        };
+        if (sessionToken) {
+          headers['x-session-token'] = sessionToken;
+          headers['authorization'] = `Bearer ${sessionToken}`;
+        }
+        if (googleCredential) {
+          headers['x-google-credential'] = googleCredential;
+        }
+
+        // ĐIỂM SỐ BẢO VỆ 35/100: Tuyệt đối không thay đổi điểm trước khi có kết quả chấm lại hợp lệ (Requirement C)
+        const calculatedScore = analysis.rubricCriteria?.reduce((sum, c) => sum + (c.proposedScore ?? 0), 0) ?? (analysis as any).score ?? 35;
+
+        await fetch('/api/user/evaluations/save-result', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            evaluationId: currentEvaluationId,
+            analysisResult: {
+              ...analysis,
+              changeSet: nextChangeSet
+            },
+            title: analysis.metadata.title,
+            subject: analysis.metadata.subject,
+            score: calculatedScore,
+            draftText: newDraft,
+            changeSet: nextChangeSet
+          }),
+        });
+      } catch (err) {
+        console.error('[APPLY_CHANGE] Lỗi khi lưu bản nháp lên máy chủ:', err);
+      }
+    }
+
+    // Lưu vào localStorage dự phòng để chống mất nội dung khi F5
+    if (currentEvaluationId && typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem(`skkn_draft_${currentEvaluationId}`, newDraft);
+        localStorage.setItem(`skkn_changeset_${currentEvaluationId}`, JSON.stringify(nextChangeSet));
+      } catch (_) {}
+    }
+  };
+
+  // Hoàn tác thay đổi
+  const handleRevertChange = async (changeId: string) => {
+    let nextChangeSet: ChangeSetItem[] = [];
+    setAnalysis(prev => {
+      const existing = prev.changeSet || [];
+      nextChangeSet = existing.filter(c => c.changeId !== changeId);
+      return {
+        ...prev,
+        changeSet: nextChangeSet
+      };
+    });
+
+    if (customAnalysis) {
+      setCustomAnalysis(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          changeSet: (prev.changeSet || []).filter(c => c.changeId !== changeId)
+        };
+      });
+    }
+
+    if (currentEvaluationId && isLoggedIn && user?.email) {
+      try {
+        const sessionToken = (user as any)?.sessionToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_session_token') : '') || '';
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+          'x-user-email': user.email,
+        };
+        if (sessionToken) headers['x-session-token'] = sessionToken;
+        const calculatedScore = analysis.rubricCriteria?.reduce((sum, c) => sum + (c.proposedScore ?? 0), 0) ?? (analysis as any).score ?? 35;
+
+        await fetch('/api/user/evaluations/save-result', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            evaluationId: currentEvaluationId,
+            analysisResult: {
+              ...analysis,
+              changeSet: nextChangeSet
+            },
+            title: analysis.metadata.title,
+            subject: analysis.metadata.subject,
+            score: calculatedScore,
+            draftText: draftSkknText,
+            changeSet: nextChangeSet
+          }),
+        });
+      } catch (err) {
+        console.error('[REVERT_CHANGE] Lỗi khi hoàn tác trên máy chủ:', err);
+      }
     }
   };
 
@@ -539,6 +934,38 @@ export default function App() {
           };
         });
       }
+
+      // Tự động lưu phiên bản mới vào cơ sở dữ liệu nếu đã có hồ sơ
+      if (currentEvaluationId && isLoggedIn && user?.email) {
+        try {
+          const sessionToken = (user as any)?.sessionToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_session_token') : '') || '';
+          const calculatedScore = analysis.rubricCriteria.reduce((sum, c) => {
+            const match = rescoreData.updatedCriteria?.find((u: any) => u.criterionName === c.criterionName);
+            const scoreVal = (match && typeof match.newScore === 'number') ? match.newScore : (c.proposedScore ?? 0);
+            return sum + scoreVal;
+          }, 0);
+
+          fetch('/api/user/evaluations/new-version', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-session-token': sessionToken,
+              'x-user-email': user.email,
+            },
+            body: JSON.stringify({
+              evaluationId: currentEvaluationId,
+              newAnalysisResult: {
+                ...analysis,
+                rescoreHistory: rescoreData,
+              },
+              newScore: calculatedScore,
+              notes: revisedNotes || 'Chấm lại sau khi chỉnh sửa sáng kiến',
+            }),
+          }).catch(err => console.error('Lỗi tự động lưu phiên bản mới:', err));
+        } catch (syncErr) {
+          console.error('Lỗi đồng bộ rescore:', syncErr);
+        }
+      }
     } catch (err: any) {
       console.error('Error in rescore:', err);
       setRescoreError({
@@ -604,6 +1031,7 @@ export default function App() {
         setActiveTab={(tab) => {
           setIsUploadWorkspace(false);
           setIsViewingProfileDetail(false);
+          setViewingRebuttalCardId(null);
           setActiveTab(tab);
         }}
         analysis={currentAnalysis}
@@ -624,13 +1052,192 @@ export default function App() {
           isSample={isDemoMode}
           onOpenMobileMenu={() => setIsMobileOpen(true)}
           isUploadWorkspace={isUploadWorkspace || (!hasActiveEvaluation && !isDemoMode)}
+          onOpenMyEvaluations={() => setActiveTab('my_evaluations')}
+          onStartNewSKKN={() => {
+            setCurrentEvaluationId(null);
+            setViewingRebuttalCardId(null);
+            setIsViewingProfileDetail(false);
+            setSaveStatus('idle');
+            setSaveErrorMessage(null);
+            setIsUploadWorkspace(true);
+            setActiveTab('dashboard');
+          }}
+          onExitDemo={() => {
+            setIsDemoMode(false);
+            if (customAnalysis) {
+              setAnalysis(customAnalysis);
+            }
+          }}
         />
 
         {/* Viewport content */}
         <main className="flex-1 overflow-y-auto flex flex-col min-h-0">
           <div className="flex-1 p-4 sm:p-6 lg:p-8">
             <div className="max-w-6xl mx-auto">
-            {activeTab === 'dashboard' && (
+            {activeTab === 'my_evaluations' ? (
+              <MyEvaluationsView
+                onSelectEvaluation={async (item: EvaluationItem) => {
+                  setCurrentEvaluationId(item.id);
+                  if (typeof localStorage !== 'undefined') {
+                    localStorage.setItem('skkn_current_eval_id', item.id);
+                  }
+                  setSaveStatus('saved');
+                  if (item.analysisResult) {
+                    setCustomAnalysis(item.analysisResult);
+                    setAnalysis(item.analysisResult);
+                    setDraftSkknText(item.draftText || item.originalText || '');
+                    setOriginalSkknText(item.originalText || '');
+                    setWorkflowStatus('COMPLETED');
+                    setIsDemoMode(false);
+                    setIsUploadWorkspace(false);
+                    setActiveTab('dashboard');
+                  } else {
+                    try {
+                      const sessionToken = (user as any)?.sessionToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_session_token') : '') || '';
+                      const resp = await fetch(`/api/user/evaluations/get?id=${encodeURIComponent(item.id)}`, {
+                        headers: {
+                          'x-session-token': sessionToken,
+                          'x-user-email': user?.email || '',
+                        },
+                      });
+                      const contentType = resp.headers.get('content-type') || '';
+                      if (!contentType.includes('application/json')) {
+                        throw new Error(`Máy chủ phản hồi ${resp.status} không phải JSON.`);
+                      }
+                      const data = await resp.json();
+                      if (data.success && data.evaluation?.analysisResult) {
+                        setCustomAnalysis(data.evaluation.analysisResult);
+                        setAnalysis(data.evaluation.analysisResult);
+                        setDraftSkknText(data.evaluation.draftText || data.evaluation.originalText || '');
+                        setOriginalSkknText(data.evaluation.originalText || '');
+                        setWorkflowStatus('COMPLETED');
+                        setIsDemoMode(false);
+                        setIsUploadWorkspace(false);
+                        setActiveTab('dashboard');
+                      }
+                    } catch (err) {
+                      console.error('Lỗi khi tải chi tiết hồ sơ:', err);
+                    }
+                  }
+                }}
+                onContinueEdit={async (item: EvaluationItem) => {
+                  setCurrentEvaluationId(item.id);
+                  if (typeof localStorage !== 'undefined') {
+                    localStorage.setItem('skkn_current_eval_id', item.id);
+                  }
+                  setSaveStatus('saved');
+                  if (item.analysisResult) {
+                    setCustomAnalysis(item.analysisResult);
+                    setAnalysis(item.analysisResult);
+                    setDraftSkknText(item.draftText || item.originalText || '');
+                    setOriginalSkknText(item.originalText || '');
+                    setWorkflowStatus('COMPLETED');
+                    setIsDemoMode(false);
+                    setIsUploadWorkspace(false);
+                    setActiveTab('suggestions');
+                  } else {
+                    try {
+                      const sessionToken = (user as any)?.sessionToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_session_token') : '') || '';
+                      const resp = await fetch(`/api/user/evaluations/get?id=${encodeURIComponent(item.id)}`, {
+                        headers: {
+                          'x-session-token': sessionToken,
+                          'x-user-email': user?.email || '',
+                        },
+                      });
+                      const contentType = resp.headers.get('content-type') || '';
+                      if (!contentType.includes('application/json')) {
+                        throw new Error(`Máy chủ phản hồi ${resp.status} không phải JSON.`);
+                      }
+                      const data = await resp.json();
+                      if (data.success && data.evaluation?.analysisResult) {
+                        setCustomAnalysis(data.evaluation.analysisResult);
+                        setAnalysis(data.evaluation.analysisResult);
+                        setDraftSkknText(data.evaluation.draftText || data.evaluation.originalText || '');
+                        setOriginalSkknText(data.evaluation.originalText || '');
+                        setWorkflowStatus('COMPLETED');
+                        setIsDemoMode(false);
+                        setIsUploadWorkspace(false);
+                        setActiveTab('suggestions');
+                      }
+                    } catch (err) {
+                      console.error('Lỗi khi mở chỉnh sửa hồ sơ:', err);
+                    }
+                  }
+                }}
+                onRescore={async (item: EvaluationItem) => {
+                  setCurrentEvaluationId(item.id);
+                  if (typeof localStorage !== 'undefined') {
+                    localStorage.setItem('skkn_current_eval_id', item.id);
+                  }
+                  setSaveStatus('saved');
+                  if (item.analysisResult) {
+                    setCustomAnalysis(item.analysisResult);
+                    setAnalysis(item.analysisResult);
+                    setDraftSkknText(item.draftText || item.originalText || '');
+                    setOriginalSkknText(item.originalText || '');
+                    setWorkflowStatus('COMPLETED');
+                    setIsDemoMode(false);
+                    setIsUploadWorkspace(false);
+                    setActiveTab('rescore');
+                  } else {
+                    try {
+                      const sessionToken = (user as any)?.sessionToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_session_token') : '') || '';
+                      const resp = await fetch(`/api/user/evaluations/get?id=${encodeURIComponent(item.id)}`, {
+                        headers: {
+                          'x-session-token': sessionToken,
+                          'x-user-email': user?.email || '',
+                        },
+                      });
+                      const contentType = resp.headers.get('content-type') || '';
+                      if (!contentType.includes('application/json')) {
+                        throw new Error(`Máy chủ phản hồi ${resp.status} không phải JSON.`);
+                      }
+                      const data = await resp.json();
+                      if (data.success && data.evaluation?.analysisResult) {
+                        setCustomAnalysis(data.evaluation.analysisResult);
+                        setAnalysis(data.evaluation.analysisResult);
+                        setDraftSkknText(data.evaluation.draftText || data.evaluation.originalText || '');
+                        setOriginalSkknText(data.evaluation.originalText || '');
+                        setWorkflowStatus('COMPLETED');
+                        setIsDemoMode(false);
+                        setIsUploadWorkspace(false);
+                        setActiveTab('rescore');
+                      }
+                    } catch (err) {
+                      console.error('Lỗi khi mở chấm lại hồ sơ:', err);
+                    }
+                  }
+                }}
+                onStartNewSKKN={() => {
+                  setCurrentEvaluationId(null);
+                  setSaveStatus('idle');
+                  setSaveErrorMessage(null);
+                  setIsUploadWorkspace(true);
+                  setActiveTab('dashboard');
+                }}
+              />
+            ) : viewingRebuttalCardId ? (
+              (() => {
+                const selectedCard = currentAnalysis.redTeamCards.find(c => c.id === viewingRebuttalCardId) || currentAnalysis.redTeamCards[0];
+                return selectedCard ? (
+                  <AcademicRebuttalView
+                    card={selectedCard}
+                    cards={currentAnalysis.redTeamCards}
+                    suggestions={currentAnalysis.suggestions}
+                    onSelectCard={(nextCard) => setViewingRebuttalCardId(nextCard.id)}
+                    onUpdateStatus={handleUpdateCardStatus}
+                    onBack={() => {
+                      setViewingRebuttalCardId(null);
+                      setActiveTab(rebuttalReturnTab);
+                    }}
+                    onGoToSuggestion={handleGoToSuggestionForCard}
+                    onApplyChange={handleApplyChange}
+                    changeSet={currentAnalysis.changeSet}
+                    skknFullText={draftSkknText || originalSkknText}
+                  />
+                ) : null;
+              })()
+            ) : activeTab === 'dashboard' ? (
               isViewingProfileDetail ? (
                 <ProfileDetailView
                   analysis={currentAnalysis}
@@ -639,12 +1246,12 @@ export default function App() {
                   onBack={() => setIsViewingProfileDetail(false)}
                   onNavigateTab={(tab) => {
                     setIsViewingProfileDetail(false);
+                    setViewingRebuttalCardId(null);
                     setActiveTab(tab);
                   }}
                   onGoToIssue={(card) => {
                     setIsViewingProfileDetail(false);
-                    setActiveTab('red_team');
-                    handleOpenInspector('basis', card);
+                    handleOpenAcademicRebuttal(card, 'dashboard');
                   }}
                 />
               ) : (
@@ -652,6 +1259,7 @@ export default function App() {
                   analysis={currentAnalysis}
                   onNavigateTab={(tab) => {
                     setIsViewingProfileDetail(false);
+                    setViewingRebuttalCardId(null);
                     setActiveTab(tab);
                   }}
                   onOpenProfileDrawer={() => setIsProfileDrawerOpen(true)}
@@ -672,6 +1280,11 @@ export default function App() {
                     setIsDemoMode(true);
                     setSelectedSampleIndex(0);
                     setAnalysis(sampleInitiative1);
+                    const sampleText = sampleInitiative1.suggestions.map(s => `[${s.targetSection}]\n${s.originalText}`).join('\n\n');
+                    setOriginalSkknText(sampleText);
+                    setDraftSkknText(sampleText);
+                    setCurrentEvaluationId(null);
+                    setSaveStatus('idle');
                   }}
                   onExitDemo={() => {
                     setIsDemoMode(false);
@@ -682,12 +1295,24 @@ export default function App() {
                   appMode={appMode}
                   onUpdateCardStatus={handleUpdateCardStatus}
                   onOpenInspector={handleOpenInspector}
+                  onOpenAcademicRebuttal={(card) => handleOpenAcademicRebuttal(card, 'dashboard')}
+                  saveStatus={saveStatus}
+                  saveErrorMessage={saveErrorMessage}
+                  currentEvaluationId={currentEvaluationId}
+                  onRetrySave={() => {
+                    if (customAnalysis) {
+                      autoSaveEvaluation(customAnalysis, lastSavedMetadata || undefined);
+                    }
+                  }}
+                  onOpenMyEvaluations={() => {
+                    setViewingRebuttalCardId(null);
+                    setIsViewingProfileDetail(false);
+                    setActiveTab('my_evaluations');
+                  }}
+                  onOpenAuth={() => openAuthModal('login')}
                 />
               )
-            )}
-
-            {/* Empty state for other tabs if no evaluation yet */}
-            {activeTab !== 'dashboard' && !isDemoMode && !hasActiveEvaluation ? (
+            ) : !isDemoMode && !hasActiveEvaluation ? (
               <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-8 text-center max-w-lg mx-auto my-12 space-y-4">
                 <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
                   <FileText className="w-6 h-6" />
@@ -736,9 +1361,8 @@ export default function App() {
                     cards={currentAnalysis.redTeamCards}
                     onUpdateCardStatus={handleUpdateCardStatus}
                     onOpenInspector={handleOpenInspector}
-                    onGoToSuggestionForCard={(card: RedTeamCard) => {
-                      setActiveTab('suggestions');
-                    }}
+                    onOpenAcademicRebuttal={(card) => handleOpenAcademicRebuttal(card, 'red_team')}
+                    onGoToSuggestionForCard={handleGoToSuggestionForCard}
                   />
                 )}
 
@@ -780,10 +1404,23 @@ export default function App() {
                   <SuggestionsView
                     suggestions={currentAnalysis.suggestions}
                     issues={currentAnalysis.redTeamCards}
+                    languageCheck={currentAnalysis.languageCheck}
+                    missingContents={currentAnalysis.missingContents}
+                    supportTemplates={currentAnalysis.supportTemplates}
+                    changeSet={currentAnalysis.changeSet}
                     onUpdateIssueStatus={handleUpdateCardStatus}
+                    onApplyChange={handleApplyChange}
+                    onRevertChange={handleRevertChange}
                     onGenerateCustomSuggestion={handleGenerateCustomSuggestion}
                     isGenerating={isGeneratingSuggestion}
-                    onNavigateTab={(tab) => setActiveTab(tab)}
+                    onNavigateTab={(tab) => {
+                      setViewingRebuttalCardId(null);
+                      setActiveTab(tab);
+                    }}
+                    originalDocxBuffer={originalDocxBuffer}
+                    skknTitle={currentAnalysis.metadata.title}
+                    skknFullText={draftSkknText || originalSkknText}
+                    targetSuggestionCardId={targetSuggestionCardId}
                   />
                 )}
 
@@ -883,6 +1520,10 @@ export default function App() {
         isSample={isDemoMode}
         hasCustomAnalysis={Boolean(customAnalysis)}
         workflowStatus={workflowStatus}
+        onOpenMyEvaluations={() => {
+          setIsProfileDrawerOpen(false);
+          setActiveTab('my_evaluations');
+        }}
       />
 
       {/* Profile Selector Modal */}

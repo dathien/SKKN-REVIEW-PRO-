@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   PenTool,
   Sparkles,
@@ -22,7 +22,10 @@ import {
   XCircle,
   HelpCircle,
   Info,
-  ShieldAlert
+  ShieldAlert,
+  Eye,
+  CheckCheck,
+  X
 } from 'lucide-react';
 import {
   SuggestionRewrite,
@@ -52,6 +55,7 @@ interface SuggestionsViewProps {
   originalDocxBuffer?: ArrayBuffer | null;
   skknTitle?: string;
   skknFullText?: string;
+  targetSuggestionCardId?: string | null;
 }
 
 export type PriorityFilter = 'all' | 'must_fix' | 'should_fix' | 'optimize' | 'resolved';
@@ -72,14 +76,30 @@ export const SuggestionsView: React.FC<SuggestionsViewProps> = ({
   onNavigateTab,
   originalDocxBuffer,
   skknTitle = 'Sáng kiến kinh nghiệm',
-  skknFullText = ''
+  skknFullText = '',
+  targetSuggestionCardId = null
 }) => {
   const [activeTab, setActiveTab] = useState<ViewTab>('rewrites');
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [selectedTier, setSelectedTier] = useState<Record<string, 'light' | 'academic' | 'deep'>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+
+  // Change-set quản lý cục bộ bảo đảm phản hồi 0ms và đồng bộ với prop changeSet
+  const [localChangeSet, setLocalChangeSet] = useState<ChangeSetItem[]>(changeSet || []);
+
+  // Thông báo xác nhận hành vi áp dụng (Requirement B.6)
+  const [toastNotification, setToastNotification] = useState<{
+    type: 'success' | 'error' | 'info';
+    message: string;
+    submessage?: string;
+  } | null>(null);
+
+  // Modal xem lại nội dung trước & sau khi chỉnh sửa (Requirement B.7)
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [previewTab, setPreviewTab] = useState<'changes' | 'fulldraft' | 'safety'>('changes');
 
   // Editing state for [CHỈNH LẠI] (PHẦN 6)
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
@@ -94,6 +114,55 @@ export const SuggestionsView: React.FC<SuggestionsViewProps> = ({
   const [customProblem, setCustomProblem] = useState('');
   const [customSection, setCustomSection] = useState('');
   const [allSuggestions, setAllSuggestions] = useState<SuggestionRewrite[]>(suggestions);
+
+  // Đồng bộ localChangeSet khi prop changeSet thay đổi từ server / App.tsx
+  useEffect(() => {
+    if (changeSet) {
+      setLocalChangeSet(changeSet);
+    }
+  }, [changeSet]);
+
+  // Đồng bộ allSuggestions khi có thêm gợi ý từ bên ngoài
+  useEffect(() => {
+    if (suggestions && suggestions.length > 0) {
+      setAllSuggestions(prev => {
+        const propIds = new Set(suggestions.map(s => s.id));
+        const localCustoms = prev.filter(p => !propIds.has(p.id) && p.id.startsWith('sug-custom-'));
+        return [...localCustoms, ...suggestions];
+      });
+    }
+  }, [suggestions]);
+
+  // Tự động tắt toast sau 6 giây
+  useEffect(() => {
+    if (toastNotification) {
+      const timer = setTimeout(() => {
+        setToastNotification(null);
+      }, 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastNotification]);
+
+  // Tự động cuộn đến đúng thẻ gợi ý khi được chuyển từ Trang Phản biện học thuật (Requirement II.5, II.6, II.7)
+  useEffect(() => {
+    if (targetSuggestionCardId) {
+      setActiveTab('rewrites');
+      const timer = setTimeout(() => {
+        const el = cardRefs.current[targetSuggestionCardId] ||
+          document.getElementById(`suggestion-card-${targetSuggestionCardId}`) ||
+          (document.querySelector(`[data-issue-id="${targetSuggestionCardId}"]`) as HTMLElement);
+
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          el.classList.add('ring-4', 'ring-blue-500/70', 'bg-blue-50/40');
+          setTimeout(() => {
+            el.classList.remove('ring-4', 'ring-blue-500/70', 'bg-blue-50/40');
+          }, 4000);
+        }
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [targetSuggestionCardId, allSuggestions]);
 
   // Fallback language items if none provided in analysis
   const languageFindings: LanguageFindingItem[] = languageCheck?.findings || [
@@ -201,13 +270,16 @@ export const SuggestionsView: React.FC<SuggestionsViewProps> = ({
     return card.status === 'Đã xử lý' || card.status === 'resolved';
   };
 
+  // Sử dụng effectiveChangeSet: ưu tiên prop changeSet từ cha (nếu có dữ liệu) hoặc localChangeSet
+  const effectiveChangeSet = (changeSet && changeSet.length > 0) ? changeSet : localChangeSet;
+
   // Check if a suggestion has an applied change in changeSet
   const getAppliedChangeForSuggestion = (sugId: string) => {
-    return changeSet.find(c => c.changeId === `change-${sugId}` || c.issueId === sugId);
+    return effectiveChangeSet.find(c => c.changeId === `change-${sugId}` || c.issueId === sugId);
   };
 
   const getAppliedChangeForLanguage = (langId: string) => {
-    return changeSet.find(c => c.changeId === `change-lang-${langId}`);
+    return effectiveChangeSet.find(c => c.changeId === `change-lang-${langId}`);
   };
 
   // Summary counts
@@ -216,7 +288,7 @@ export const SuggestionsView: React.FC<SuggestionsViewProps> = ({
   const optimizeCount = issues.filter(c => c.impactLevel === 'Thấp').length;
   const resolvedCount = issues.filter(c => isIssueResolved(c)).length;
   const totalCount = issues.length > 0 ? issues.length : allSuggestions.length;
-  const approvedChangesCount = changeSet.filter(c => c.status === 'approved' || c.status === 'applied').length;
+  const approvedChangesCount = effectiveChangeSet.filter(c => c.status === 'approved' || c.status === 'applied').length;
 
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
@@ -224,21 +296,62 @@ export const SuggestionsView: React.FC<SuggestionsViewProps> = ({
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const getTierContent = (s: SuggestionRewrite, tier: 'light' | 'academic' | 'deep') => {
+  // Bảo đảm 100% trả về ĐOẠN VĂN CỤ THỂ thay thế, không phải câu hướng dẫn
+  const getTierContent = (s: SuggestionRewrite, tier: 'light' | 'academic' | 'deep'): string => {
+    let text = '';
     switch (tier) {
-      case 'light': return s.lightRevision;
-      case 'academic': return s.academicRevision;
-      case 'deep': return s.deepRevision;
+      case 'light': text = s.lightRevision; break;
+      case 'academic': text = s.academicRevision; break;
+      case 'deep': text = s.deepRevision; break;
     }
+    const raw = (text || '').trim();
+    const isInstructional = !raw ||
+      raw.startsWith('Chỉnh sửa diễn đạt tại') ||
+      raw.startsWith('Viết lại theo văn phong') ||
+      raw.startsWith('Tái cấu trúc lập luận tại') ||
+      raw.startsWith('Tác giả nên') ||
+      raw.startsWith('Cần sửa') ||
+      raw.startsWith('Cần viết lại');
+
+    if (isInstructional) {
+      const orig = (s.originalText || '').trim();
+      const loc = s.targetSection || 'đoạn văn';
+      if (tier === 'light') {
+        return orig
+          ? orig.replace(/tuyệt đối|chắc chắn 100%|ngay lập tức|hoàn toàn/gi, 'rõ rệt').replace(/nổ lực/g, 'nỗ lực')
+          : `Quá trình triển khai giải pháp tại ${loc} bước đầu ghi nhận sự chuyển biến tích cực của học sinh [GV điền: số liệu thực tế].`;
+      } else if (tier === 'academic') {
+        return orig
+          ? `Việc áp dụng giải pháp tại ${loc} nhằm nâng cao tính chủ động và năng lực thực hành của học sinh, đáp ứng mục tiêu của Chương trình GDPT 2018. Kết quả đánh giá được kiểm chứng khách quan qua tiến trình học tập.`
+          : `Việc thực hiện sáng kiến tại ${loc} đáp ứng mục tiêu phát triển phẩm chất và năng lực cho học sinh theo Chương trình GDPT 2018; các chỉ số đánh giá được đối chiếu thận trọng và có minh chứng đính kèm.`;
+      } else {
+        return orig
+          ? `Nhằm bảo đảm tính khoa học tại ${loc}, tiến trình thực nghiệm sư phạm được triển khai theo 3 bước: khảo sát thực trạng, can thiệp phương pháp mới và kiểm tra đánh giá đối chứng [GV bổ sung: lớp và số liệu đối chứng] tại Phụ lục.`
+          : `Tiến trình giải pháp tại ${loc} được cấu trúc chặt chẽ theo chuỗi lập luận: xác định vấn đề thực tiễn -> can thiệp sư phạm -> thu thập dữ liệu đối chứng [GV điền: số liệu thực tế] để khẳng định hiệu quả khoa học.`;
+      }
+    }
+    return raw;
   };
 
-  // PHẦN 6 & 24: Áp dụng thay đổi vào change-set
+  // PHẦN 6 & 24: Áp dụng thay đổi vào change-set (Requirement B)
   const handleApplySuggestion = (s: SuggestionRewrite, textToApply: string, isManualEdit = false) => {
     const matchingIssue = findMatchingIssue(s);
     const tier = selectedTier[s.id] || 'academic';
+
+    // Kiểm tra xem đề xuất này đã được duyệt trước đó với nội dung giống hệt chưa (Requirement B.8)
+    const existingChange = effectiveChangeSet.find(c => c.changeId === `change-${s.id}` || c.issueId === s.id);
+    if (existingChange && existingChange.approvedText === textToApply) {
+      setToastNotification({
+        type: 'info',
+        message: 'Đoạn văn này đã được áp dụng vào bản nháp',
+        submessage: `Vị trí: ${s.targetSection}. Hệ thống không tăng trùng số lần duyệt.`
+      });
+      return;
+    }
+
     const changeItem: ChangeSetItem = {
       changeId: `change-${s.id}`,
-      issueId: s.id,
+      issueId: matchingIssue?.id || s.id,
       type: 'suggestion',
       location: s.targetSection,
       originalText: s.originalText,
@@ -252,19 +365,56 @@ export const SuggestionsView: React.FC<SuggestionsViewProps> = ({
       appliedAt: new Date().toLocaleTimeString('vi-VN')
     };
 
+    // 1. Cập nhật ngay lập tức localChangeSet (0ms UI latency)
+    setLocalChangeSet(prev => {
+      const idx = prev.findIndex(c => c.changeId === changeItem.changeId || c.issueId === s.id);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = changeItem;
+        return copy;
+      }
+      return [...prev, changeItem];
+    });
+
+    // 2. Chuyển tiếp callback lên App.tsx để áp dụng vào bản nháp và lưu hồ sơ
     if (onApplyChange) {
-      onApplyChange(changeItem);
+      try {
+        onApplyChange(changeItem);
+      } catch (err: any) {
+        console.error('[SUGGESTIONS] Lỗi onApplyChange:', err);
+      }
     }
 
-    // Tự động đồng bộ sang issues[]
+    // 3. Tự động đồng bộ trạng thái Red Team card
     if (matchingIssue && onUpdateIssueStatus) {
       onUpdateIssueStatus(matchingIssue.id, 'Đã xử lý');
     }
 
     setEditingCardId(null);
+
+    // 4. Thông báo xác nhận thành công rõ ràng (Requirement B.6)
+    const isNewApproval = !existingChange;
+    const currentApprovedCount = effectiveChangeSet.filter(c => c.changeId !== changeItem.changeId && (c.status === 'approved' || c.status === 'applied')).length;
+    const finalCount = isNewApproval ? currentApprovedCount + 1 : currentApprovedCount;
+
+    setToastNotification({
+      type: 'success',
+      message: 'Đã áp dụng thay đổi thành công',
+      submessage: `Đoạn đề xuất tại "${s.targetSection}" đã được đưa vào Bản nháp chỉnh sửa. Số thay đổi đã duyệt: ${finalCount}.`
+    });
   };
 
   const handleApplyLanguageItem = (item: LanguageFindingItem, textToApply: string, isManualEdit = false) => {
+    const existingChange = effectiveChangeSet.find(c => c.changeId === `change-lang-${item.id}` || c.issueId === item.id);
+    if (existingChange && existingChange.approvedText === textToApply) {
+      setToastNotification({
+        type: 'info',
+        message: 'Lỗi chính tả/ngôn ngữ này đã được áp dụng trước đó',
+        submessage: `Vị trí: ${item.location}.`
+      });
+      return;
+    }
+
     const changeItem: ChangeSetItem = {
       changeId: `change-lang-${item.id}`,
       issueId: item.id,
@@ -279,21 +429,48 @@ export const SuggestionsView: React.FC<SuggestionsViewProps> = ({
       appliedAt: new Date().toLocaleTimeString('vi-VN')
     };
 
+    setLocalChangeSet(prev => {
+      const idx = prev.findIndex(c => c.changeId === changeItem.changeId);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = changeItem;
+        return copy;
+      }
+      return [...prev, changeItem];
+    });
+
     if (onApplyChange) {
       onApplyChange(changeItem);
     }
 
     setEditingCardId(null);
+
+    const isNewApproval = !existingChange;
+    const currentApprovedCount = effectiveChangeSet.filter(c => c.changeId !== changeItem.changeId && (c.status === 'approved' || c.status === 'applied')).length;
+    const finalCount = isNewApproval ? currentApprovedCount + 1 : currentApprovedCount;
+
+    setToastNotification({
+      type: 'success',
+      message: 'Đã áp dụng thay đổi thành công',
+      submessage: `Chuẩn hóa ngôn ngữ tại "${item.location}" đã được cập nhật vào Bản nháp. Số thay đổi đã duyệt: ${finalCount}.`
+    });
   };
 
   // PHẦN 19: Hoàn tác thay đổi
   const handleRevertItem = (changeId: string, matchingIssueId?: string) => {
+    setLocalChangeSet(prev => prev.filter(c => c.changeId !== changeId));
     if (onRevertChange) {
       onRevertChange(changeId);
     }
     if (matchingIssueId && onUpdateIssueStatus) {
       onUpdateIssueStatus(matchingIssueId, 'Chưa xử lý');
     }
+
+    setToastNotification({
+      type: 'info',
+      message: 'Đã hoàn tác thay đổi',
+      submessage: 'Đoạn văn đã được khôi phục về trạng thái nguyên bản.'
+    });
   };
 
   // PHẦN 22, 23, 24, 25, 26: Xuất Word bảo toàn định dạng
@@ -383,6 +560,59 @@ export const SuggestionsView: React.FC<SuggestionsViewProps> = ({
   return (
     <div className="space-y-6 pb-12 select-none">
       
+      {/* Toast xác nhận áp dụng thay đổi thành công (Requirement B.6) */}
+      {toastNotification && (
+        <div
+          role="alert"
+          className={`p-4 rounded-2xl border flex items-start justify-between gap-3 shadow-md transition-all animate-in fade-in slide-in-from-top duration-200 ${
+            toastNotification.type === 'success'
+              ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
+              : toastNotification.type === 'error'
+              ? 'bg-rose-50 border-rose-300 text-rose-950'
+              : 'bg-blue-50 border-blue-300 text-blue-950'
+          }`}
+        >
+          <div className="flex items-start gap-3">
+            {toastNotification.type === 'success' ? (
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+            ) : toastNotification.type === 'error' ? (
+              <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+            ) : (
+              <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+            )}
+            <div>
+              <strong className="block font-bold text-[15px]">
+                {toastNotification.message}
+              </strong>
+              {toastNotification.submessage && (
+                <p className="text-[13.5px] mt-0.5 text-slate-700 leading-relaxed">
+                  {toastNotification.submessage}
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {approvedChangesCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowPreviewModal(true)}
+                className="text-[13px] font-bold px-3 py-1.5 rounded-lg bg-white border border-emerald-300 hover:bg-emerald-100 text-emerald-800 transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>Xem bản nháp</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setToastNotification(null)}
+              className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-black/5 transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Banner - PHẦN 4: HỖ TRỢ HOÀN THIỆN */}
       <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white rounded-2xl p-6 shadow-md border border-blue-950">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -399,19 +629,32 @@ export const SuggestionsView: React.FC<SuggestionsViewProps> = ({
             </p>
           </div>
 
-          {/* PHẦN 22 & 26: Nút xuất Word BETA */}
-          <div className="space-y-1.5 shrink-0 self-start sm:self-auto">
-            <button
-              type="button"
-              onClick={handleExportWord}
-              disabled={isExportingWord}
-              className="py-3 px-5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[14px] sm:text-[15px] rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-            >
-              <Download className="w-4 h-4" />
-              <span>{isExportingWord ? 'Đang đóng gói Word...' : `Xuất Word đã sửa (${approvedChangesCount})`}</span>
-              <span className="text-[12px] bg-emerald-700 px-2 py-0.5 rounded font-mono font-bold">BETA</span>
-            </button>
-            <span className="text-[13px] text-blue-200/90 block text-center font-medium">
+          {/* Nút Xem bản nháp & Nút xuất Word BETA */}
+          <div className="space-y-2 shrink-0 self-start sm:self-auto flex flex-col items-stretch sm:items-end">
+            <div className="flex items-center gap-2 flex-wrap">
+              {approvedChangesCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowPreviewModal(true)}
+                  className="py-3 px-4 bg-white/10 hover:bg-white/20 text-white font-bold text-[14px] sm:text-[15px] rounded-xl border border-white/25 shadow-sm transition-all flex items-center gap-2 cursor-pointer"
+                  title="Xem đối chiếu trước và sau các đoạn đã áp dụng"
+                >
+                  <Eye className="w-4 h-4 text-emerald-300" />
+                  <span>Xem bản nháp ({approvedChangesCount} đã duyệt)</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleExportWord}
+                disabled={isExportingWord}
+                className="py-3 px-5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[14px] sm:text-[15px] rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <Download className="w-4 h-4" />
+                <span>{isExportingWord ? 'Đang đóng gói Word...' : `Xuất Word (${approvedChangesCount})`}</span>
+                <span className="text-[12px] bg-emerald-700 px-2 py-0.5 rounded font-mono font-bold">BETA</span>
+              </button>
+            </div>
+            <span className="text-[13px] text-blue-200/90 block text-center sm:text-right font-medium">
               Bảo toàn tối đa hình ảnh, bảng & định dạng
             </span>
           </div>
@@ -705,7 +948,15 @@ export const SuggestionsView: React.FC<SuggestionsViewProps> = ({
               return (
                 <div
                   key={s.id}
-                  className={`bg-white rounded-2xl border transition-all duration-200 shadow-2xs space-y-4 p-5 sm:p-6 lg:p-7 ${
+                  ref={(el) => {
+                    cardRefs.current[s.id] = el;
+                    if (matchingIssue) {
+                      cardRefs.current[matchingIssue.id] = el;
+                    }
+                  }}
+                  id={`suggestion-card-${s.id}`}
+                  data-issue-id={matchingIssue?.id || s.id}
+                  className={`bg-white rounded-2xl border transition-all duration-300 shadow-2xs space-y-4 p-5 sm:p-6 lg:p-7 scroll-mt-28 ${
                     isApplied
                       ? 'border-emerald-300 bg-emerald-50/15'
                       : isDone
@@ -732,7 +983,7 @@ export const SuggestionsView: React.FC<SuggestionsViewProps> = ({
                           {isApplied && (
                             <span className="text-[13px] font-[700] px-2.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
                               <Check className="w-3.5 h-3.5 text-emerald-700" />
-                              <span>Đã duyệt đưa vào bản xuất ✓</span>
+                              <span>Đã áp dụng vào bản nháp ✓</span>
                             </span>
                           )}
                         </div>
@@ -933,14 +1184,25 @@ export const SuggestionsView: React.FC<SuggestionsViewProps> = ({
 
                     <div className="flex items-center gap-2.5 self-end sm:self-auto">
                       {isApplied ? (
-                        <button
-                          type="button"
-                          onClick={() => handleRevertItem(`change-${s.id}`, matchingIssue?.id)}
-                          className="text-[14px] font-[650] px-4 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 transition-all flex items-center gap-2 cursor-pointer shadow-2xs"
-                        >
-                          <RotateCcw className="w-4 h-4" />
-                          <span>Hoàn tác (Hủy áp dụng)</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setShowPreviewModal(true)}
+                            className="text-[13.5px] font-[650] px-3.5 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                            title="Xem so sánh Trước và Sau của đoạn văn này trong bản nháp"
+                          >
+                            <Eye className="w-4 h-4 text-emerald-600" />
+                            <span>Xem đối chiếu</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRevertItem(`change-${s.id}`, matchingIssue?.id)}
+                            className="text-[14px] font-[650] px-4 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 transition-all flex items-center gap-2 cursor-pointer shadow-2xs"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                            <span>Hoàn tác (Hủy áp dụng)</span>
+                          </button>
+                        </div>
                       ) : (
                         <>
                           <button
@@ -1273,6 +1535,236 @@ export const SuggestionsView: React.FC<SuggestionsViewProps> = ({
             <RefreshCw className="w-4 h-4" />
             <span>TIẾN HÀNH CHẤM LẠI SAU CHỈNH SỬA →</span>
           </button>
+        </div>
+      )}
+
+      {/* Modal Xem lại nội dung trước & sau khi chỉnh sửa (Requirement B.7) */}
+      {showPreviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+            
+            {/* Header modal */}
+            <div className="p-5 sm:p-6 bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 text-white flex items-center justify-between gap-3 shrink-0">
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[12.5px] font-bold border border-emerald-500/30">
+                  <CheckCheck className="w-3.5 h-3.5" />
+                  <span>Bản nháp chỉnh sửa • {approvedChangesCount} thay đổi đã áp dụng</span>
+                </div>
+                <h3 className="text-[18px] sm:text-[20px] font-bold tracking-tight text-white">
+                  ĐỐI CHIẾU TRƯỚC ↔ SAU & BẢN NHÁP HOÀN THIỆN
+                </h3>
+                <p className="text-[13.5px] text-blue-200/90 truncate max-w-xl">
+                  {skknTitle}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowPreviewModal(false)}
+                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal tabs */}
+            <div className="flex items-center gap-2 px-6 pt-3 border-b border-slate-200 bg-slate-50 shrink-0">
+              <button
+                type="button"
+                onClick={() => setPreviewTab('changes')}
+                className={`pb-3 px-3 text-[14px] font-bold border-b-2 transition-all cursor-pointer ${
+                  previewTab === 'changes'
+                    ? 'border-blue-600 text-blue-800'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Danh sách đoạn đã sửa ({effectiveChangeSet.filter(c => c.status === 'approved' || c.status === 'applied').length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviewTab('fulldraft')}
+                className={`pb-3 px-3 text-[14px] font-bold border-b-2 transition-all cursor-pointer ${
+                  previewTab === 'fulldraft'
+                    ? 'border-blue-600 text-blue-800'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Toàn văn Bản nháp đã sửa
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviewTab('safety')}
+                className={`pb-3 px-3 text-[14px] font-bold border-b-2 transition-all cursor-pointer ${
+                  previewTab === 'safety'
+                    ? 'border-blue-600 text-blue-800'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                🛡️ Bảo vệ bản gốc v1
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              
+              {previewTab === 'changes' && (
+                <div className="space-y-4">
+                  {effectiveChangeSet.filter(c => c.status === 'approved' || c.status === 'applied').length === 0 ? (
+                    <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                      <p className="text-[15px] font-semibold text-slate-700">
+                        Chưa có thay đổi nào được duyệt đưa vào bản nháp.
+                      </p>
+                      <p className="text-[13.5px] text-slate-500">
+                        Thầy/Cô hãy duyệt các đề xuất viết lại ở danh sách bên ngoài bằng cách nhấn "ÁP DỤNG THAY ĐỔI".
+                      </p>
+                    </div>
+                  ) : (
+                    effectiveChangeSet
+                      .filter(c => c.status === 'approved' || c.status === 'applied')
+                      .map((c, i) => (
+                        <div
+                          key={c.changeId || i}
+                          className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-3"
+                        >
+                          <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="w-6 h-6 rounded-md bg-emerald-100 text-emerald-800 font-bold text-[13px] flex items-center justify-center">
+                                #{i + 1}
+                              </span>
+                              <strong className="text-[14.5px] text-slate-900">
+                                📍 Vị trí: {c.location || 'Trong văn bản'}
+                              </strong>
+                              <span className="text-[12.5px] font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-800">
+                                {c.type === 'language' ? 'Kiểm tra ngôn ngữ' : 'Gợi ý viết lại'}
+                              </span>
+                              {c.selectedRevisionLevel && (
+                                <span className="text-[12px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                  {c.selectedRevisionLevel === 'light' ? 'Sửa nhẹ' : c.selectedRevisionLevel === 'academic' ? 'Sửa học thuật' : 'Sửa sâu'}
+                                </span>
+                              )}
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleRevertItem(c.changeId, c.issueId)}
+                              className="text-[13px] font-bold text-rose-700 hover:text-rose-900 px-3 py-1.5 rounded-lg border border-rose-200 hover:bg-rose-50 transition-colors cursor-pointer flex items-center gap-1"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              <span>Hủy duyệt đoạn này</span>
+                            </button>
+                          </div>
+
+                          {/* So sánh Đối chiếu 2 Cột: Trước (Bản gốc) ↔ Sau (Bản đề xuất) */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[14px]">
+                            <div className="p-3.5 rounded-xl bg-rose-50/50 border border-rose-200 space-y-1.5">
+                              <span className="text-[12px] font-bold uppercase tracking-wider text-rose-800 flex items-center gap-1">
+                                <span>❌ BẢN GỐC v1 (TRƯỚC SỬA):</span>
+                              </span>
+                              <p className="text-slate-800 italic leading-relaxed bg-white p-3 rounded-lg border border-rose-100">
+                                "{c.originalText}"
+                              </p>
+                            </div>
+
+                            <div className="p-3.5 rounded-xl bg-emerald-50/50 border border-emerald-200 space-y-1.5">
+                              <span className="text-[12px] font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1">
+                                <span>✓ BẢN MỚI ĐÃ DUYỆT (ĐƯA VÀO NHÁP):</span>
+                              </span>
+                              <p className="text-slate-900 font-medium leading-relaxed bg-white p-3 rounded-lg border border-emerald-100">
+                                "{c.approvedText || c.proposedText}"
+                              </p>
+                            </div>
+                          </div>
+
+                          {c.reason && (
+                            <p className="text-[13px] text-slate-600 pt-1">
+                              <strong>Lý do điều chỉnh:</strong> {c.reason}
+                            </p>
+                          )}
+                        </div>
+                      ))
+                  )}
+                </div>
+              )}
+
+              {previewTab === 'fulldraft' && (
+                <div className="space-y-3">
+                  <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 text-[13.5px] text-blue-900 leading-relaxed flex items-start gap-2.5">
+                    <Info className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" />
+                    <div>
+                      <strong>Trạng thái Bản nháp:</strong> Toàn văn dưới đây được trích xuất từ Bản nháp đang chỉnh sửa của hồ sơ, đã tích hợp các đoạn văn được giáo viên phê duyệt. Bản này sẽ được tự động sử dụng khi Thầy/Cô chuyển sang chức năng <strong>"CHẤM LẠI SAU CHỈNH SỬA"</strong>.
+                    </div>
+                  </div>
+
+                  <div className="p-5 bg-slate-50 border border-slate-300 rounded-2xl font-sans text-[14.5px] sm:text-[15px] text-slate-900 whitespace-pre-wrap leading-[1.8] max-h-[50vh] overflow-y-auto">
+                    {skknFullText && skknFullText.trim() ? (
+                      skknFullText
+                    ) : (
+                      <div className="text-slate-500 italic p-6 text-center">
+                        Bản nháp đang áp dụng các thay đổi từ ChangeSet. Khi tải hoặc dán toàn văn SKKN, toàn bộ văn bản sẽ hiển thị đầy đủ tại đây.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {previewTab === 'safety' && (
+                <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-4 text-[14.5px] leading-relaxed text-slate-800">
+                  <div className="flex items-center gap-3 text-emerald-800">
+                    <ShieldCheck className="w-7 h-7 text-emerald-600" />
+                    <h4 className="text-[17px] font-bold text-slate-900">
+                      CƠ CHẾ QUẢN LÝ PHIÊN BẢN & BẢO VỆ BẢN GỐC V1
+                    </h4>
+                  </div>
+                  <ul className="space-y-2.5 list-disc pl-5">
+                    <li>
+                      <strong>Bản gốc v1 là bất biến:</strong> Toàn bộ văn bản gốc của Thầy/Cô khi nộp thẩm định lần đầu được niêm phong v1, không bao giờ bị ghi đè hay thay đổi ngoài ý muốn.
+                    </li>
+                    <li>
+                      <strong>Bản nháp chỉnh sửa độc lập:</strong> Khi nhấn "ÁP DỤNG THAY ĐỔI", đoạn văn mới chỉ được tích hợp vào Bản nháp chỉnh sửa của hồ sơ hiện tại.
+                    </li>
+                    <li>
+                      <strong>Không đổi điểm trước khi chấm lại:</strong> Điểm số thẩm định ban đầu (ví dụ: 35/100) được giữ nguyên hoàn toàn. Điểm chỉ được cập nhật sau khi quy trình Chấm lại thực chất hoàn tất.
+                    </li>
+                    <li>
+                      <strong>Phiên bản v2 chỉ tạo khi Chấm lại:</strong> Hệ thống không tự động tạo phiên bản trùng lặp. Phiên bản mới v2 chỉ được sinh ra có kiểm soát khi có kết quả Chấm lại hợp lệ.
+                    </li>
+                  </ul>
+                </div>
+              )}
+
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 sm:p-5 bg-slate-100 border-t border-slate-200 flex items-center justify-between gap-3 shrink-0">
+              <span className="text-[13px] text-slate-600 font-medium">
+                {effectiveChangeSet.filter(c => c.status === 'approved' || c.status === 'applied').length} thay đổi đã được tích hợp vào bản nháp
+              </span>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPreviewModal(false)}
+                  className="px-4 py-2 rounded-xl bg-white hover:bg-slate-200 text-slate-800 font-bold text-[14px] border border-slate-300 transition-colors cursor-pointer"
+                >
+                  Đóng đối chiếu
+                </button>
+                {onNavigateTab && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPreviewModal(false);
+                      onNavigateTab('rescore');
+                    }}
+                    className="px-5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-[14px] transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    <span>Sang module Chấm lại →</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+          </div>
         </div>
       )}
 

@@ -14,16 +14,32 @@
   ],
   "rewrites": [
     {
+      "source": "/api/auth",
+      "destination": "/api/auth?__subpath="
+    },
+    {
       "source": "/api/auth/:path*",
       "destination": "/api/auth?__subpath=:path*"
+    },
+    {
+      "source": "/api/user",
+      "destination": "/api/user?__subpath="
     },
     {
       "source": "/api/user/:path*",
       "destination": "/api/user?__subpath=:path*"
     },
     {
+      "source": "/api/license",
+      "destination": "/api/license?__subpath="
+    },
+    {
       "source": "/api/license/:path*",
       "destination": "/api/license?__subpath=:path*"
+    },
+    {
+      "source": "/api/admin",
+      "destination": "/api/admin?__subpath="
     },
     {
       "source": "/api/admin/:path*",

@@ -502,3 +502,64 @@ export interface SystemSettings {
   freeAccessStart: string;
   freeAccessEnd: string;
 }
+
+// ==========================================
+// KHO HỒ SƠ CÁ NHÂN & LƯU TRỮ GOOGLE DRIVE
+// ==========================================
+export type EvaluationRecordStatus = 'DRAFT' | 'COMPLETED' | 'REVISED';
+
+export interface EvaluationVersionItem {
+  version: number;
+  createdAt: string;
+  score: number;
+  notes?: string;
+  resultSummary?: string;
+  resultFileId?: string;
+}
+
+export interface EvaluationItem {
+  id: string; // EVALUATION_ID (e.g. eval_1729000000_abc)
+  userId: string;
+  userEmail: string;
+  title: string;
+  subject?: string;
+  gradeLevel?: string;
+  score: number;
+  status: EvaluationRecordStatus;
+  versionCount: number;
+  currentVersion: number;
+  originalFileName?: string;
+  originalFileSize?: number;
+  wordCount?: number;
+  driveFolderId?: string;
+  latestResultFileId?: string;
+  originalFileId?: string;
+  createdAt: string;
+  updatedAt: string;
+  // Full analysis loaded on demand:
+  analysisResult?: SKKNAnalysisResult;
+  versionsHistory?: EvaluationVersionItem[];
+  // Quản lý phiên bản & Bản nháp (Bản gốc v1 bất biến vs Bản nháp đang sửa)
+  originalText?: string;
+  draftText?: string;
+  changeSet?: ChangeSetItem[];
+}
+
+export interface StorageAuditLog {
+  auditId: string;
+  timestamp: string;
+  action: 'CREATE' | 'SAVE_RESULT' | 'NEW_VERSION' | 'RENAME' | 'DELETE';
+  userId: string;
+  userEmail: string;
+  evaluationId: string;
+  details: string;
+  status: 'SUCCESS' | 'FAILED';
+}
+
+export interface StorageStats {
+  totalEvaluations: number;
+  totalVersions: number;
+  totalSizeBytes: number;
+  userEvaluationsCount: number;
+}
+

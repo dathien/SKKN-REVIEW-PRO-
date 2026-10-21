@@ -11,9 +11,26 @@ export default async function handler(req: any, res: any) {
   // GET /api/auth/config
   if (subpath === 'config') {
     const rawClientId = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || '';
-    const cleanClientId = rawClientId.replace(/^["']|["']$/g, '').trim();
+    const cleanCandidate = rawClientId.replace(/^["']|["']$/g, '').trim();
+    const fallbackClientId = '398274708628-jlja4cs8fpbe7n8677ra3uorid2fr5ck.apps.googleusercontent.com';
+
+    const isCandidateValid = Boolean(
+      cleanCandidate &&
+      !cleanCandidate.startsWith('http://') &&
+      !cleanCandidate.startsWith('https://') &&
+      !cleanCandidate.includes('/') &&
+      !cleanCandidate.includes('your-google-client-id') &&
+      /^[0-9]+[a-z0-9_-]*\.apps\.googleusercontent\.com$/i.test(cleanCandidate)
+    );
+
+    const effectiveClientId = isCandidateValid ? cleanCandidate : fallbackClientId;
+
+    if (!isCandidateValid && cleanCandidate) {
+      console.warn(`[OAuth Config Warning] Detected invalid GOOGLE_CLIENT_ID in environment: "${cleanCandidate}". Google OAuth Client IDs must end with .apps.googleusercontent.com (not URLs). Using default verified Client ID.`);
+    }
+
     return res.status(200).json({
-      googleClientId: cleanClientId,
+      googleClientId: effectiveClientId,
       hasLicenseApi: Boolean(process.env.LICENSE_API_URL),
     });
   }
@@ -56,11 +73,8 @@ export default async function handler(req: any, res: any) {
         id: userId,
       });
 
-      // Tạo Admin Session Token nếu là Quản trị viên hoặc Root Admin
-      let sessionToken: string | undefined;
-      if (user.role === 'ADMIN' || ROOT_ADMIN_EMAILS.includes(userEmail)) {
-        sessionToken = createAdminSession(userEmail, user.role);
-      }
+      // Tạo Session Token xác thực có chữ ký số cho người dùng đã đăng nhập
+      const sessionToken = createAdminSession(userEmail, user.role);
 
       return res.status(200).json({ success: true, user, sessionToken });
     } catch (err: any) {

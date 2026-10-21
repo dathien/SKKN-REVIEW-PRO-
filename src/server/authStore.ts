@@ -172,6 +172,24 @@ export function loadStore() {
   saveStore();
 }
 
+export function reloadStoreFromDisk() {
+  try {
+    if (fs.existsSync(STORE_FILE)) {
+      const content = fs.readFileSync(STORE_FILE, 'utf-8');
+      const parsed = JSON.parse(content);
+      if (parsed && parsed.users) {
+        store.users = parsed.users;
+        if (parsed.guests) store.guests = parsed.guests;
+        if (parsed.licenses) store.licenses = parsed.licenses;
+        if (parsed.stats) store.stats = parsed.stats;
+        if (parsed.settings) store.settings = parsed.settings;
+      }
+    }
+  } catch (_) {
+    // Ignore read errors
+  }
+}
+
 export function saveStore() {
   try {
     if (!fs.existsSync(DATA_DIR)) {
@@ -188,6 +206,7 @@ export function getOrCreateGuest(guestId: string): GuestSession {
   if (!guestId) {
     guestId = `guest_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
   }
+  reloadStoreFromDisk();
   if (!store.guests[guestId]) {
     store.guests[guestId] = {
       guestId,
@@ -209,6 +228,7 @@ export function getOrCreateGuest(guestId: string): GuestSession {
 // ----------------- USER OPERATIONS -----------------
 export function findUserByEmailOrId(identifier: string): UserAccount | null {
   if (!identifier) return null;
+  reloadStoreFromDisk();
   const lower = identifier.toLowerCase();
   for (const key of Object.keys(store.users)) {
     const u = store.users[key];
@@ -630,16 +650,41 @@ export function consumeQuota(params: {
         };
       }
 
-      // LICENSED, ADMIN or FREE ACCESS or PRO plan -> Unlimited (không trừ lượt thực tế)
-      if (
+      // 1. Root Admin or Admin always has unlimited access
+      if (user.role === 'ADMIN' || ROOT_ADMIN_EMAILS.includes(user.email.toLowerCase())) {
+        store.stats.totalAnalyses += 1;
+        saveStore();
+        return {
+          allowed: true,
+          role: 'ADMIN',
+          quota: user.quota,
+        };
+      }
+
+      // 2. PRO, LICENSED, FREE ACCESS: Check expiry date
+      const isProPlan =
         user.role === 'LICENSED' ||
-        user.role === 'ADMIN' ||
         user.role === 'FREE_ACCESS' ||
         Boolean(user.freeAccess) ||
         user.plan === 'PRO' ||
         user.plan === 'SCHOOL' ||
-        user.plan === 'PREMIUM'
-      ) {
+        user.plan === 'PREMIUM';
+
+      if (isProPlan) {
+        if (user.licenseExpiresAt) {
+          const expiryTime = new Date(user.licenseExpiresAt).getTime();
+          if (!isNaN(expiryTime) && expiryTime < Date.now()) {
+            return {
+              allowed: false,
+              code: 'NOT_ALLOWED',
+              message: 'Gói PRO của Thầy/Cô đã hết thời hạn sử dụng. Vui lòng liên hệ Quản trị viên để được gia hạn dịch vụ.',
+              role: user.role,
+              quota: user.quota,
+            };
+          }
+        }
+
+        // PRO còn hiệu lực: sử dụng không giới hạn lượt, không trừ hạn mức
         store.stats.totalAnalyses += 1;
         saveStore();
         return {
@@ -1043,6 +1088,7 @@ export async function checkSheetCompatibility(): Promise<{
 }
 
 export async function getAllUsersAndGuests() {
+  reloadStoreFromDisk();
   if (process.env.LICENSE_API_URL) {
     try {
       const resp = await fetch(process.env.LICENSE_API_URL, {

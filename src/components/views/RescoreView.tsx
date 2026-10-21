@@ -25,6 +25,8 @@ interface RescoreViewProps {
   isRescoring?: boolean;
   onNavigateTab?: (tab: ActiveTab) => void;
   rescoreError?: { message: string; retryable?: boolean } | null;
+  draftText?: string;
+  originalText?: string;
 }
 
 export const RescoreView: React.FC<RescoreViewProps> = ({
@@ -32,7 +34,9 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
   onRescore,
   isRescoring,
   onNavigateTab,
-  rescoreError
+  rescoreError,
+  draftText,
+  originalText
 }) => {
   const [inputMode, setInputMode] = useState<'paste' | 'file'>('paste');
   const [revisedText, setRevisedText] = useState('');
@@ -44,6 +48,21 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
   const totalIssues = analysis.redTeamCards.length;
   const resolvedCount = analysis.redTeamCards.filter(c => c.status === 'Đã xử lý' || c.status === 'resolved').length;
   const remainingCount = totalIssues - resolvedCount;
+
+  const approvedChanges = (analysis.changeSet || []).filter(c => c.status === 'approved' || c.status === 'applied');
+
+  // Tự động khởi tạo từ Bản nháp đã chỉnh sửa nếu chưa có nội dung (Requirement C)
+  React.useEffect(() => {
+    if (!revisedText) {
+      if (draftText && draftText.trim()) {
+        setRevisedText(draftText);
+      } else if (approvedChanges.length > 0) {
+        const autoSummary = `BẢN ĐIỀU CHỈNH ĐÃ ÁP DỤNG (${approvedChanges.length} THAY ĐỔI TỪ GỢI Ý SỬA):\n\n` +
+          approvedChanges.map((c, i) => `${i + 1}. Vị trí: ${c.location}\n- Bản gốc: "${c.originalText}"\n- Bản mới đã duyệt: "${c.approvedText}"\n- Lý do: ${c.reason}\n`).join('\n');
+        setRevisedText(autoSummary);
+      }
+    }
+  }, [draftText, approvedChanges.length]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -208,6 +227,26 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
                 Tải bản đã sửa (.docx/.txt)
               </button>
             </div>
+
+            {approvedChanges.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (draftText && draftText.trim()) {
+                    setRevisedText(draftText);
+                  } else {
+                    const autoSummary = `BẢN ĐIỀU CHỈNH ĐÃ ÁP DỤNG (${approvedChanges.length} THAY ĐỔI TỪ GỢI Ý SỬA):\n\n` +
+                      approvedChanges.map((c, i) => `${i + 1}. Vị trí: ${c.location}\n- Bản gốc: "${c.originalText}"\n- Bản mới đã duyệt: "${c.approvedText}"\n- Lý do: ${c.reason}\n`).join('\n');
+                    setRevisedText(autoSummary);
+                  }
+                }}
+                className="text-[13px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3.5 py-1.5 rounded-lg border border-emerald-300 transition-colors cursor-pointer flex items-center gap-1.5"
+                title="Lấy nội dung bản nháp đã tích hợp các thay đổi được duyệt"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Nạp bản nháp đã sửa ({approvedChanges.length} thay đổi)</span>
+              </button>
+            )}
 
             <button
               type="button"

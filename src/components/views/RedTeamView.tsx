@@ -9,6 +9,7 @@ import { InspectorMode } from '../EvidenceInspectorModal';
 interface RedTeamViewProps {
   cards: RedTeamCard[];
   onOpenCardModal?: (card: RedTeamCard) => void;
+  onOpenAcademicRebuttal?: (card: RedTeamCard) => void;
   onUpdateCardStatus?: (id: string, status: FindingStatus, notes?: string) => void;
   onUpdateStatus?: (cardId: string, status: FindingStatus) => void;
   onOpenInspector?: (mode: InspectorMode, target: RedTeamCard) => void;
@@ -18,6 +19,7 @@ interface RedTeamViewProps {
 export const RedTeamView: React.FC<RedTeamViewProps> = ({
   cards,
   onOpenCardModal,
+  onOpenAcademicRebuttal,
   onUpdateCardStatus,
   onUpdateStatus,
   onOpenInspector,
@@ -49,7 +51,9 @@ export const RedTeamView: React.FC<RedTeamViewProps> = ({
   const warningCount = cards.filter(c => c.impactLevel === 'Trung bình').length;
 
   const handleOpenCard = (card: RedTeamCard) => {
-    if (onOpenCardModal) {
+    if (onOpenAcademicRebuttal) {
+      onOpenAcademicRebuttal(card);
+    } else if (onOpenCardModal) {
       onOpenCardModal(card);
     } else if (onOpenInspector) {
       onOpenInspector('basis', card);

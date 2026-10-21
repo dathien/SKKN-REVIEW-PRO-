@@ -317,31 +317,29 @@ app.post('/api/generate-suggestion', async (req, res) => {
 
     const prompt = `
 Bạn là chuyên gia cố vấn nghiên cứu và hoàn thiện Sáng kiến Kinh nghiệm (SKKN) của "SKKN REVIEW PRO".
-Nhiệm vụ: Tạo 3 phiên bản chỉnh sửa THỰC SỰ KHÁC NHAU dựa CHUNG trên một tập dữ kiện đã có, tuyệt đối tuân thủ FACT SAFETY.
+Nhiệm vụ: Tạo 3 phiên bản đoạn văn chỉnh sửa THỰC SỰ KHÁC NHAU dựa CHUNG trên một tập dữ kiện đã có, tuyệt đối tuân thủ FACT SAFETY.
 
-NGUYÊN TẮC FACT SAFETY BẮT BUỘC:
+QUY TẮC BẮT BUỘC VỀ ĐOẠN VĂN THAY THẾ (KHÔNG ĐƯỢC LÀ LỜI HƯỚNG DẪN):
+- Cả 3 trường "lightRevision", "academicRevision", "deepRevision" BẮT BUỘC PHẢI LÀ ĐOẠN VĂN HOÀN CHỈNH, sẵn sàng để sao chép hoặc dán đè trực tiếp vào văn bản SKKN.
+- TUYỆT ĐỐI KHÔNG trả về các câu hướng dẫn, lời khuyên hay mô tả việc cần làm (ví dụ: cấm viết "Chỉnh sửa diễn đạt tại...", "Cần viết lại...", "Giữ nguyên câu chữ...").
 - KHÔNG tự tạo số liệu mới (số học sinh, số tiết, số phiếu, tỷ lệ %, điểm số).
-- KHÔNG tự tạo nguyên nhân mới (vắng, không tham gia, hỏng phiếu,...).
-- KHÔNG tự tạo tên trường, tên lớp, tên người, ngày tháng, công cụ đo lường mới.
-- KHÔNG tự tạo minh chứng, khảo sát, nguồn trích dẫn, DOI, URL giả mạo.
-- Nếu thiếu dữ liệu thực tế, BẮT BUỘC dùng placeholder: [CẦN BỔ SUNG SỐ LIỆU THỰC TẾ] hoặc [CẦN BỔ SUNG MINH CHỨNG].
+- KHÔNG tự tạo nguyên nhân mới, tên trường, tên lớp, ngày tháng hay minh chứng giả mạo.
+- Nếu thiếu dữ liệu thực tế, BẮT BUỘC dùng placeholder rõ ràng: [GV điền: số liệu học sinh thực tế] hoặc [GV bổ sung: minh chứng cụ thể].
+- Không tự ý thay đổi ý nghĩa hay kết luận gốc của tác giả.
 
 3 MỨC ĐỘ CHỈNH SỬA PHẢI THỰC SỰ KHÁC BIỆT:
 1. LIGHT (SỬA NHẸ):
    - Giữ tối đa câu chữ, giọng văn và cấu trúc của tác giả.
-   - Chỉ sửa những gì thực sự cần thiết để khắc phục issue (chính tả, ngữ pháp, thuật ngữ, giảm khẳng định quá mức).
-   - Không tái cấu trúc toàn đoạn. Không thêm dữ kiện.
+   - Viết thành đoạn văn hoàn chỉnh đã khắc phục lỗi chính tả, ngữ pháp, thuật ngữ, giảm khẳng định tuyệt đối.
+   - Không thêm dữ kiện mới.
 
 2. ACADEMIC (SỬA HỌC THUẬT):
-   - Viết lại đoạn theo văn phong nghiên cứu giáo dục chặt chẽ, khách quan và logic hơn.
-   - Được tổ chức lại câu, làm rõ chủ thể, chuẩn hóa thuật ngữ khoa học sư phạm.
-   - Diễn đạt thận trọng, khiêm tốn khoa học. Không thay đổi bản chất nội dung và không thêm dữ kiện.
+   - Viết lại toàn bộ đoạn văn theo văn phong nghiên cứu giáo dục chặt chẽ, khách quan, chuẩn mực sư phạm.
+   - Diễn đạt thận trọng, khoa học. Không thay đổi bản chất nội dung và không thêm dữ kiện.
 
 3. DEEP (SỬA SÂU):
-   - Tái cấu trúc đoạn để giải quyết issue ở mức sâu nhất có thể.
-   - Có thể thay đổi cấu trúc lập luận theo chuỗi: đối tượng -> phương pháp -> dữ liệu -> phân tích -> kết luận.
-   - Đổi thứ tự câu, tách/gộp ý, chỉ rõ vị trí cần minh chứng thực nghiệm đối chứng tại Phụ lục.
-   - Tuyệt đối không thêm fact không có căn cứ.
+   - Tái cấu trúc toàn bộ đoạn văn theo chuỗi lập luận: bối cảnh -> giải pháp -> dữ liệu thực nghiệm -> kết luận.
+   - Nếu cần số liệu thực nghiệm, đặt placeholder rõ ràng [GV điền: số liệu đối chứng].
 
 Thông tin đoạn văn:
 - Vị trí/Mục: ${targetSection || 'Văn bản SKKN'}
@@ -358,9 +356,9 @@ Trả về ĐÚNG định dạng JSON sau:
   "basis": "Căn cứ quy chuẩn / tiêu chí rubric / nguyên tắc nghiên cứu sư phạm",
   "revisionGoal": "Mục tiêu chỉnh sửa cụ thể",
   "howToRevise": "Cách sửa chi tiết từng bước",
-  "lightRevision": "Phiên bản sửa nhẹ (giữ tối đa bản gốc)",
-  "academicRevision": "Phiên bản sửa học thuật (chuẩn hóa văn phong nghiên cứu)",
-  "deepRevision": "Phiên bản sửa sâu (tái cấu trúc lập luận có hệ thống)",
+  "lightRevision": "ĐOẠN VĂN HOÀN CHỈNH sửa nhẹ (giữ tối đa bản gốc)",
+  "academicRevision": "ĐOẠN VĂN HOÀN CHỈNH sửa học thuật (chuẩn hóa văn phong nghiên cứu)",
+  "deepRevision": "ĐOẠN VĂN HOÀN CHỈNH sửa sâu (tái cấu trúc lập luận có hệ thống)",
   "tierDetails": {
     "light": {
       "text": "Nội dung sửa nhẹ",
@@ -374,7 +372,7 @@ Trả về ĐÚNG định dạng JSON sau:
     },
     "deep": {
       "text": "Nội dung sửa sâu",
-      "changeScope": "Tái cấu trúc chuỗi lập luận đối tượng -> phương pháp -> dữ liệu -> kết luận",
+      "changeScope": "Tái cấu trúc chuỗi lập luận bối cảnh -> giải pháp -> dữ liệu -> kết luận",
       "factsUsed": ["Dữ kiện gốc trong SKKN"]
     }
   },
@@ -407,28 +405,42 @@ Trả về ĐÚNG định dạng JSON sau:
       } catch (fallbackErr) {
         console.warn('All models failed for generate-suggestion, returning pedagogical fallback.');
         const loc = targetSection || 'đoạn văn';
+        const orig = (originalText || '').trim();
+
+        const lightText = orig
+          ? orig.replace(/tuyệt đối|chắc chắn 100%|ngay lập tức|hoàn toàn/gi, 'rõ rệt').replace(/nổ lực/g, 'nỗ lực')
+          : `Quá trình triển khai giải pháp tại ${loc} bước đầu ghi nhận sự chuyển biến tích cực của học sinh trong giờ học [GV điền: số liệu thực tế].`;
+
+        const academicText = orig
+          ? `Việc áp dụng giải pháp tại ${loc} nhằm nâng cao tính chủ động và năng lực thực hành của học sinh, đáp ứng mục tiêu của Chương trình GDPT 2018. Kết quả đánh giá được ghi nhận khách quan qua các hoạt động học tập.`
+          : `Việc thực hiện sáng kiến tại ${loc} đáp ứng mục tiêu phát triển phẩm chất và năng lực cho học sinh theo Chương trình GDPT 2018; các chỉ số đánh giá được đối chiếu thận trọng và có căn cứ minh chứng đính kèm.`;
+
+        const deepText = orig
+          ? `Nhằm bảo đảm tính khoa học tại ${loc}, quy trình thực nghiệm sư phạm được triển khai theo 3 bước: khảo sát thực trạng, can thiệp phương pháp mới và kiểm tra đánh giá đối chứng [GV bổ sung: tên lớp và số liệu đối chứng] tại Phụ lục.`
+          : `Tiến trình giải pháp tại ${loc} được cấu trúc chặt chẽ theo chuỗi lập luận: xác định vấn đề thực tiễn -> can thiệp sư phạm -> thu thập dữ liệu đối chứng [GV điền: số liệu thực tế] để khẳng định hiệu quả khoa học.`;
+
         return res.json({
           whyRevise: `Vấn đề: ${problem || 'Cần điều chỉnh số liệu và diễn đạt cho chuẩn hóa'}. Việc chỉnh sửa giúp tăng độ tin cậy và bảo toàn điểm số theo Rubric.`,
           basis: 'Căn cứ tiêu chí đánh giá sáng kiến kinh nghiệm, quy chuẩn phương pháp nghiên cứu sư phạm và quy tắc liêm chính khoa học.',
           revisionGoal: 'Chuẩn hóa số liệu, củng cố tính khoa học và minh chứng sư phạm.',
-          howToRevise: 'Rà soát văn bản gốc, thống nhất số liệu và đính kèm phụ lục minh chứng thực nghiệm.',
-          lightRevision: `Chỉnh sửa diễn đạt tại ${loc}: Giữ nguyên câu chữ và cấu trúc của tác giả, rà soát lại câu từ và khắc phục trực tiếp lỗi phát hiện. Giữ nguyên số liệu gốc, ghi chú: "[CẦN BỔ SUNG SỐ LIỆU THỰC TẾ]" nếu chưa đủ căn cứ.`,
-          academicRevision: `Viết lại theo văn phong nghiên cứu sư phạm tại ${loc}: Làm rõ mục tiêu, đối tượng và mối quan hệ giữa các dữ kiện. Diễn đạt khách quan, thận trọng, không tự ý bổ sung dữ kiện chưa kiểm chứng.`,
-          deepRevision: `Tái cấu trúc lập luận tại ${loc}:\n1. Thực trạng & Vấn đề: Làm rõ bối cảnh cụ thể trước can thiệp.\n2. Phương pháp & Tiến trình: Trình bày mạch lạc chuỗi giải pháp.\n3. Minh chứng & Đối soát: Chỉ rõ vị trí cần đính kèm minh chứng thực nghiệm [CẦN BỔ SUNG MINH CHỨNG THỰC TẾ] tại Phụ lục để bảo vệ luận điểm.`,
+          howToRevise: 'Rà soát văn bản gốc, thống nhất số liệu và áp dụng đoạn đề xuất đã được chuẩn hóa.',
+          lightRevision: lightText,
+          academicRevision: academicText,
+          deepRevision: deepText,
           tierDetails: {
             light: {
-              text: `Chỉnh sửa diễn đạt tại ${loc}: Giữ nguyên câu chữ và cấu trúc của tác giả.`,
+              text: lightText,
               changeScope: 'Sửa chính tả, ngữ pháp, giảm khẳng định quá mức, giữ nguyên cấu trúc gốc',
               factsUsed: ['Dữ kiện gốc trong SKKN']
             },
             academic: {
-              text: `Viết lại theo văn phong nghiên cứu sư phạm tại ${loc}: Chuẩn hóa thuật ngữ và liên kết logic.`,
+              text: academicText,
               changeScope: 'Chuẩn hóa văn phong nghiên cứu, tăng tính khách quan và liên kết logic',
               factsUsed: ['Dữ kiện gốc trong SKKN']
             },
             deep: {
-              text: `Tái cấu trúc lập luận tại ${loc} theo chuỗi đối tượng -> phương pháp -> dữ liệu -> kết luận.`,
-              changeScope: 'Tái cấu trúc chuỗi lập luận đối tượng -> phương pháp -> dữ liệu -> kết luận',
+              text: deepText,
+              changeScope: 'Tái cấu trúc chuỗi lập luận bối cảnh -> giải pháp -> dữ liệu -> kết luận',
               factsUsed: ['Dữ kiện gốc trong SKKN']
             }
           },
@@ -767,9 +779,14 @@ app.all('/api/license/*', (req, res) => licenseHandler(req, res));
 app.all('/api/admin', (req, res) => adminHandler(req, res));
 app.all('/api/admin/*', (req, res) => adminHandler(req, res));
 
-// Strict API fallback: Prevent any unmatched /api/* route from falling through to Vite HTML
-app.all('/api/*', (req, res) => {
-  res.status(404).json({ error: 'Endpoint not found', path: req.originalUrl || req.path });
+// Strict API fallback: Prevent ANY unmatched /api or /api/* route from falling through to Vite HTML
+app.use('/api', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.status(404).json({
+    error: `API endpoint không tồn tại (HTTP 404): ${req.method} ${req.originalUrl || req.path}`,
+    path: req.originalUrl || req.path,
+    method: req.method,
+  });
 });
 
 // Explicit route to serve canonical Google Apps Script Code.gs

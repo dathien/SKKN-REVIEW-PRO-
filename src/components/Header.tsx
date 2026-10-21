@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronDown, Menu, BookOpen, User, Key, Shield, Sparkles } from 'lucide-react';
+import { ChevronDown, Menu, BookOpen, User, Key, Shield, Sparkles, FolderOpen } from 'lucide-react';
 import { SKKNAnalysisResult } from '../types';
 import { useAuth } from '../context/AuthContext';
 
@@ -13,6 +13,7 @@ interface HeaderProps {
   isUploadWorkspace?: boolean;
   onStartNewSKKN?: () => void;
   onExitDemo?: () => void;
+  onOpenMyEvaluations?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -25,6 +26,7 @@ export const Header: React.FC<HeaderProps> = ({
   isUploadWorkspace = false,
   onStartNewSKKN,
   onExitDemo,
+  onOpenMyEvaluations,
 }) => {
   const {
     user,
@@ -90,6 +92,19 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Shield className="w-3.5 h-3.5 text-purple-700" />
             <span>Quản trị</span>
+          </button>
+        )}
+
+        {/* KHO HỒ SƠ BUTTON */}
+        {onOpenMyEvaluations && (
+          <button
+            type="button"
+            onClick={onOpenMyEvaluations}
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-bold text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-all cursor-pointer shadow-2xs"
+            title="Kho hồ sơ sáng kiến cá nhân và lịch sử đánh giá"
+          >
+            <FolderOpen className="w-3.5 h-3.5 text-blue-600" />
+            <span>Hồ sơ của tôi</span>
           </button>
         )}
 

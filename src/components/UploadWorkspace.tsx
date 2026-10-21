@@ -22,7 +22,16 @@ interface UploadWorkspaceProps {
     skknText: string,
     rubricText: string,
     evidenceFiles: UploadedFileItem[],
-    notes: string
+    notes: string,
+    extraMetadata?: {
+      originalFileName?: string;
+      originalFileSize?: number;
+      originalFileBase64?: string;
+      wordCount?: number;
+      title?: string;
+      subject?: string;
+      gradeLevel?: string;
+    }
   ) => Promise<void>;
   isLoading: boolean;
   onCancelReturn?: () => void;
@@ -240,7 +249,17 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
     const finalRubricText = rubricFile?.textContent || '';
     const metadataNotes = skknTitle ? `Tên SKKN: ${skknTitle}` : '';
 
-    await onAnalyze(finalSkknText, finalRubricText, evidenceFiles, metadataNotes);
+    const calcWordCount = finalSkknText.trim() ? finalSkknText.trim().split(/\s+/).filter(Boolean).length : 0;
+    const cleanFileName = skknFile?.name || (activeMode === 'paste' ? 'Van_ban_SKKN.txt' : '');
+    const cleanTitle = skknTitle.trim() || (skknFile ? skknFile.name.replace(/\.[^/.]+$/, "") : '');
+
+    await onAnalyze(finalSkknText, finalRubricText, evidenceFiles, metadataNotes, {
+      originalFileName: cleanFileName,
+      originalFileSize: skknFile?.size || 0,
+      originalFileBase64: skknFile?.dataBase64 || '',
+      wordCount: calcWordCount,
+      title: cleanTitle
+    });
   };
 
   // Determine Mascot State

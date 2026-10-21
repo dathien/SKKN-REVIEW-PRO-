@@ -21,20 +21,34 @@ const isDev = process.env.NODE_ENV !== 'production';
 export const DEFAULT_GOOGLE_CLIENT_ID = '398274708628-jlja4cs8fpbe7n8677ra3uorid2fr5ck.apps.googleusercontent.com';
 
 /**
+ * Kiểm tra Client ID có đúng chuẩn Google OAuth hay không.
+ * Ngăn chặn tuyệt đối việc nhầm lẫn giữa URL website (ví dụ: https://...vercel.app)
+ * và Google OAuth Client ID (<số>-<chuỗi>.apps.googleusercontent.com).
+ */
+export function isValidGoogleClientId(id?: string | null): boolean {
+  if (!id || typeof id !== 'string') return false;
+  const trimmed = id.trim().replace(/^["']|["']$/g, '');
+  if (!trimmed) return false;
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.includes('/')) return false;
+  if (trimmed.includes('your-google-client-id') || trimmed.includes('MY_GOOGLE_CLIENT_ID')) return false;
+  return /^[0-9]+[a-z0-9_-]*\.apps\.googleusercontent\.com$/i.test(trimmed);
+}
+
+/**
  * Lấy Google Client ID:
- * - Ưu tiên số 1: Build-time env (Vite / Vercel define) -> KHÔNG gọi network để tránh 404 trên Vercel
+ * - Ưu tiên số 1: Build-time env (Vite / Vercel define) -> Kiểm tra định dạng hợp lệ
  * - Dự phòng số 2: Client ID hợp lệ đã được xác minh của SKKN REVIEW PRO
  * - Dự phòng số 3: Gọi /api/auth/config nếu ở môi trường backend server
  */
 export async function fetchGoogleClientId(timeoutMs = 4000): Promise<string> {
   // 1. Kiểm tra cache trong memory
-  if (cachedClientId) {
+  if (cachedClientId && isValidGoogleClientId(cachedClientId)) {
     return cachedClientId;
   }
 
   // 2. ƯU TIÊN SỐ 1: Kiểm tra build-time env (Vite / Vercel define)
   const envClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
-  if (envClientId) {
+  if (isValidGoogleClientId(envClientId)) {
     cachedClientId = envClientId;
     if (isDev) {
       console.log('[Google Auth] Sử dụng Google Client ID từ environment/build');
@@ -43,12 +57,11 @@ export async function fetchGoogleClientId(timeoutMs = 4000): Promise<string> {
   }
 
   // 3. Dự phòng với Client ID hợp lệ đã được cấu hình và xác minh
-  if (DEFAULT_GOOGLE_CLIENT_ID) {
+  if (isValidGoogleClientId(DEFAULT_GOOGLE_CLIENT_ID)) {
     cachedClientId = DEFAULT_GOOGLE_CLIENT_ID;
-    return DEFAULT_GOOGLE_CLIENT_ID;
   }
 
-  // 4. Chỉ gọi /api/auth/config nếu chưa có Client ID
+  // 4. Gọi /api/auth/config nếu có
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -62,7 +75,7 @@ export async function fetchGoogleClientId(timeoutMs = 4000): Promise<string> {
     if (res.ok) {
       const data = await res.json();
       const srvClientId = (data.googleClientId || '').trim();
-      if (srvClientId) {
+      if (isValidGoogleClientId(srvClientId)) {
         cachedClientId = srvClientId;
         return srvClientId;
       }
@@ -71,7 +84,7 @@ export async function fetchGoogleClientId(timeoutMs = 4000): Promise<string> {
     clearTimeout(timer);
   }
 
-  return DEFAULT_GOOGLE_CLIENT_ID;
+  return cachedClientId || DEFAULT_GOOGLE_CLIENT_ID;
 }
 
 /**
@@ -183,7 +196,8 @@ export function initializeGoogleIdentityOnce(
     return true;
   }
 
-  const effectiveClientId = (clientId || '').trim() || DEFAULT_GOOGLE_CLIENT_ID;
+  const rawCandidate = (clientId || '').trim();
+  const effectiveClientId = isValidGoogleClientId(rawCandidate) ? rawCandidate : DEFAULT_GOOGLE_CLIENT_ID;
 
   try {
     window.google.accounts.id.initialize({

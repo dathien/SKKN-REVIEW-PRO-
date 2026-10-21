@@ -17,12 +17,14 @@ import {
   ArrowLeft,
   Plus,
   Shield,
-  Key
+  Key,
+  FolderOpen
 } from 'lucide-react';
 import { SKKNAnalysisResult } from '../types';
 import { useAuth } from '../context/AuthContext';
 
 export type ActiveTab = 
+  | 'my_evaluations'
   | 'dashboard'
   | 'rubric'
   | 'red_team'
@@ -319,6 +321,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </span>
             </button>
           )}
+
+          {/* Mục HỒ SƠ CỦA TÔI (Kho cá nhân) */}
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('my_evaluations');
+              if (onCloseMobile) onCloseMobile();
+            }}
+            title="Kho hồ sơ sáng kiến cá nhân và lịch sử đánh giá"
+            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[15px] leading-[1.4] transition-all cursor-pointer text-left ${
+              activeTab === 'my_evaluations'
+                ? 'bg-blue-600 text-white font-[700] shadow-xs'
+                : 'text-blue-300 hover:bg-slate-800 hover:text-white font-[600] bg-blue-950/20 border border-blue-500/20'
+            }`}
+          >
+            <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-1">
+              <FolderOpen className={`w-[18px] h-[18px] shrink-0 mt-0.5 ${activeTab === 'my_evaluations' ? 'text-white' : 'text-blue-400'}`} />
+              <span className="leading-[1.4] whitespace-normal break-words">HỒ SƠ CỦA TÔI</span>
+            </div>
+            <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${
+              activeTab === 'my_evaluations' ? 'bg-blue-700 text-white' : 'bg-blue-500/20 text-blue-300 border border-blue-400/30'
+            }`}>
+              KHO
+            </span>
+          </button>
 
           {/* Divider nhẹ */}
           <div className="my-1.5 border-t border-slate-800/80" />

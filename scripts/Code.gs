@@ -377,6 +377,318 @@ function handleRequest(e, method) {
       }
     }
 
+    // 11. LIST EVALUATIONS (Kho hồ sơ cá nhân - Phân quyền riêng tư tuyệt đối)
+    if (action === 'listEvaluations') {
+      var authResult = verifyServerAuthorization(params, postData);
+      if (!authResult.authorized) {
+        return jsonResponse({ success: false, error: authResult.message });
+      }
+
+      var targetEmail = String((postData && postData.userEmail) || params.userEmail || '').trim().toLowerCase();
+      var operatorEmail = authResult.operatorEmail;
+
+      // BẢO MẬT: Người dùng A tuyệt đối không xem được hồ sơ của Người dùng B
+      if (targetEmail !== operatorEmail && !isRootAdminEmail(operatorEmail)) {
+        return jsonResponse({
+          success: false,
+          error: 'Bảo mật: Không có quyền truy cập hồ sơ của tài khoản khác.'
+        });
+      }
+
+      var evalSheet = getOrCreateSheet(ss, 'EVALUATIONS');
+      var list = findEvaluationsInSheet(evalSheet, targetEmail);
+      return jsonResponse({ success: true, evaluations: list });
+    }
+
+    // 12. CREATE EVALUATION (Tạo hồ sơ và thư mục Google Drive)
+    if (action === 'createEvaluation') {
+      var authResult = verifyServerAuthorization(params, postData);
+      if (!authResult.authorized) {
+        return jsonResponse({ success: false, error: authResult.message });
+      }
+
+      var evalData = (postData && postData.evaluation) || {};
+      var operatorEmail = authResult.operatorEmail;
+      var targetEmail = String(evalData.userEmail || postData.userEmail || '').trim().toLowerCase();
+
+      if (targetEmail !== operatorEmail && !isRootAdminEmail(operatorEmail)) {
+        return jsonResponse({ success: false, error: 'Bảo mật: Quyền sở hữu không hợp lệ.' });
+      }
+
+      var lock = LockService.getScriptLock();
+      try { lock.tryLock(10000); } catch (_) {}
+
+      var createdFiles = [];
+      var evalFolder = null;
+      try {
+        var evalId = String(evalData.id || ('eval_' + new Date().getTime()));
+        var userId = String(evalData.userId || postData.userId || targetEmail);
+
+        // Tạo thư mục Google Drive chuyên biệt
+        evalFolder = getOrCreateUserEvalFolder(userId, evalId);
+        evalData.driveFolderId = evalFolder.getId();
+
+        // Lưu file Word/PDF gốc nếu có
+        if (postData && postData.originalFileBase64) {
+          try {
+            var fileName = evalData.originalFileName || ('original_' + evalId + '.docx');
+            var mime = fileName.toLowerCase().endsWith('.pdf') ? MimeType.PDF : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+            var blob = Utilities.newBlob(Utilities.base64Decode(postData.originalFileBase64), mime, fileName);
+            var originalFile = evalFolder.createFile(blob);
+            createdFiles.push(originalFile);
+            evalData.originalFileId = originalFile.getId();
+          } catch (fileErr) {
+            console.warn('Lỗi ghi file gốc:', fileErr);
+          }
+        }
+
+        // Lưu kết quả JSON phiên bản đầu tiên nếu có
+        if (postData && postData.analysisResult) {
+          try {
+            var jsonStr = typeof postData.analysisResult === 'string'
+              ? postData.analysisResult
+              : JSON.stringify(postData.analysisResult);
+            var resultFile = evalFolder.createFile('evaluation_v1.json', jsonStr, MimeType.PLAIN_TEXT);
+            createdFiles.push(resultFile);
+            evalData.latestResultFileId = resultFile.getId();
+          } catch (jsonErr) {
+            console.warn('Lỗi ghi JSON v1:', jsonErr);
+          }
+        }
+
+        var evalSheet = getOrCreateSheet(ss, 'EVALUATIONS');
+        upsertEvaluationInSheet(evalSheet, evalData);
+
+        recordStorageAudit(ss, 'CREATE', userId, targetEmail, evalId, 'Tạo hồ sơ: ' + (evalData.title || ''), 'SUCCESS');
+        return jsonResponse({ success: true, evaluation: evalData });
+      } catch (saveErr) {
+        // Rollback dọn dẹp file mồ côi
+        for (var f = 0; f < createdFiles.length; f++) {
+          try { createdFiles[f].setTrashed(true); } catch (_) {}
+        }
+        if (evalFolder) {
+          try { evalFolder.setTrashed(true); } catch (_) {}
+        }
+        recordStorageAudit(ss, 'CREATE', targetEmail, targetEmail, evalData.id || '', 'Thất bại: ' + saveErr.message, 'FAILED');
+        return jsonResponse({ success: false, error: 'Lỗi lưu hồ sơ vào hệ thống: ' + saveErr.message });
+      } finally {
+        try { lock.releaseLock(); } catch (_) {}
+      }
+    }
+
+    // 13. GET EVALUATION DETAIL
+    if (action === 'getEvaluation') {
+      var authResult = verifyServerAuthorization(params, postData);
+      if (!authResult.authorized) {
+        return jsonResponse({ success: false, error: authResult.message });
+      }
+
+      var evalId = String((postData && postData.evaluationId) || params.evaluationId || '').trim();
+      var operatorEmail = authResult.operatorEmail;
+      var evalSheet = getOrCreateSheet(ss, 'EVALUATIONS');
+      var item = findEvaluationByIdInSheet(evalSheet, evalId);
+
+      if (!item) {
+        return jsonResponse({ success: false, error: 'Không tìm thấy hồ sơ' });
+      }
+
+      if (item.userEmail.toLowerCase() !== operatorEmail && !isRootAdminEmail(operatorEmail)) {
+        return jsonResponse({ success: false, error: 'Bảo mật: Không có quyền xem hồ sơ này.' });
+      }
+
+      var analysisResult = null;
+      if (item.driveFolderId) {
+        try {
+          var folder = DriveApp.getFolderById(item.driveFolderId);
+          var vNum = item.currentVersion || 1;
+          var files = folder.getFilesByName('evaluation_v' + vNum + '.json');
+          if (files.hasNext()) {
+            analysisResult = files.next().getBlob().getDataAsString();
+          }
+        } catch (_) {}
+      }
+
+      return jsonResponse({ success: true, evaluation: item, analysisResult: analysisResult });
+    }
+
+    // 14. SAVE EVALUATION RESULT
+    if (action === 'saveEvaluationResult') {
+      var authResult = verifyServerAuthorization(params, postData);
+      if (!authResult.authorized) {
+        return jsonResponse({ success: false, error: authResult.message });
+      }
+
+      var evalId = String((postData && postData.evaluationId) || '').trim();
+      var operatorEmail = authResult.operatorEmail;
+      var evalSheet = getOrCreateSheet(ss, 'EVALUATIONS');
+      var item = findEvaluationByIdInSheet(evalSheet, evalId);
+
+      if (!item) {
+        return jsonResponse({ success: false, error: 'Không tìm thấy hồ sơ để lưu kết quả' });
+      }
+
+      if (item.userEmail.toLowerCase() !== operatorEmail && !isRootAdminEmail(operatorEmail)) {
+        return jsonResponse({ success: false, error: 'Bảo mật: Quyền sở hữu không hợp lệ.' });
+      }
+
+      var lock = LockService.getScriptLock();
+      try { lock.tryLock(10000); } catch (_) {}
+
+      try {
+        var version = postData.version || item.currentVersion || 1;
+        var folder = item.driveFolderId ? DriveApp.getFolderById(item.driveFolderId) : getOrCreateUserEvalFolder(item.userId, evalId);
+        var jsonStr = typeof postData.analysisResult === 'string'
+          ? postData.analysisResult
+          : JSON.stringify(postData.analysisResult || {});
+
+        var existingFiles = folder.getFilesByName('evaluation_v' + version + '.json');
+        var resFile = null;
+        if (existingFiles.hasNext()) {
+          resFile = existingFiles.next();
+          resFile.setContent(jsonStr);
+        } else {
+          resFile = folder.createFile('evaluation_v' + version + '.json', jsonStr, MimeType.PLAIN_TEXT);
+        }
+
+        item.score = postData.score !== undefined ? postData.score : item.score;
+        item.status = postData.status || 'COMPLETED';
+        item.updatedAt = new Date().toISOString();
+        item.latestResultFileId = resFile.getId();
+        if (postData.title) item.title = postData.title;
+
+        upsertEvaluationInSheet(evalSheet, item);
+        recordStorageAudit(ss, 'SAVE_RESULT', item.userId, operatorEmail, evalId, 'Lưu kết quả v' + version, 'SUCCESS');
+        return jsonResponse({ success: true, latestResultFileId: resFile.getId() });
+      } catch (err) {
+        recordStorageAudit(ss, 'SAVE_RESULT', item.userId, operatorEmail, evalId, 'Thất bại: ' + err.message, 'FAILED');
+        return jsonResponse({ success: false, error: 'Lỗi lưu kết quả: ' + err.message });
+      } finally {
+        try { lock.releaseLock(); } catch (_) {}
+      }
+    }
+
+    // 15. CREATE EVALUATION VERSION
+    if (action === 'createEvaluationVersion') {
+      var authResult = verifyServerAuthorization(params, postData);
+      if (!authResult.authorized) {
+        return jsonResponse({ success: false, error: authResult.message });
+      }
+
+      var evalId = String((postData && postData.evaluationId) || '').trim();
+      var operatorEmail = authResult.operatorEmail;
+      var evalSheet = getOrCreateSheet(ss, 'EVALUATIONS');
+      var item = findEvaluationByIdInSheet(evalSheet, evalId);
+
+      if (!item) {
+        return jsonResponse({ success: false, error: 'Không tìm thấy hồ sơ để tạo phiên bản mới' });
+      }
+
+      if (item.userEmail.toLowerCase() !== operatorEmail && !isRootAdminEmail(operatorEmail)) {
+        return jsonResponse({ success: false, error: 'Bảo mật: Quyền sở hữu không hợp lệ.' });
+      }
+
+      var lock = LockService.getScriptLock();
+      try { lock.tryLock(10000); } catch (_) {}
+
+      try {
+        var newV = postData.version || ((item.versionCount || 1) + 1);
+        var folder = item.driveFolderId ? DriveApp.getFolderById(item.driveFolderId) : getOrCreateUserEvalFolder(item.userId, evalId);
+        var jsonStr = typeof postData.analysisResult === 'string'
+          ? postData.analysisResult
+          : JSON.stringify(postData.analysisResult || {});
+
+        var resFile = folder.createFile('evaluation_v' + newV + '.json', jsonStr, MimeType.PLAIN_TEXT);
+
+        item.versionCount = newV;
+        item.currentVersion = newV;
+        item.score = postData.score !== undefined ? postData.score : item.score;
+        item.status = postData.status || 'REVISED';
+        item.updatedAt = new Date().toISOString();
+        item.latestResultFileId = resFile.getId();
+
+        upsertEvaluationInSheet(evalSheet, item);
+        recordStorageAudit(ss, 'NEW_VERSION', item.userId, operatorEmail, evalId, 'Tạo phiên bản v' + newV, 'SUCCESS');
+        return jsonResponse({ success: true, latestResultFileId: resFile.getId(), version: newV });
+      } catch (err) {
+        recordStorageAudit(ss, 'NEW_VERSION', item.userId, operatorEmail, evalId, 'Thất bại: ' + err.message, 'FAILED');
+        return jsonResponse({ success: false, error: 'Lỗi tạo phiên bản mới: ' + err.message });
+      } finally {
+        try { lock.releaseLock(); } catch (_) {}
+      }
+    }
+
+    // 16. RENAME EVALUATION
+    if (action === 'renameEvaluation') {
+      var authResult = verifyServerAuthorization(params, postData);
+      if (!authResult.authorized) {
+        return jsonResponse({ success: false, error: authResult.message });
+      }
+
+      var evalId = String((postData && postData.evaluationId) || '').trim();
+      var newTitle = String((postData && postData.newTitle) || '').trim();
+      var operatorEmail = authResult.operatorEmail;
+      var evalSheet = getOrCreateSheet(ss, 'EVALUATIONS');
+      var item = findEvaluationByIdInSheet(evalSheet, evalId);
+
+      if (!item) {
+        return jsonResponse({ success: false, error: 'Không tìm thấy hồ sơ để đổi tên' });
+      }
+
+      if (item.userEmail.toLowerCase() !== operatorEmail && !isRootAdminEmail(operatorEmail)) {
+        return jsonResponse({ success: false, error: 'Bảo mật: Quyền sở hữu không hợp lệ.' });
+      }
+
+      item.title = newTitle;
+      item.updatedAt = new Date().toISOString();
+      upsertEvaluationInSheet(evalSheet, item);
+      recordStorageAudit(ss, 'RENAME', item.userId, operatorEmail, evalId, 'Đổi tên thành: ' + newTitle, 'SUCCESS');
+      return jsonResponse({ success: true });
+    }
+
+    // 17. DELETE EVALUATION
+    if (action === 'deleteEvaluation') {
+      var authResult = verifyServerAuthorization(params, postData);
+      if (!authResult.authorized) {
+        return jsonResponse({ success: false, error: authResult.message });
+      }
+
+      var evalId = String((postData && postData.evaluationId) || '').trim();
+      var operatorEmail = authResult.operatorEmail;
+      var evalSheet = getOrCreateSheet(ss, 'EVALUATIONS');
+      var item = findEvaluationByIdInSheet(evalSheet, evalId);
+
+      if (!item) {
+        return jsonResponse({ success: false, error: 'Không tìm thấy hồ sơ để xóa' });
+      }
+
+      if (item.userEmail.toLowerCase() !== operatorEmail && !isRootAdminEmail(operatorEmail)) {
+        return jsonResponse({ success: false, error: 'Bảo mật: Quyền sở hữu không hợp lệ.' });
+      }
+
+      deleteEvaluationRowInSheet(evalSheet, evalId);
+
+      if (item.driveFolderId) {
+        try {
+          DriveApp.getFolderById(item.driveFolderId).setTrashed(true);
+        } catch (_) {}
+      }
+
+      recordStorageAudit(ss, 'DELETE', item.userId, operatorEmail, evalId, 'Xóa hồ sơ: ' + item.title, 'SUCCESS');
+      return jsonResponse({ success: true, deleted: true });
+    }
+
+    // 18. GET STORAGE STATS
+    if (action === 'getStorageStats') {
+      var authResult = verifyServerAuthorization(params, postData);
+      if (!authResult.authorized) {
+        return jsonResponse({ success: false, error: authResult.message });
+      }
+
+      var evalSheet = getOrCreateSheet(ss, 'EVALUATIONS');
+      var rowCount = Math.max(0, evalSheet.getLastRow() - 1);
+      return jsonResponse({ success: true, totalEvaluations: rowCount });
+    }
+
     return jsonResponse({ success: false, error: 'Hành động không được hỗ trợ: ' + action });
 
   } catch (globalError) {
@@ -514,6 +826,32 @@ function validateSheetHeaders(sheet, sheetType) {
     };
   }
 
+  if (sheetType === 'EVALUATIONS') {
+    var hasId = colMap['EVALUATION_ID'] !== undefined || colMap['ID'] !== undefined;
+    var hasEmail = colMap['USER_EMAIL'] !== undefined || colMap['EMAIL'] !== undefined;
+    var missing = [];
+    if (!hasId) missing.push('EVALUATION_ID');
+    if (!hasEmail) missing.push('USER_EMAIL');
+    return {
+      isValid: missing.length === 0,
+      headers: headers,
+      columnCount: headers.length,
+      missing: missing
+    };
+  }
+
+  if (sheetType === 'STORAGE_AUDIT') {
+    var hasAuditId = colMap['AUDIT_ID'] !== undefined || colMap['ID'] !== undefined;
+    var missing = [];
+    if (!hasAuditId) missing.push('AUDIT_ID');
+    return {
+      isValid: missing.length === 0,
+      headers: headers,
+      columnCount: headers.length,
+      missing: missing
+    };
+  }
+
   return { isValid: true, headers: headers, columnCount: headers.length, missing: [] };
 }
 
@@ -551,6 +889,20 @@ function getOrCreateSheet(ss, name) {
     } else if (name === 'SETTINGS') {
       sheet.appendRow(['KEY', 'VALUE', 'DESCRIPTION']);
       sheet.getRange(1, 1, 1, 3).setFontWeight('bold').setBackground('#f1f5f9');
+    } else if (name === 'EVALUATIONS') {
+      sheet.appendRow([
+        'EVALUATION_ID', 'USER_ID', 'USER_EMAIL', 'TITLE', 'SUBJECT', 'GRADE_LEVEL',
+        'SCORE', 'STATUS', 'VERSION_COUNT', 'CURRENT_VERSION', 'ORIGINAL_FILENAME',
+        'ORIGINAL_FILE_SIZE', 'DRIVE_FOLDER_ID', 'LATEST_RESULT_FILE_ID', 'ORIGINAL_FILE_ID',
+        'CREATED_AT', 'UPDATED_AT'
+      ]);
+      sheet.getRange(1, 1, 1, 17).setFontWeight('bold').setBackground('#eff6ff');
+    } else if (name === 'STORAGE_AUDIT') {
+      sheet.appendRow([
+        'AUDIT_ID', 'TIMESTAMP', 'ACTION', 'USER_ID', 'USER_EMAIL',
+        'EVALUATION_ID', 'DETAILS', 'STATUS'
+      ]);
+      sheet.getRange(1, 1, 1, 8).setFontWeight('bold').setBackground('#f8fafc');
     }
   }
   return sheet;
@@ -1127,3 +1479,200 @@ function jsonResponse(data) {
   output.setMimeType(ContentService.MimeType.JSON);
   return output;
 }
+
+// =========================================================================
+// TIỆN ÍCH LƯU TRỮ HỒ SƠ EVALUATIONS & GOOGLE DRIVE
+// =========================================================================
+
+var EVALUATIONS_HEADERS = [
+  'EVALUATION_ID', 'USER_ID', 'USER_EMAIL', 'TITLE', 'SUBJECT', 'GRADE_LEVEL',
+  'SCORE', 'STATUS', 'VERSION_COUNT', 'CURRENT_VERSION', 'ORIGINAL_FILENAME',
+  'ORIGINAL_FILE_SIZE', 'DRIVE_FOLDER_ID', 'LATEST_RESULT_FILE_ID', 'ORIGINAL_FILE_ID',
+  'CREATED_AT', 'UPDATED_AT'
+];
+
+var STORAGE_AUDIT_HEADERS = [
+  'AUDIT_ID', 'TIMESTAMP', 'ACTION', 'USER_ID', 'USER_EMAIL',
+  'EVALUATION_ID', 'DETAILS', 'STATUS'
+];
+
+function getOrCreateStorageRootFolder() {
+  var props = PropertiesService.getScriptProperties();
+  var configuredFolderId = props.getProperty('DRIVE_FOLDER_ID');
+  if (configuredFolderId) {
+    try {
+      return DriveApp.getFolderById(configuredFolderId);
+    } catch (_) {}
+  }
+
+  var folders = DriveApp.getFoldersByName('SKKN_REVIEW_PRO_STORAGE');
+  if (folders.hasNext()) {
+    var f = folders.next();
+    try { props.setProperty('DRIVE_FOLDER_ID', f.getId()); } catch (_) {}
+    return f;
+  }
+
+  var newRoot = DriveApp.createFolder('SKKN_REVIEW_PRO_STORAGE');
+  try { props.setProperty('DRIVE_FOLDER_ID', newRoot.getId()); } catch (_) {}
+  return newRoot;
+}
+
+function getOrCreateUserEvalFolder(userId, evalId) {
+  var root = getOrCreateStorageRootFolder();
+  var usersFolders = root.getFoldersByName('users');
+  var usersFolder = usersFolders.hasNext() ? usersFolders.next() : root.createFolder('users');
+
+  var cleanUserFolderId = String(userId || 'default_user').replace(/[^a-zA-Z0-9._-]/g, '_');
+  var uFolders = usersFolder.getFoldersByName(cleanUserFolderId);
+  var userFolder = uFolders.hasNext() ? uFolders.next() : usersFolder.createFolder(cleanUserFolderId);
+
+  var cleanEvalId = String(evalId).replace(/[^a-zA-Z0-9._-]/g, '_');
+  var eFolders = userFolder.getFoldersByName(cleanEvalId);
+  var evalFolder = eFolders.hasNext() ? eFolders.next() : userFolder.createFolder(cleanEvalId);
+
+  return evalFolder;
+}
+
+function recordStorageAudit(ss, action, userId, userEmail, evalId, details, status) {
+  try {
+    var auditSheet = getOrCreateSheet(ss, 'STORAGE_AUDIT');
+    if (auditSheet.getLastRow() === 0) {
+      auditSheet.appendRow(STORAGE_AUDIT_HEADERS);
+    }
+    var auditId = 'audit_' + new Date().getTime() + '_' + Math.floor(Math.random() * 10000);
+    var now = new Date().toISOString();
+    auditSheet.appendRow([
+      auditId,
+      now,
+      action,
+      userId,
+      userEmail,
+      evalId,
+      details,
+      status || 'SUCCESS'
+    ]);
+  } catch (_) {}
+}
+
+function findEvaluationsInSheet(sheet, userEmail) {
+  var headers = getSheetHeaders(sheet);
+  var colMap = createColumnIndexMap(headers);
+  var emailCol = colMap['USER_EMAIL'] !== undefined ? colMap['USER_EMAIL'] : (colMap['EMAIL'] !== undefined ? colMap['EMAIL'] : 2);
+  var data = sheet.getDataRange().getValues();
+  var list = [];
+  var cleanTarget = String(userEmail || '').toLowerCase().trim();
+
+  for (var r = 1; r < data.length; r++) {
+    var row = data[r];
+    var rowEmail = String(row[emailCol] || '').toLowerCase().trim();
+    if (rowEmail === cleanTarget) {
+      list.push(parseEvaluationRow(row, colMap));
+    }
+  }
+  return list;
+}
+
+function findEvaluationByIdInSheet(sheet, evalId) {
+  var headers = getSheetHeaders(sheet);
+  var colMap = createColumnIndexMap(headers);
+  var idCol = colMap['EVALUATION_ID'] !== undefined ? colMap['EVALUATION_ID'] : (colMap['ID'] !== undefined ? colMap['ID'] : 0);
+  var data = sheet.getDataRange().getValues();
+  var target = String(evalId || '').trim();
+
+  for (var r = 1; r < data.length; r++) {
+    var row = data[r];
+    if (String(row[idCol] || '').trim() === target) {
+      return parseEvaluationRow(row, colMap);
+    }
+  }
+  return null;
+}
+
+function parseEvaluationRow(row, colMap) {
+  function getVal(key, def) {
+    var idx = colMap[key];
+    if (idx !== undefined && row[idx] !== undefined && row[idx] !== '') {
+      return row[idx];
+    }
+    return def;
+  }
+
+  return {
+    id: String(getVal('EVALUATION_ID', getVal('ID', ''))),
+    userId: String(getVal('USER_ID', '')),
+    userEmail: String(getVal('USER_EMAIL', getVal('EMAIL', ''))),
+    title: String(getVal('TITLE', '')),
+    subject: String(getVal('SUBJECT', 'Chung')),
+    gradeLevel: String(getVal('GRADE_LEVEL', '')),
+    score: Number(getVal('SCORE', 0)),
+    status: String(getVal('STATUS', 'COMPLETED')),
+    versionCount: Number(getVal('VERSION_COUNT', 1)),
+    currentVersion: Number(getVal('CURRENT_VERSION', 1)),
+    originalFileName: String(getVal('ORIGINAL_FILENAME', '')),
+    originalFileSize: Number(getVal('ORIGINAL_FILE_SIZE', 0)),
+    driveFolderId: String(getVal('DRIVE_FOLDER_ID', '')),
+    latestResultFileId: String(getVal('LATEST_RESULT_FILE_ID', '')),
+    originalFileId: String(getVal('ORIGINAL_FILE_ID', '')),
+    createdAt: String(getVal('CREATED_AT', '')),
+    updatedAt: String(getVal('UPDATED_AT', ''))
+  };
+}
+
+function upsertEvaluationInSheet(sheet, item) {
+  var headers = getSheetHeaders(sheet);
+  var colMap = createColumnIndexMap(headers);
+  var idCol = colMap['EVALUATION_ID'] !== undefined ? colMap['EVALUATION_ID'] : (colMap['ID'] !== undefined ? colMap['ID'] : 0);
+  var data = sheet.getDataRange().getValues();
+  var targetId = String(item.id || '').trim();
+  var targetRowIdx = -1;
+
+  for (var r = 1; r < data.length; r++) {
+    if (String(data[r][idCol] || '').trim() === targetId) {
+      targetRowIdx = r + 1; // 1-based index in Sheet
+      break;
+    }
+  }
+
+  var rowValues = [
+    item.id,
+    item.userId || item.userEmail,
+    item.userEmail,
+    item.title || '',
+    item.subject || 'Chung',
+    item.gradeLevel || '',
+    item.score || 0,
+    item.status || 'COMPLETED',
+    item.versionCount || 1,
+    item.currentVersion || 1,
+    item.originalFileName || '',
+    item.originalFileSize || 0,
+    item.driveFolderId || '',
+    item.latestResultFileId || '',
+    item.originalFileId || '',
+    item.createdAt || new Date().toISOString(),
+    item.updatedAt || new Date().toISOString()
+  ];
+
+  if (targetRowIdx > 0) {
+    sheet.getRange(targetRowIdx, 1, 1, rowValues.length).setValues([rowValues]);
+  } else {
+    sheet.appendRow(rowValues);
+  }
+}
+
+function deleteEvaluationRowInSheet(sheet, evalId) {
+  var headers = getSheetHeaders(sheet);
+  var colMap = createColumnIndexMap(headers);
+  var idCol = colMap['EVALUATION_ID'] !== undefined ? colMap['EVALUATION_ID'] : (colMap['ID'] !== undefined ? colMap['ID'] : 0);
+  var data = sheet.getDataRange().getValues();
+  var target = String(evalId || '').trim();
+
+  for (var r = 1; r < data.length; r++) {
+    if (String(data[r][idCol] || '').trim() === target) {
+      sheet.deleteRow(r + 1);
+      return true;
+    }
+  }
+  return false;
+}
+

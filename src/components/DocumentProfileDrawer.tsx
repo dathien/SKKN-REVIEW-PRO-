@@ -26,6 +26,7 @@ interface DocumentProfileDrawerProps {
   workflowStatus?: string;
   skknFileName?: string;
   rubricFileName?: string;
+  onOpenMyEvaluations?: () => void;
 }
 
 export const DocumentProfileDrawer: React.FC<DocumentProfileDrawerProps> = ({
@@ -40,7 +41,8 @@ export const DocumentProfileDrawer: React.FC<DocumentProfileDrawerProps> = ({
   hasCustomAnalysis = false,
   workflowStatus = 'IDLE',
   skknFileName,
-  rubricFileName
+  rubricFileName,
+  onOpenMyEvaluations
 }) => {
   const [showDetailAccordion, setShowDetailAccordion] = useState(false);
 
@@ -337,14 +339,29 @@ export const DocumentProfileDrawer: React.FC<DocumentProfileDrawerProps> = ({
         {/* ======================================================================= */}
         {/* FOOTER MODAL: [ĐÓNG] (bên trái) và [+ TẠO HỒ SƠ MỚI] (bên phải)         */}
         {/* ======================================================================= */}
-        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between shrink-0">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4.5 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-semibold text-[14px] transition-colors cursor-pointer shadow-2xs"
-          >
-            Đóng
-          </button>
+        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between shrink-0 gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-semibold text-[14px] transition-colors cursor-pointer shadow-2xs"
+            >
+              Đóng
+            </button>
+            {onOpenMyEvaluations && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenMyEvaluations();
+                }}
+                className="px-4 py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold text-[14px] transition-colors cursor-pointer inline-flex items-center gap-1.5"
+              >
+                <FolderOpen className="w-4 h-4 text-blue-600" />
+                <span>Kho hồ sơ của tôi</span>
+              </button>
+            )}
+          </div>
 
           <button
             type="button"

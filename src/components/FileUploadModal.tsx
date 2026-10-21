@@ -17,7 +17,21 @@ import { FileCategory, UploadedFileItem } from '../types';
 interface FileUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAnalyze: (skknText: string, rubricText: string, evidenceFiles: UploadedFileItem[], notes: string) => Promise<void>;
+  onAnalyze: (
+    skknText: string,
+    rubricText: string,
+    evidenceFiles: UploadedFileItem[],
+    notes: string,
+    extraMetadata?: {
+      originalFileName?: string;
+      originalFileSize?: number;
+      originalFileBase64?: string;
+      wordCount?: number;
+      title?: string;
+      subject?: string;
+      gradeLevel?: string;
+    }
+  ) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -110,7 +124,14 @@ export const FileUploadModal: React.FC<FileUploadModalProps> = ({
       return;
     }
     setErrorMessage('');
-    await onAnalyze(skknText, rubricText, uploadedFiles, additionalNotes);
+    const primaryFile = uploadedFiles.find(f => f.category === 'skkn_primary');
+    const calcWordCount = skknText ? skknText.split(/\s+/).filter(Boolean).length : 0;
+    await onAnalyze(skknText, rubricText, uploadedFiles, additionalNotes, {
+      originalFileName: primaryFile?.name || 'Van_ban_SKKN.docx',
+      originalFileSize: primaryFile?.size || 0,
+      wordCount: calcWordCount,
+      title: primaryFile ? primaryFile.name.replace(/\.[^/.]+$/, "") : ''
+    });
     onClose();
   };
 

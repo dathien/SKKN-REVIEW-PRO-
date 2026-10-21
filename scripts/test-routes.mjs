@@ -1116,6 +1116,548 @@ console.log('\n--- 12. Testing Mandatory 14 Acceptance Criteria (Nhiệm vụ 6)
   const modalSource = fs.readFileSync(path.resolve('src/components/AdminPortalModal.tsx'), 'utf8');
   assert('TEST 14: Mã nguồn AdminPortalModal hợp lệ, có bảo vệ safeJson và không xung đột lớp',
     modalSource.includes('safeJson') && !modalSource.includes('<<<<<<<') && modalSource.includes('filteredUsers'));
+
+  // --- 13. Testing Monthly PRO, Calendar Math & Extension Modes ---
+  console.log('\n--- 13. Testing Monthly PRO, Calendar Math & Extension Modes ---');
+
+  function addCalendarMonths(startDateStr, months) {
+    if (!startDateStr || months <= 0) return startDateStr;
+    const parts = startDateStr.split('-').map(Number);
+    const year = parts[0];
+    const month = parts[1] - 1;
+    const day = parts[2];
+    const totalMonths = year * 12 + month + months;
+    const targetYear = Math.floor(totalMonths / 12);
+    const targetMonth = totalMonths % 12;
+    const maxDays = new Date(targetYear, targetMonth + 1, 0).getDate();
+    const targetDay = Math.min(day, maxDays);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${targetYear}-${pad(targetMonth + 1)}-${pad(targetDay)}`;
+  }
+
+  // Calendar Test 1: Leap year 2024-01-31 + 1 month -> 2024-02-29
+  assert('Calendar Test 1: Leap year 2024-01-31 + 1 month produces 2024-02-29',
+    addCalendarMonths('2024-01-31', 1) === '2024-02-29');
+
+  // Calendar Test 2: Non-leap year 2026-01-31 + 1 month -> 2026-02-28
+  assert('Calendar Test 2: Non-leap year 2026-01-31 + 1 month produces 2026-02-28',
+    addCalendarMonths('2026-01-31', 1) === '2026-02-28');
+
+  // Calendar Test 3: Month with 31 days to 30 days (2026-03-31 + 1 month -> 2026-04-30)
+  assert('Calendar Test 3: 2026-03-31 + 1 month produces 2026-04-30',
+    addCalendarMonths('2026-03-31', 1) === '2026-04-30');
+
+  // Calendar Test 4: Arbitrary months (2026-01-15 + 5 months -> 2026-06-15, +18 months -> 2027-07-15)
+  assert('Calendar Test 4: Arbitrary months (5 months, 18 months) calculate accurately',
+    addCalendarMonths('2026-01-15', 5) === '2026-06-15' &&
+    addCalendarMonths('2026-01-15', 18) === '2027-07-15');
+
+  // API Test: Grant PRO with 3 months expiry to a test user
+  const futureExpiry = '2027-06-30T23:59:59.999Z';
+  const { req: grantReq, res: grantRes } = createMockContext({
+    method: 'POST',
+    url: '/api/admin?__subpath=update-user',
+    query: { __subpath: 'update-user' },
+    headers: adminHeaders,
+    body: {
+      email: 'teacher1@gmail.com',
+      plan: 'PRO',
+      role: 'LICENSED',
+      expiresAt: futureExpiry
+    }
+  });
+  await adminHandler(grantReq, grantRes);
+  const updatedUserRes = grantRes.getData()?.user;
+  assert('API Test: Updating teacher1 with 3 months PRO returns 200 and sets licenseExpiresAt',
+    grantRes.getStatusCode() === 200 && updatedUserRes?.licenseExpiresAt === futureExpiry);
+
+  // Active PRO consumeQuota Test: Unlimited access, not blocked
+  const { req: consumeReq, res: consumeRes } = createMockContext({
+    method: 'POST',
+    url: '/api/user?__subpath=consume-quota',
+    query: { __subpath: 'consume-quota' },
+    headers: { 'Content-Type': 'application/json' },
+    body: { email: 'teacher1@gmail.com', mode: 'easy' }
+  });
+  await userHandler(consumeReq, consumeRes);
+  assert('Active PRO Test: User with active PRO has unlimited access (allowed=true)',
+    consumeRes.getStatusCode() === 200 && consumeRes.getData()?.allowed === true);
+
+  // Expired PRO Test: User with expired license is rejected with informative message
+  const pastExpiry = '2025-01-01T00:00:00.000Z';
+  const { req: expReq, res: expRes } = createMockContext({
+    method: 'POST',
+    url: '/api/admin?__subpath=update-user',
+    query: { __subpath: 'update-user' },
+    headers: adminHeaders,
+    body: {
+      email: 'teacher1@gmail.com',
+      plan: 'PRO',
+      role: 'LICENSED',
+      expiresAt: pastExpiry
+    }
+  });
+  await adminHandler(expReq, expRes);
+  const { req: consumeExpReq, res: consumeExpRes } = createMockContext({
+    method: 'POST',
+    url: '/api/user?__subpath=consume-quota',
+    query: { __subpath: 'consume-quota' },
+    headers: { 'Content-Type': 'application/json' },
+    body: { email: 'teacher1@gmail.com', mode: 'easy' }
+  });
+  await userHandler(consumeExpReq, consumeExpRes);
+  assert('Expired PRO Test: User with expired PRO license is blocked from consume-quota (403)',
+    consumeExpRes.getStatusCode() === 403 && consumeExpRes.getData()?.allowed === false && consumeExpRes.getData()?.message?.includes('hết thời hạn'));
+
+  // Clean up: Restore teacher1 to PRO without expiry / default state
+  const { req: cleanupReq, res: cleanupRes } = createMockContext({
+    method: 'POST',
+    url: '/api/admin?__subpath=update-user',
+    query: { __subpath: 'update-user' },
+    headers: adminHeaders,
+    body: {
+      email: 'teacher1@gmail.com',
+      name: 'Teacher 1 Sync Test',
+      plan: 'PRO',
+      role: 'LICENSED',
+      expiresAt: null
+    }
+  });
+  await adminHandler(cleanupReq, cleanupRes);
+  assert('Cleanup Test: Restored teacher1@gmail.com to PRO lifetime',
+    cleanupRes.getStatusCode() === 200 && cleanupRes.getData()?.user?.licenseExpiresAt === null);
+}
+
+console.log('\n--- 14. Testing Personal Evaluations Dossier & UI Regression ---');
+{
+  // 1. Regression Test: Header.tsx must destructure and handle onOpenMyEvaluations correctly
+  const headerSource = fs.readFileSync(path.resolve('src/components/Header.tsx'), 'utf-8');
+  assert('Regression Test: Header.tsx declares onOpenMyEvaluations in HeaderProps',
+    headerSource.includes('onOpenMyEvaluations?: () => void;'));
+  assert('Regression Test: Header.tsx destructures onOpenMyEvaluations in component parameters (Safe Scope)',
+    headerSource.includes('onOpenMyEvaluations,') || headerSource.includes('onOpenMyEvaluations '));
+  assert('Regression Test: Header.tsx attaches onClick={onOpenMyEvaluations} to "Hồ sơ của tôi" button',
+    headerSource.includes('onClick={onOpenMyEvaluations}'));
+
+  // 2. Regression Test: App.tsx and DocumentProfileDrawer connect onOpenMyEvaluations
+  const appSource = fs.readFileSync(path.resolve('src/App.tsx'), 'utf-8');
+  assert('Regression Test: App.tsx passes onOpenMyEvaluations to Header',
+    appSource.includes("onOpenMyEvaluations={() => setActiveTab('my_evaluations')}"));
+  assert('Regression Test: App.tsx mounts MyEvaluationsView when activeTab is my_evaluations',
+    appSource.includes("<MyEvaluationsView") && appSource.includes("activeTab === 'my_evaluations'"));
+
+  // 3. API Test: Unauthorized access to /api/user/evaluations/list returns 401
+  const { req: unauthReq, res: unauthRes } = createMockContext({
+    method: 'GET',
+    url: '/api/user?__subpath=evaluations/list',
+    query: { __subpath: 'evaluations/list' },
+  });
+  await userHandler(unauthReq, unauthRes);
+  assert('API Security: Unauthorized access to evaluations list returns 401',
+    unauthRes.getStatusCode() === 401);
+
+  // 4. API Test: Authorized teacher can create, list, rename and delete evaluations
+  const teacherEmail = 'teacher1@gmail.com';
+  const { req: createEvalReq, res: createEvalRes } = createMockContext({
+    method: 'POST',
+    url: '/api/user?__subpath=evaluations/create',
+    query: { __subpath: 'evaluations/create' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-user-email': teacherEmail,
+    },
+    body: {
+      title: 'Sáng kiến kinh nghiệm Kiểm thử Tự động',
+      subject: 'Toán học',
+      gradeLevel: 'Lớp 12',
+    }
+  });
+  await userHandler(createEvalReq, createEvalRes);
+  const createdEval = createEvalRes.getData()?.evaluation;
+  assert('API Test: User can create new evaluation record (200)',
+    createEvalRes.getStatusCode() === 200 && Boolean(createdEval?.id));
+
+  const evalId = createdEval?.id;
+
+  // 5. API Test: List evaluations contains created item
+  const { req: listEvalReq, res: listEvalRes } = createMockContext({
+    method: 'GET',
+    url: '/api/user?__subpath=evaluations/list',
+    query: { __subpath: 'evaluations/list' },
+    headers: {
+      'x-user-email': teacherEmail,
+    }
+  });
+  await userHandler(listEvalReq, listEvalRes);
+  const userEvals = listEvalRes.getData()?.evaluations || [];
+  assert('API Test: User can list own evaluations',
+    listEvalRes.getStatusCode() === 200 && userEvals.some(e => e.id === evalId));
+
+  // 6. API Test: Rename evaluation
+  const newEvalTitle = 'Sáng kiến kinh nghiệm Đã Đổi Tên Thành Công';
+  const { req: renameEvalReq, res: renameEvalRes } = createMockContext({
+    method: 'POST',
+    url: '/api/user?__subpath=evaluations/rename',
+    query: { __subpath: 'evaluations/rename' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-user-email': teacherEmail,
+    },
+    body: {
+      evaluationId: evalId,
+      newTitle: newEvalTitle,
+    }
+  });
+  await userHandler(renameEvalReq, renameEvalRes);
+  assert('API Test: User can rename own evaluation (200)',
+    renameEvalRes.getStatusCode() === 200 && renameEvalRes.getData()?.evaluation?.title === newEvalTitle);
+
+  // 7. API Security: Another user cannot delete or access evaluation (Privacy Defense)
+  const { req: privacyReq, res: privacyRes } = createMockContext({
+    method: 'POST',
+    url: '/api/user?__subpath=evaluations/delete',
+    query: { __subpath: 'evaluations/delete' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-user-email': 'test.skkn.review@gmail.com',
+    },
+    body: {
+      evaluationId: evalId,
+    }
+  });
+  await userHandler(privacyReq, privacyRes);
+  assert('API Security: Another user cannot delete user evaluation (Strict 403 Privacy Violation)',
+    privacyRes.getStatusCode() === 403 && privacyRes.getData()?.error?.includes('Bảo mật'));
+
+  // 8. API Test: Delete evaluation by owner succeeds
+  const { req: delEvalReq, res: delEvalRes } = createMockContext({
+    method: 'POST',
+    url: '/api/user?__subpath=evaluations/delete',
+    query: { __subpath: 'evaluations/delete' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-user-email': teacherEmail,
+    },
+    body: {
+      evaluationId: evalId,
+    }
+  });
+  await userHandler(delEvalReq, delEvalRes);
+  assert('API Test: Owner can delete own evaluation (200)',
+    delEvalRes.getStatusCode() === 200 && delEvalRes.getData()?.success === true);
+
+  // 9. Full Workflow Test: Auto-save evaluation with score 35 and 2 issues (User Scenario)
+  const userScenarioEmail = 'giaovien.test@gmail.com';
+  const { req: regReq, res: regRes } = createMockContext({
+    method: 'POST',
+    url: '/api/auth?__subpath=google',
+    query: { __subpath: 'google' },
+    headers: { 'Content-Type': 'application/json' },
+    body: {
+      email: userScenarioEmail,
+      name: 'Cô Mai Lan'
+    }
+  });
+  await authHandler(regReq, regRes);
+  const scenarioSessionToken = regRes.getData()?.sessionToken || '';
+
+  const sampleAnalysisResult = {
+    metadata: {
+      title: 'Ứng dụng sơ đồ tư duy kết hợp phần mềm tương tác môn Lịch sử 8',
+      subject: 'Lịch sử',
+      gradeLevel: 'Lớp 8',
+      author: 'Nguyễn Thị Mai Lan',
+      unit: 'Trường THCS Trần Hưng Đạo'
+    },
+    rubricCriteria: [
+      { criterionName: 'Tính mới và sáng tạo', maxScore: 20, proposedScore: 15, strengths: 'Tốt', deductionReason: '' },
+      { criterionName: 'Tính hiệu quả thực tiễn', maxScore: 20, proposedScore: 20, strengths: 'Tốt', deductionReason: '' },
+    ],
+    redTeamCards: [
+      { id: 'rtc_1', issueDetected: 'Thiếu số liệu đối chứng lớp 8A2', impactLevel: 'Cao', status: 'Chưa xử lý' },
+      { id: 'rtc_2', issueDetected: 'Minh chứng ảnh chụp chưa đủ nét', impactLevel: 'Trung bình', status: 'Chưa xử lý' }
+    ],
+    evidenceChain: [],
+    sectionsMap: [],
+    councilQuestions: []
+  };
+
+  const { req: autoSaveReq, res: autoSaveRes } = createMockContext({
+    method: 'POST',
+    url: '/api/user?__subpath=evaluations/create',
+    query: { __subpath: 'evaluations/create' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-session-token': scenarioSessionToken,
+      'x-user-email': userScenarioEmail,
+    },
+    body: {
+      title: sampleAnalysisResult.metadata.title,
+      subject: sampleAnalysisResult.metadata.subject,
+      gradeLevel: sampleAnalysisResult.metadata.gradeLevel,
+      score: 35,
+      originalFileName: 'SKKN_Lich_Su_8.docx',
+      originalFileSize: 45210,
+      wordCount: 3500,
+      analysisResult: sampleAnalysisResult,
+    }
+  });
+  await userHandler(autoSaveReq, autoSaveRes);
+  const autoSavedItem = autoSaveRes.getData()?.evaluation;
+  assert('Auto-Save Test: Evaluation with 35/100 points and 2 issues is automatically created',
+    autoSaveRes.getStatusCode() === 200 && autoSavedItem?.score === 35 && autoSavedItem?.status === 'COMPLETED');
+
+  const autoSavedId = autoSavedItem?.id;
+
+  // 10. Persistence Test: List evaluations from persistent store after save (Simulating F5 reload)
+  const { req: f5Req, res: f5Res } = createMockContext({
+    method: 'GET',
+    url: '/api/user?__subpath=evaluations/list',
+    query: { __subpath: 'evaluations/list' },
+    headers: {
+      'x-session-token': scenarioSessionToken,
+      'x-user-email': userScenarioEmail,
+    }
+  });
+  await userHandler(f5Req, f5Res);
+  const reloadedList = f5Res.getData()?.evaluations || [];
+  const foundAfterReload = reloadedList.find(e => e.id === autoSavedId);
+  assert('Persistence Test (F5): Saved evaluation persists on disk and is retrieved in MyEvaluationsView',
+    f5Res.getStatusCode() === 200 && Boolean(foundAfterReload) && foundAfterReload?.score === 35);
+
+  // 11. Anti-Duplicate Test: Updating the same evaluation updates the record instead of duplicating
+  const { req: updateReq, res: updateRes } = createMockContext({
+    method: 'POST',
+    url: '/api/user?__subpath=evaluations/save-result',
+    query: { __subpath: 'evaluations/save-result' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-session-token': scenarioSessionToken,
+      'x-user-email': userScenarioEmail,
+    },
+    body: {
+      evaluationId: autoSavedId,
+      score: 38,
+      title: 'Ứng dụng sơ đồ tư duy kết hợp phần mềm tương tác môn Lịch sử 8 (Đã nâng cấp)',
+      analysisResult: {
+        ...sampleAnalysisResult,
+        redTeamCards: [
+          { id: 'rtc_1', issueDetected: 'Thiếu số liệu đối chứng lớp 8A2', impactLevel: 'Cao', status: 'Đã xử lý' },
+          { id: 'rtc_2', issueDetected: 'Minh chứng ảnh chụp chưa đủ nét', impactLevel: 'Trung bình', status: 'Chưa xử lý' }
+        ]
+      }
+    }
+  });
+  await userHandler(updateReq, updateRes);
+  assert('Anti-Duplicate Test: Save-result updates existing evaluation without creating duplicate record',
+    updateRes.getStatusCode() === 200 && updateRes.getData()?.evaluation?.score === 38);
+
+  const { req: countReq, res: countRes } = createMockContext({
+    method: 'GET',
+    url: '/api/user?__subpath=evaluations/list',
+    query: { __subpath: 'evaluations/list' },
+    headers: {
+      'x-session-token': scenarioSessionToken,
+      'x-user-email': userScenarioEmail,
+    }
+  });
+  await userHandler(countReq, countRes);
+  const updatedList = countRes.getData()?.evaluations || [];
+  assert('Anti-Duplicate Verification: Exact single record exists for user (no duplicates)',
+    updatedList.filter(e => e.id === autoSavedId).length === 1);
+
+  // 12. Privacy Defense: Another user cannot read or tamper with this evaluation
+  const otherUserEmail = 'new_teacher@school.edu.vn';
+  const { req: otherRegReq, res: otherRegRes } = createMockContext({
+    method: 'POST',
+    url: '/api/auth?__subpath=google',
+    query: { __subpath: 'google' },
+    headers: { 'Content-Type': 'application/json' },
+    body: {
+      email: otherUserEmail,
+      name: 'Thầy Bình'
+    }
+  });
+  await authHandler(otherRegReq, otherRegRes);
+  const otherSessionToken = otherRegRes.getData()?.sessionToken || '';
+
+  const { req: unauthorizedGetReq, res: unauthorizedGetRes } = createMockContext({
+    method: 'GET',
+    url: `/api/user?__subpath=evaluations/get&id=${encodeURIComponent(autoSavedId)}`,
+    query: { __subpath: 'evaluations/get', id: autoSavedId },
+    headers: {
+      'x-session-token': otherSessionToken,
+      'x-user-email': otherUserEmail,
+    }
+  });
+  await userHandler(unauthorizedGetReq, unauthorizedGetRes);
+  assert('Privacy Defense: Another account cannot read evaluation details (403 Forbidden)',
+    unauthorizedGetRes.getStatusCode() === 403);
+
+  // 13. UI Architecture Verification: App.tsx has autoSaveEvaluation, MyEvaluationsView, and save status banner
+  assert('UI Verification: App.tsx defines autoSaveEvaluation function',
+    appSource.includes('autoSaveEvaluation = async'));
+  assert('UI Verification: App.tsx calls autoSaveEvaluation after evaluation completion',
+    appSource.includes('autoSaveEvaluation(parsedResult, extraMetadata)'));
+  assert('UI Verification: App.tsx maintains currentEvaluationId and saveStatus',
+    appSource.includes('currentEvaluationId') && appSource.includes('saveStatus'));
+
+  // 14. Cleanup scenario test user
+  const { req: cleanupReq, res: cleanupRes } = createMockContext({
+    method: 'POST',
+    url: '/api/user?__subpath=evaluations/delete',
+    query: { __subpath: 'evaluations/delete' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-session-token': scenarioSessionToken,
+      'x-user-email': userScenarioEmail,
+    },
+    body: {
+      evaluationId: autoSavedId,
+    }
+  });
+  await userHandler(cleanupReq, cleanupRes);
+  assert('Cleanup Test: Successfully cleaned up scenario test evaluation',
+    cleanupRes.getStatusCode() === 200);
+}
+
+console.log('\n--- 15. Testing Google OAuth Client ID Sanitization & Resilience ---');
+{
+  // 1. Check current /api/auth/config
+  const { req, res } = createMockContext({
+    method: 'GET',
+    url: '/api/auth?__subpath=config',
+    query: { __subpath: 'config' },
+  });
+  await authHandler(req, res);
+  const data = res.getData();
+  assert('OAuth Sanitization: googleClientId ends with .apps.googleusercontent.com',
+    data?.googleClientId?.endsWith('.apps.googleusercontent.com'));
+  assert('OAuth Sanitization: googleClientId does not start with http or contain URL slash',
+    !data?.googleClientId?.startsWith('http://') && !data?.googleClientId?.startsWith('https://') && !data?.googleClientId?.includes('/'));
+
+  // 2. Check that even if GOOGLE_CLIENT_ID is maliciously or accidentally set to a website URL, it is sanitized
+  const originalEnv = process.env.GOOGLE_CLIENT_ID;
+  try {
+    process.env.GOOGLE_CLIENT_ID = 'https://skkn-review-pro.vercel.app';
+    const { req: malReq, res: malRes } = createMockContext({
+      method: 'GET',
+      url: '/api/auth?__subpath=config',
+      query: { __subpath: 'config' },
+    });
+    await authHandler(malReq, malRes);
+    const malData = malRes.getData();
+    assert('OAuth Sanitization: Website URL in GOOGLE_CLIENT_ID is intercepted and sanitized to default verified client ID',
+      malData?.googleClientId === '398274708628-jlja4cs8fpbe7n8677ra3uorid2fr5ck.apps.googleusercontent.com');
+  } finally {
+    process.env.GOOGLE_CLIENT_ID = originalEnv;
+  }
+
+  // 3. Check AuthModal source code contains email fallback sign-in
+  const authModalSource = fs.readFileSync(path.resolve('src/components/AuthModal.tsx'), 'utf-8');
+  assert('OAuth Resilience: AuthModal.tsx provides handleEmailSignIn fallback',
+    authModalSource.includes('handleEmailSignIn') && authModalSource.includes('loginWithEmailDemo'));
+
+  // 4. Check Root Admin login via email fallback endpoint /api/auth/google
+  const { req: adminLoginReq, res: adminLoginRes } = createMockContext({
+    method: 'POST',
+    url: '/api/auth?__subpath=google',
+    query: { __subpath: 'google' },
+    headers: { 'Content-Type': 'application/json' },
+    body: {
+      email: 'dathien2412@gmail.com',
+      name: 'GV. Hồ Nguyễn Đa Thiện'
+    }
+  });
+  await authHandler(adminLoginReq, adminLoginRes);
+  const adminLoginData = adminLoginRes.getData();
+  assert('OAuth Auth: Root Admin login via /api/auth/google returns ADMIN role and signed session token',
+    adminLoginRes.getStatusCode() === 200 && adminLoginData?.user?.role === 'ADMIN' && Boolean(adminLoginData?.sessionToken));
+}
+
+console.log('\n--- 16. Testing Dossier Recovery, Tin học 11 Restoration & Safe Persistence ---');
+{
+  const targetEmail = 'dathien2412@gmail.com';
+
+  // 1. Kiểm tra danh sách hồ sơ của dathien2412@gmail.com chứa hồ sơ Tin học 11 điểm 35/100
+  const { req: listReq, res: listRes } = createMockContext({
+    method: 'GET',
+    url: '/api/user?__subpath=evaluations/list',
+    query: { __subpath: 'evaluations/list' },
+    headers: {
+      'x-user-email': targetEmail,
+    }
+  });
+  await userHandler(listReq, listRes);
+  const listData = listRes.getData();
+  const evals = listData?.evaluations || [];
+  const tinHocItem = evals.find(e => e.id === 'eval_tinhoc11_dathien2412' || (e.subject === 'Tin học' && e.gradeLevel === 'Lớp 11'));
+
+  assert('Dossier Test 1: User dathien2412@gmail.com has preserved Tin học 11 evaluation in dossier',
+    listRes.getStatusCode() === 200 && listData?.success === true && Boolean(tinHocItem));
+
+  assert('Dossier Test 2: Tin học 11 evaluation has score 35.0, status COMPLETED, version 1',
+    tinHocItem?.score === 35 && tinHocItem?.status === 'COMPLETED' && (tinHocItem?.versionCount || 1) === 1);
+
+  // 2. Kiểm tra xem lại chi tiết hồ sơ Tin học 11 (XEM LẠI)
+  const { req: getReq, res: getRes } = createMockContext({
+    method: 'GET',
+    url: `/api/user?__subpath=evaluations/get&id=${tinHocItem?.id || 'eval_tinhoc11_dathien2412'}`,
+    query: { __subpath: 'evaluations/get', id: tinHocItem?.id || 'eval_tinhoc11_dathien2412' },
+    headers: {
+      'x-user-email': targetEmail,
+    }
+  });
+  await userHandler(getReq, getRes);
+  const getData = getRes.getData();
+  const rubricSum = getData?.evaluation?.analysisResult?.rubricCriteria?.reduce((s, c) => s + (c.proposedScore ?? 0), 0);
+
+  assert('Dossier Test 3: Viewing details restores full analysisResult with Rubric criteria summing to 35.0',
+    getRes.getStatusCode() === 200 && getData?.success === true && Math.abs(rubricSum - 35) < 0.1);
+
+  // 3. Quyền riêng tư: Người dùng khác không được truy cập hồ sơ này
+  const { req: otherGetReq, res: otherGetRes } = createMockContext({
+    method: 'GET',
+    url: `/api/user?__subpath=evaluations/get&id=${tinHocItem?.id || 'eval_tinhoc11_dathien2412'}`,
+    query: { __subpath: 'evaluations/get', id: tinHocItem?.id || 'eval_tinhoc11_dathien2412' },
+    headers: {
+      'x-user-email': 'other_teacher@school.edu.vn',
+    }
+  });
+  await userHandler(otherGetReq, otherGetRes);
+  assert('Privacy Test: Another user is strictly blocked (403 Forbidden) from accessing Tin học 11 record',
+    otherGetRes.getStatusCode() === 403);
+
+  // 4. Kiểm tra mã lỗi 401 khi không đăng nhập
+  const { req: unauthReq, res: unauthRes } = createMockContext({
+    method: 'GET',
+    url: '/api/user?__subpath=evaluations/list',
+    query: { __subpath: 'evaluations/list' },
+  });
+  await userHandler(unauthReq, unauthRes);
+  assert('Security Test: Missing authentication strictly returns 401 with JSON response',
+    unauthRes.getStatusCode() === 401 && Boolean(unauthRes.getData()?.error));
+
+  // 5. Kiểm tra mã lỗi 404 khi subpath không tồn tại
+  const { req: notFoundReq, res: notFoundRes } = createMockContext({
+    method: 'GET',
+    url: '/api/user?__subpath=evaluations/unknown_action',
+    query: { __subpath: 'evaluations/unknown_action' },
+    headers: {
+      'x-user-email': targetEmail,
+    }
+  });
+  await userHandler(notFoundReq, notFoundRes);
+  assert('Routing Test: Unknown subpath returns 404 JSON, never falls through to HTML',
+    notFoundRes.getStatusCode() === 404 && Boolean(notFoundRes.getData()?.error));
+
+  // 6. Kiểm tra mã nguồn MyEvaluationsView có cơ chế phòng thủ safeFetchJson & chống hiển thị 0 khi lỗi
+  const myEvalsSource = fs.readFileSync(path.resolve('src/components/views/MyEvaluationsView.tsx'), 'utf-8');
+  assert('Resilience Test 1: MyEvaluationsView implements safeFetchJson with Content-Type and HTML check',
+    myEvalsSource.includes('safeFetchJson') && myEvalsSource.includes('isHtml') && myEvalsSource.includes('application/json'));
+
+  assert('Resilience Test 2: MyEvaluationsView prevents showing 0 dossiers when API loading fails',
+    myEvalsSource.includes("errorMessage && evaluations.length === 0 ? '--'"));
 }
 
 if (failCount > 0) {

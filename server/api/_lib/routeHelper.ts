@@ -14,21 +14,26 @@ export function extractSubpath(req: any, basePath: string): string {
 
   const prefix = basePath.endsWith('/') ? basePath : `${basePath}/`;
 
-  // 2. Check req.url
-  if (typeof req.url === 'string') {
-    const pathname = req.url.split('?')[0];
+  // 2. Check req.originalUrl (Express or local dev proxy)
+  if (typeof req.originalUrl === 'string') {
+    const pathname = req.originalUrl.split('?')[0];
     if (pathname.startsWith(prefix)) {
       const sub = pathname.slice(prefix.length).replace(/^\/+|\/+$/g, '');
       if (sub) return sub;
     }
   }
 
-  // 3. Check req.originalUrl (Express or local dev proxy)
-  if (typeof req.originalUrl === 'string') {
-    const pathname = req.originalUrl.split('?')[0];
+  // 3. Check req.url
+  if (typeof req.url === 'string') {
+    const pathname = req.url.split('?')[0];
     if (pathname.startsWith(prefix)) {
       const sub = pathname.slice(prefix.length).replace(/^\/+|\/+$/g, '');
       if (sub) return sub;
+    }
+    // Also handle case when req.url has prefix stripped by middleware mount (e.g. /evaluations/list)
+    const stripped = pathname.replace(/^\/+|\/+$/g, '');
+    if (stripped && !stripped.startsWith('api/')) {
+      return stripped;
     }
   }
 

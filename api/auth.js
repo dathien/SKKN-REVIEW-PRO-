@@ -143,6 +143,22 @@ function loadStore() {
   initDefaultData();
   saveStore();
 }
+function reloadStoreFromDisk() {
+  try {
+    if (fs.existsSync(STORE_FILE)) {
+      const content = fs.readFileSync(STORE_FILE, "utf-8");
+      const parsed = JSON.parse(content);
+      if (parsed && parsed.users) {
+        store.users = parsed.users;
+        if (parsed.guests) store.guests = parsed.guests;
+        if (parsed.licenses) store.licenses = parsed.licenses;
+        if (parsed.stats) store.stats = parsed.stats;
+        if (parsed.settings) store.settings = parsed.settings;
+      }
+    }
+  } catch (_) {
+  }
+}
 function saveStore() {
   try {
     if (!fs.existsSync(DATA_DIR)) {
@@ -155,6 +171,7 @@ function saveStore() {
 }
 function findUserByEmailOrId(identifier) {
   if (!identifier) return null;
+  reloadStoreFromDisk();
   const lower = identifier.toLowerCase();
   for (const key of Object.keys(store.users)) {
     const u = store.users[key];
@@ -402,18 +419,22 @@ function extractSubpath(req, basePath) {
     if (cleaned) return cleaned;
   }
   const prefix = basePath.endsWith("/") ? basePath : `${basePath}/`;
+  if (typeof req.originalUrl === "string") {
+    const pathname = req.originalUrl.split("?")[0];
+    if (pathname.startsWith(prefix)) {
+      const sub = pathname.slice(prefix.length).replace(/^\/+|\/+$/g, "");
+      if (sub) return sub;
+    }
+  }
   if (typeof req.url === "string") {
     const pathname = req.url.split("?")[0];
     if (pathname.startsWith(prefix)) {
       const sub = pathname.slice(prefix.length).replace(/^\/+|\/+$/g, "");
       if (sub) return sub;
     }
-  }
-  if (typeof req.originalUrl === "string") {
-    const pathname = req.originalUrl.split("?")[0];
-    if (pathname.startsWith(prefix)) {
-      const sub = pathname.slice(prefix.length).replace(/^\/+|\/+$/g, "");
-      if (sub) return sub;
+    const stripped = pathname.replace(/^\/+|\/+$/g, "");
+    if (stripped && !stripped.startsWith("api/")) {
+      return stripped;
     }
   }
   const headerKeys = ["x-matched-path", "x-forwarded-uri", "x-original-uri", "x-rewrite-url"];
@@ -461,9 +482,17 @@ async function handler(req, res) {
   const body = getRequestBody(req);
   if (subpath === "config") {
     const rawClientId = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || "";
-    const cleanClientId = rawClientId.replace(/^["']|["']$/g, "").trim();
+    const cleanCandidate = rawClientId.replace(/^["']|["']$/g, "").trim();
+    const fallbackClientId = "398274708628-jlja4cs8fpbe7n8677ra3uorid2fr5ck.apps.googleusercontent.com";
+    const isCandidateValid = Boolean(
+      cleanCandidate && !cleanCandidate.startsWith("http://") && !cleanCandidate.startsWith("https://") && !cleanCandidate.includes("/") && !cleanCandidate.includes("your-google-client-id") && /^[0-9]+[a-z0-9_-]*\.apps\.googleusercontent\.com$/i.test(cleanCandidate)
+    );
+    const effectiveClientId = isCandidateValid ? cleanCandidate : fallbackClientId;
+    if (!isCandidateValid && cleanCandidate) {
+      console.warn(`[OAuth Config Warning] Detected invalid GOOGLE_CLIENT_ID in environment: "${cleanCandidate}". Google OAuth Client IDs must end with .apps.googleusercontent.com (not URLs). Using default verified Client ID.`);
+    }
     return res.status(200).json({
-      googleClientId: cleanClientId,
+      googleClientId: effectiveClientId,
       hasLicenseApi: Boolean(process.env.LICENSE_API_URL)
     });
   }
@@ -499,10 +528,7 @@ async function handler(req, res) {
         picture: userPicture,
         id: userId
       });
-      let sessionToken;
-      if (user.role === "ADMIN" || ROOT_ADMIN_EMAILS.includes(userEmail)) {
-        sessionToken = createAdminSession(userEmail, user.role);
-      }
+      const sessionToken = createAdminSession(userEmail, user.role);
       return res.status(200).json({ success: true, user, sessionToken });
     } catch (err) {
       return res.status(500).json({ error: err.message });

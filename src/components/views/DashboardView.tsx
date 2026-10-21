@@ -8,7 +8,8 @@ import {
   ChevronUp,
   MapPin,
   UploadCloud,
-  FileText
+  FileText,
+  AlertCircle
 } from 'lucide-react';
 import { SKKNAnalysisResult, RedTeamCard, FindingStatus, UploadedFileItem } from '../../types';
 import { FriendlyErrorInfo } from '../../utils/aiErrorHandler';
@@ -28,7 +29,16 @@ interface DashboardViewProps {
     skknText: string,
     rubricText: string,
     evidenceFiles: UploadedFileItem[],
-    notes: string
+    notes: string,
+    extraMetadata?: {
+      originalFileName?: string;
+      originalFileSize?: number;
+      originalFileBase64?: string;
+      wordCount?: number;
+      title?: string;
+      subject?: string;
+      gradeLevel?: string;
+    }
   ) => Promise<void>;
   isAnalyzing?: boolean;
   isSample?: boolean;
@@ -43,6 +53,13 @@ interface DashboardViewProps {
   appMode?: AppMode;
   onUpdateCardStatus?: (id: string, status: FindingStatus, notes?: string) => void;
   onOpenInspector?: (mode: InspectorMode, item: any) => void;
+  saveStatus?: 'idle' | 'saving' | 'saved' | 'error' | 'guest';
+  saveErrorMessage?: string | null;
+  currentEvaluationId?: string | null;
+  onRetrySave?: () => void;
+  onOpenMyEvaluations?: () => void;
+  onOpenAuth?: () => void;
+  onOpenAcademicRebuttal?: (card: RedTeamCard) => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -64,7 +81,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onExitDemo,
   appMode = 'easy',
   onUpdateCardStatus,
-  onOpenInspector
+  onOpenInspector,
+  saveStatus = 'idle',
+  saveErrorMessage = null,
+  currentEvaluationId = null,
+  onRetrySave,
+  onOpenMyEvaluations,
+  onOpenAuth,
+  onOpenAcademicRebuttal,
 }) => {
   const [selectedCardForDrawer, setSelectedCardForDrawer] = useState<RedTeamCard | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -116,6 +140,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const firstUnresolved = unresolvedCards[0] || sortedCards[0];
 
   const handleOpenDrawer = (card: RedTeamCard) => {
+    if (onOpenAcademicRebuttal) {
+      onOpenAcademicRebuttal(card);
+      return;
+    }
     setSelectedCardForDrawer(card);
     setIsDrawerOpen(true);
   };
@@ -226,6 +254,73 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {showResults ? (
         <>
           <div id="evaluation-results-section" className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-6 space-y-4 scroll-mt-6">
+            
+            {/* Thanh trạng thái Tự động lưu hồ sơ (Requirement B) */}
+            {!isSample && (
+              <>
+                {saveStatus === 'saved' && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3.5 px-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[13.5px]">
+                    <div className="flex items-center gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>
+                        <strong className="font-bold">Đã tự động lưu hồ sơ an toàn</strong> vào kho lưu trữ cá nhân {currentEvaluationId ? `(${currentEvaluationId})` : ''}
+                      </span>
+                    </div>
+                    {onOpenMyEvaluations && (
+                      <button
+                        type="button"
+                        onClick={onOpenMyEvaluations}
+                        className="text-emerald-700 hover:text-emerald-950 font-bold underline text-[13px] cursor-pointer shrink-0 self-end sm:self-auto"
+                      >
+                        Xem kho hồ sơ →
+                      </button>
+                    )}
+                  </div>
+                )}
+                {saveStatus === 'saving' && (
+                  <div className="flex items-center gap-2.5 p-3.5 px-4 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-[13.5px]">
+                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin shrink-0" />
+                    <span>Đang tự động lưu hồ sơ vào hệ thống dữ liệu...</span>
+                  </div>
+                )}
+                {saveStatus === 'error' && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3.5 px-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-[13.5px]">
+                    <div className="flex items-center gap-2.5">
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                      <span>
+                        <strong className="font-bold">Chưa thể lưu hồ sơ:</strong> {saveErrorMessage || 'Lỗi kết nối máy chủ'}. <em>Kết quả thẩm định của Thầy/Cô vẫn được giữ nguyên vẹn.</em>
+                      </span>
+                    </div>
+                    {onRetrySave && (
+                      <button
+                        type="button"
+                        onClick={onRetrySave}
+                        className="px-3.5 py-1.5 rounded-lg bg-rose-600 text-white font-bold hover:bg-rose-700 active:bg-rose-800 text-[12.5px] cursor-pointer shrink-0 self-end sm:self-auto shadow-xs"
+                      >
+                        Thử lưu lại
+                      </button>
+                    )}
+                  </div>
+                )}
+                {saveStatus === 'guest' && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3.5 px-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-[13.5px]">
+                    <div className="flex items-center gap-2.5">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>Hồ sơ đang ở phiên tạm. Đăng nhập Google để lưu trữ tự động vào kho hồ sơ và Google Drive.</span>
+                    </div>
+                    {onOpenAuth && (
+                      <button
+                        type="button"
+                        onClick={onOpenAuth}
+                        className="px-3.5 py-1.5 rounded-lg bg-amber-600 text-white font-bold hover:bg-amber-700 text-[12.5px] cursor-pointer shrink-0 self-end sm:self-auto shadow-xs"
+                      >
+                        Đăng nhập ngay
+                      </button>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
         
         {isAllResolved ? (
           // Trạng thái khi 5/5 vấn đề đã xử lý

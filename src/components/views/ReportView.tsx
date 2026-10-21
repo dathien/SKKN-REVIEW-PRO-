@@ -49,8 +49,17 @@ export const ReportView: React.FC<ReportViewProps> = ({ analysis }) => {
   const shouldFixItems = redTeamCards.filter(c => c.impactLevel === 'Trung bình');
   const optimizeItems = redTeamCards.filter(c => c.impactLevel === 'Thấp');
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    try {
+      window.focus();
+      window.print();
+    } catch (err) {
+      console.warn('Lỗi khi kích hoạt window.print():', err);
+    }
   };
 
   const handleCopyMarkdown = () => {
@@ -177,6 +186,7 @@ ${rescoreHistory?.remainingIssues?.length ? rescoreHistory.remainingIssues.map(i
           <button
             type="button"
             onClick={handlePrint}
+            title="In báo cáo hoặc Xuất PDF (Phím tắt: Ctrl + P)"
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold rounded-xl text-[13.5px] shadow-sm shadow-blue-500/20 transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <Printer className="w-4 h-4" />
@@ -596,6 +606,33 @@ ${rescoreHistory?.remainingIssues?.length ? rescoreHistory.remainingIssues.map(i
             <div className="h-16 flex items-center justify-center text-[12px] text-slate-400 font-mono">
               [XÁC THỰC HỒ SƠ THẬT]
             </div>
+          </div>
+        </div>
+
+        {/* Bottom Action Bar */}
+        <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 print:hidden">
+          <p className="text-[13px] text-slate-500">
+            * Mẹo: Chọn mục <strong>"Lưu dưới dạng PDF" (Save as PDF)</strong> trong hộp thoại in để xuất tài liệu chất lượng cao.
+          </p>
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={handleCopyMarkdown}
+              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-bold rounded-xl text-[13.5px] transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+              <span>{copied ? 'Đã sao chép Markdown' : 'Sao chép văn bản'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handlePrint}
+              title="In báo cáo hoặc Xuất PDF (Phím tắt: Ctrl + P)"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold rounded-xl text-[13.5px] shadow-sm shadow-blue-500/20 transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <Printer className="w-4 h-4" />
+              <span>In báo cáo / Xuất PDF</span>
+            </button>
           </div>
         </div>
 
