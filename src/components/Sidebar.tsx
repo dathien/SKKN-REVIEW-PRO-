@@ -271,7 +271,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           : 'hidden lg:flex static'
       }`}>
         {/* App Branding */}
-        <div className="px-4 py-3.5 border-b border-slate-800 bg-slate-950/80 shrink-0">
+        <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8.5 h-8.5 rounded-lg bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 flex items-center justify-center font-black text-white shadow-md text-[13px] shrink-0 tracking-wider">
               PRO
@@ -287,12 +287,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </span>
               </div>
               {/* Dòng 2: Slogan mô tả sản phẩm */}
-              <div className="text-[12.5px] font-[500] text-slate-400 tracking-tight leading-snug mt-1 truncate">
+              <div className="text-[12px] font-[500] text-slate-400 tracking-tight leading-tight mt-1 truncate">
                 Trợ lý Chấm & Phản biện
-              </div>
-              {/* Dòng 3: Tác giả phát triển (Dưới slogan) */}
-              <div className="text-[12px] font-[600] text-slate-300/90 tracking-tight leading-snug mt-0.5 truncate">
-                GV.Hồ Nguyễn Đa Thiện
               </div>
             </div>
           </div>

@@ -37,6 +37,10 @@ export interface AcademicRebuttalViewProps {
   onApplyChange?: (change: ChangeSetItem) => void;
   changeSet?: ChangeSetItem[];
   skknFullText?: string;
+  customProposals?: Record<string, { tier?: string; text: string; updatedAt?: string }>;
+  onSaveCustomProposal?: (cardId: string, tier: 'light' | 'academic' | 'deep', text: string) => Promise<{ success: boolean; error?: string }>;
+  initialTier?: 'light' | 'academic' | 'deep';
+  onTierChange?: (tier: 'light' | 'academic' | 'deep') => void;
 }
 
 interface EvidencePiece {
@@ -102,13 +106,19 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
   onGoToSuggestion,
   onApplyChange,
   changeSet = [],
-  skknFullText = ''
+  skknFullText = '',
+  customProposals = {},
+  onSaveCustomProposal,
+  initialTier = 'academic',
+  onTierChange
 }) => {
-  const [selectedTier, setSelectedTier] = useState<'light' | 'academic' | 'deep'>('academic');
+  const [selectedTier, setSelectedTier] = useState<'light' | 'academic' | 'deep'>(initialTier);
   const [copied, setCopied] = useState(false);
   const [teacherNotes, setTeacherNotes] = useState(card.userNotes || '');
   const [isEditingCustom, setIsEditingCustom] = useState(false);
   const [customProposedText, setCustomProposedText] = useState('');
+  const [isSavingProposal, setIsSavingProposal] = useState(false);
+  const [proposalSaveError, setProposalSaveError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // PB-002 Fact confirmation state
@@ -120,10 +130,11 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
   const [customSampleCount, setCustomSampleCount] = useState<string>('');
   const [isSampleConfirmed, setIsSampleConfirmed] = useState(false);
 
-  // Sync notes when switching cards
+  // Sync notes and reset edit state when switching cards
   useEffect(() => {
     setTeacherNotes(card.userNotes || '');
     setIsEditingCustom(false);
+    setProposalSaveError(null);
     setCopied(false);
     setIsSampleConfirmed(false);
     setSampleChoice('');
@@ -211,11 +222,19 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
     return changeSet.find(c => c.issueId === card.id || c.changeId === `change-${card.id}` || c.changeId === `change-${effectiveSuggestion.id}`);
   }, [changeSet, card.id, effectiveSuggestion.id]);
 
-  const currentProposedText = useMemo(() => {
+  // 1. AI Proposal (base from algorithm)
+  const aiProposalText = useMemo(() => {
     if (selectedTier === 'light') return effectiveSuggestion.lightRevision;
     if (selectedTier === 'academic') return effectiveSuggestion.academicRevision;
     return effectiveSuggestion.deepRevision;
   }, [selectedTier, effectiveSuggestion]);
+
+  // 2. Saved Proposal (confirmed saved by teacher)
+  const savedProposalKey = `${card.id}_${selectedTier}`;
+  const savedProposal = customProposals?.[savedProposalKey]?.text || (card as any)?.customProposals?.[selectedTier];
+
+  // 3. Displayed Proposal in Box 5 (Saved Proposal > AI Proposal)
+  const displayedProposalText = savedProposal || aiProposalText;
 
   // Evidence pieces
   const evidencePieces = useMemo(() => {
@@ -250,11 +269,59 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleStartEditing = () => {
+    setCustomProposedText(displayedProposalText);
+    setIsEditingCustom(true);
+    setProposalSaveError(null);
+  };
+
+  const handleCancelEditing = () => {
+    setIsEditingCustom(false);
+    setCustomProposedText(displayedProposalText);
+    setProposalSaveError(null);
+  };
+
+  const handleSaveProposal = async () => {
+    const trimmed = customProposedText.trim();
+    if (!trimmed) {
+      setProposalSaveError('Nội dung đề xuất không được để trống.');
+      return;
+    }
+    setIsSavingProposal(true);
+    setProposalSaveError(null);
+
+    try {
+      if (onSaveCustomProposal) {
+        const res = await onSaveCustomProposal(card.id, selectedTier, trimmed);
+        if (!res.success) {
+          setProposalSaveError(res.error || 'Máy chủ không thể lưu đoạn đề xuất. Vui lòng thử lại.');
+          setIsSavingProposal(false);
+          return;
+        }
+      }
+      setIsSavingProposal(false);
+      setIsEditingCustom(false);
+      setToastMessage('✓ Đã lưu bản đề xuất chỉnh sửa thành công!');
+      setTimeout(() => setToastMessage(null), 3500);
+    } catch (err: any) {
+      setIsSavingProposal(false);
+      setProposalSaveError(err.message || 'Lỗi mạng khi lưu đề xuất.');
+    }
+  };
+
+  const handleSelectTier = (tier: 'light' | 'academic' | 'deep') => {
+    setSelectedTier(tier);
+    setIsEditingCustom(false);
+    setProposalSaveError(null);
+    onTierChange?.(tier);
+  };
+
   const handleApplyThisChange = () => {
-    const textToApply = isEditingCustom ? customProposedText : currentProposedText;
+    const textToApply = isEditingCustom ? customProposedText : displayedProposalText;
     if (!textToApply) return;
 
     if (onApplyChange) {
+      const isTeacherCustom = Boolean(savedProposal) || isEditingCustom;
       const changeItem: ChangeSetItem = {
         changeId: `change-${card.id}`,
         issueId: card.id,
@@ -267,7 +334,9 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
         reason: card.whyItMatters || card.issueDetected,
         rubricCriterion: card.affectedCriterion,
         selectedRevisionLevel: selectedTier,
-        decidedBy: isEditingCustom ? 'Giáo viên chỉnh trực tiếp' : `AI đề xuất (${selectedTier === 'light' ? 'Sửa nhẹ' : selectedTier === 'academic' ? 'Sửa học thuật' : 'Sửa sâu'}) / Giáo viên duyệt`,
+        decidedBy: isTeacherCustom
+          ? 'Giáo viên chỉnh trực tiếp'
+          : `AI đề xuất (${selectedTier === 'light' ? 'Sửa nhẹ' : selectedTier === 'academic' ? 'Sửa học thuật' : 'Sửa sâu'}) / Giáo viên duyệt`,
         appliedAt: new Date().toLocaleTimeString('vi-VN')
       };
       onApplyChange(changeItem);
@@ -342,8 +411,9 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
         </div>
       </div>
 
-      {/* HEADER BANNER: TÊN VẤN ĐỀ, MỨC ĐỘ ƯU TIÊN, VỊ TRÍ & TRẠNG THÁI */}
+      {/* HEADER BANNER: DÒNG 1 -> DÒNG 5 CHUẨN SECTION V */}
       <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white rounded-2xl p-6 sm:p-7 shadow-md border border-slate-800 space-y-4">
+        {/* DÒNG 1: PHẢN BIỆN HỌC THUẬT | PHẢI SỬA / NÊN SỬA */}
         <div className="flex flex-wrap items-center gap-2.5">
           <span className="px-3 py-1 rounded-lg bg-blue-500/25 border border-blue-400/40 text-blue-200 text-[12.5px] font-bold uppercase tracking-wider flex items-center gap-1.5">
             <ShieldAlert className="w-3.5 h-3.5 text-blue-300" />
@@ -362,51 +432,56 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
           )}
         </div>
 
+        {/* DÒNG 2: TIÊU ĐỀ VẤN ĐỀ PHẢN BIỆN */}
         <div>
           <h1 className="text-[20px] sm:text-[23px] font-[750] text-white leading-[1.35] tracking-tight">
             {card.issueDetected || card.issueType || 'Vấn đề phản biện học thuật'}
           </h1>
-          <p className="text-[13.5px] text-slate-300 mt-1.5 flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-rose-400 shrink-0" />
-            <span><strong>Vị trí trong SKKN:</strong> {card.location || 'Toàn văn sáng kiến kinh nghiệm'}</span>
-          </p>
         </div>
 
-        {/* Quick status selector */}
-        <div className="pt-3 border-t border-slate-700/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-[13.5px]">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-slate-400 font-medium">Trạng thái hiện tại:</span>
-            {(['Chưa xử lý', 'Đang xử lý', 'Đã xử lý', 'Bỏ qua'] as FindingStatus[]).map(st => (
-              <button
-                key={st}
-                type="button"
-                onClick={() => handleStatusChange(st)}
-                className={`px-3 py-1 rounded-lg font-bold text-[12.5px] transition-all cursor-pointer ${
-                  card.status === st
-                    ? st === 'Đã xử lý'
-                      ? 'bg-emerald-500 text-white shadow-xs'
-                      : st === 'Đang xử lý'
-                      ? 'bg-blue-500 text-white shadow-xs'
-                      : st === 'Bỏ qua'
-                      ? 'bg-slate-600 text-slate-200'
-                      : 'bg-rose-600 text-white shadow-xs'
-                    : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white'
-                }`}
-              >
-                {st}
-              </button>
-            ))}
-          </div>
+        {/* DÒNG 3: VỊ TRÍ TRONG SKKN */}
+        <div className="text-[13.5px] text-slate-300 flex items-center gap-2">
+          <MapPin className="w-4 h-4 text-rose-400 shrink-0" />
+          <span><strong>Vị trí trong SKKN:</strong> {card.location || 'Toàn văn sáng kiến kinh nghiệm'}</span>
+        </div>
 
-          <button
-            type="button"
-            onClick={() => onGoToSuggestion(card)}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-[700] rounded-xl shadow-sm transition-all inline-flex items-center gap-2 cursor-pointer self-start sm:self-auto shrink-0"
-            title="Chuyển thẳng sang khu vực chỉnh sửa & cuộn đến vị trí này"
-          >
-            <PenTool className="w-4 h-4" />
-            <span>GỢI Ý SỬA →</span>
-          </button>
+        {/* DÒNG 4: ĐƯỜNG PHÂN CÁCH */}
+        <div className="border-t border-slate-700/80 pt-4">
+
+          {/* DÒNG 5: TRẠNG THÁI XỬ LÝ VÀ 4 NÚT QUY CHUẨN */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-[13.5px]">
+            <div className="flex items-center gap-3 flex-wrap w-full">
+              <span className="text-slate-300 font-bold uppercase text-[12.5px] tracking-wider shrink-0">
+                TRẠNG THÁI XỬ LÝ:
+              </span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-1 sm:max-w-xl">
+                {(['Chưa xử lý', 'Đang xử lý', 'Đã xử lý', 'Bỏ qua'] as FindingStatus[]).map(st => {
+                  const isSelected = card.status === st || (st === 'Chưa xử lý' && (!card.status || card.status === 'open'));
+                  return (
+                    <button
+                      key={st}
+                      type="button"
+                      onClick={() => handleStatusChange(st)}
+                      className={`h-9 px-3.5 rounded-xl font-bold text-[13px] transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                        isSelected
+                          ? st === 'Đã xử lý'
+                            ? 'bg-emerald-600 text-white shadow-md ring-2 ring-emerald-400/50'
+                            : st === 'Đang xử lý'
+                            ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-400/50'
+                            : st === 'Bỏ qua'
+                            ? 'bg-slate-600 text-white shadow-md ring-2 ring-slate-400/50'
+                            : 'bg-rose-600 text-white shadow-md ring-2 ring-rose-400/50'
+                          : 'bg-slate-800/90 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700'
+                      }`}
+                    >
+                      {isSelected && <span className="w-2 h-2 rounded-full bg-white shrink-0" />}
+                      <span className="truncate">{st}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -549,26 +624,46 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
           </div>
 
           {/* 4. HƯỚNG XỬ LÝ */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-2xs space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <span className="text-[15px] font-[750] uppercase tracking-wide text-slate-900 flex items-center gap-2">
-                <BookOpen className="w-4.5 h-4.5 text-emerald-600" />
-                <span>4. HƯỚNG XỬ LÝ CỤ THỂ</span>
-              </span>
-              <span className="text-[12.5px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                Giải pháp khắc phục
-              </span>
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-2xs space-y-3 flex flex-col justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <span className="text-[15px] font-[750] uppercase tracking-wide text-slate-900 flex items-center gap-2">
+                  <BookOpen className="w-4.5 h-4.5 text-emerald-600" />
+                  <span>4. HƯỚNG XỬ LÝ CỤ THỂ</span>
+                </span>
+                <span className="text-[12.5px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                  Giải pháp khắc phục
+                </span>
+              </div>
+
+              <div className="text-[15px] text-slate-800 leading-[1.7] space-y-2 bg-emerald-50/30 p-4 rounded-xl border border-emerald-200/80">
+                <p>
+                  {card.resolutionGuidance || (card as any).recommendedAction || 'Rà soát lại toàn bộ đoạn văn, thống nhất các chỉ số thực nghiệm và sử dụng bản đề xuất chỉnh sửa 3 mức độ bên dưới để đưa vào bản nháp SKKN.'}
+                </p>
+                {card.requiredEvidence && (
+                  <p className="text-[13.5px] text-emerald-900 font-semibold pt-2 border-t border-emerald-200/60">
+                    📁 <strong>Minh chứng cần chuẩn bị kèm:</strong> {card.requiredEvidence}
+                  </p>
+                )}
+              </div>
             </div>
 
-            <div className="text-[15px] text-slate-800 leading-[1.7] space-y-2 bg-emerald-50/30 p-4 rounded-xl border border-emerald-200/80">
-              <p>
-                {card.resolutionGuidance || (card as any).recommendedAction || 'Rà soát lại toàn bộ đoạn văn, thống nhất các chỉ số thực nghiệm và sử dụng bản đề xuất chỉnh sửa 3 mức độ bên dưới để đưa vào bản nháp SKKN.'}
-              </p>
-              {card.requiredEvidence && (
-                <p className="text-[13.5px] text-emerald-900 font-semibold pt-2 border-t border-emerald-200/60">
-                  📁 <strong>Minh chứng cần chuẩn bị kèm:</strong> {card.requiredEvidence}
-                </p>
-              )}
+            {/* NÚT XEM ĐỀ XUẤT CHỈNH SỬA TẠI CUỐI MỤC 4 (SECTION V) */}
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  const targetEl = document.getElementById('section-5-proposals');
+                  if (targetEl) {
+                    targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-[700] text-[13.5px] rounded-xl shadow-xs transition-all inline-flex items-center gap-2 cursor-pointer"
+                title="Cuộn mượt đến bản đề xuất viết lại 3 mức độ"
+              >
+                <Sparkles className="w-4 h-4 text-blue-200" />
+                <span>XEM ĐỀ XUẤT CHỈNH SỬA ↓</span>
+              </button>
             </div>
           </div>
 
@@ -577,7 +672,7 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
       </div>
 
       {/* KHU VỰC 5: GỢI Ý SỬA 3 MỨC ĐỘ & SO SÁNH SONG SONG (BEFORE / AFTER) */}
-      <div className="bg-white rounded-2xl border-2 border-blue-200 p-5 sm:p-7 shadow-sm space-y-5">
+      <div id="section-5-proposals" className="scroll-mt-24 bg-white rounded-2xl border-2 border-blue-200 p-5 sm:p-7 shadow-sm space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-4">
           <div>
             <h2 className="text-[17px] sm:text-[18px] font-[750] text-slate-900 uppercase tracking-wide flex items-center gap-2">
@@ -593,7 +688,7 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
           <div className="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200 text-[13.5px] font-[650] shrink-0 self-start sm:self-auto">
             <button
               type="button"
-              onClick={() => { setSelectedTier('light'); setIsEditingCustom(false); }}
+              onClick={() => handleSelectTier('light')}
               className={`px-3 py-1.5 rounded-lg cursor-pointer transition-all ${
                 selectedTier === 'light' ? 'bg-blue-600 text-white font-bold shadow-2xs' : 'text-slate-600 hover:text-slate-900'
               }`}
@@ -602,7 +697,7 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => { setSelectedTier('academic'); setIsEditingCustom(false); }}
+              onClick={() => handleSelectTier('academic')}
               className={`px-3 py-1.5 rounded-lg cursor-pointer transition-all ${
                 selectedTier === 'academic' ? 'bg-blue-600 text-white font-bold shadow-2xs' : 'text-slate-600 hover:text-slate-900'
               }`}
@@ -611,7 +706,7 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => { setSelectedTier('deep'); setIsEditingCustom(false); }}
+              onClick={() => handleSelectTier('deep')}
               className={`px-3 py-1.5 rounded-lg cursor-pointer transition-all ${
                 selectedTier === 'deep' ? 'bg-blue-600 text-white font-bold shadow-2xs' : 'text-slate-600 hover:text-slate-900'
               }`}
@@ -621,7 +716,7 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
           </div>
         </div>
 
-        {/* SIDE-BY-SIDE: BẢN HIỆN TẠI VS BẢN AI ĐỀ XUẤT */}
+        {/* SIDE-BY-SIDE: BẢN HIỆN TẠI VS BẢN ĐỀ XUẤT */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
           {/* CỘT TRÁI: BẢN HIỆN TẠI (GỐC) */}
@@ -641,7 +736,7 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
             </div>
           </div>
 
-          {/* CỘT PHẢI: BẢN AI ĐỀ XUẤT */}
+          {/* CỘT PHẢI: BẢN ĐỀ XUẤT (SAVED PROPOSAL HOẶC AI ĐỀ XUẤT) */}
           <div className="p-4 sm:p-5 bg-blue-50/50 border border-blue-200 rounded-xl space-y-3 flex flex-col justify-between">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -651,45 +746,64 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
                     BẢN ĐỀ XUẤT ({selectedTier === 'light' ? 'SỬA NHẸ' : selectedTier === 'academic' ? 'SỬA HỌC THUẬT' : 'SỬA SÂU'}):
                   </span>
                 </span>
-                <span className="text-[12px] text-blue-800 font-medium">
-                  {selectedTier === 'light' ? 'Bảo toàn tối đa câu chữ' : selectedTier === 'academic' ? 'Chuẩn hóa văn phong sư phạm' : 'Tái cấu trúc lập luận'}
+                <span className="text-[12px] text-blue-800 font-semibold bg-blue-100/70 px-2 py-0.5 rounded">
+                  {savedProposal ? 'Giáo viên đã lưu chỉnh sửa' : selectedTier === 'light' ? 'Bảo toàn tối đa câu chữ' : selectedTier === 'academic' ? 'Chuẩn hóa văn phong sư phạm' : 'Tái cấu trúc lập luận'}
                 </span>
               </div>
 
               {isEditingCustom ? (
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   <textarea
                     value={customProposedText}
                     onChange={(e) => setCustomProposedText(e.target.value)}
                     rows={6}
-                    className="w-full p-3.5 bg-white border border-blue-300 rounded-xl text-[15.5px] leading-[1.7] text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-sans shadow-2xs"
+                    placeholder="Nhập nội dung Thầy/Cô muốn chỉnh sửa cho bản đề xuất này..."
+                    className="w-full p-3.5 bg-white border-2 border-blue-400 rounded-xl text-[15.5px] leading-[1.7] text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-sans shadow-2xs"
                   />
-                  <div className="flex items-center justify-end gap-2">
+                  {proposalSaveError && (
+                    <div className="p-2.5 bg-rose-50 border border-rose-300 rounded-lg text-[13px] text-rose-800 font-semibold flex items-center gap-1.5">
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                      <span>{proposalSaveError}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-end gap-2.5">
                     <button
                       type="button"
-                      onClick={() => setIsEditingCustom(false)}
-                      className="px-3 py-1.5 text-slate-600 hover:text-slate-900 text-[13px] font-semibold cursor-pointer"
+                      onClick={handleCancelEditing}
+                      disabled={isSavingProposal}
+                      className="px-3.5 py-1.5 text-slate-600 hover:text-slate-900 text-[13.5px] font-semibold cursor-pointer disabled:opacity-50"
                     >
                       Hủy
                     </button>
                     <button
                       type="button"
-                      onClick={() => setIsEditingCustom(false)}
-                      className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[13px] rounded-lg cursor-pointer"
+                      onClick={handleSaveProposal}
+                      disabled={isSavingProposal}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-[13.5px] rounded-xl cursor-pointer shadow-xs inline-flex items-center gap-1.5 disabled:opacity-50"
                     >
-                      Xong
+                      {isSavingProposal ? (
+                        <>
+                          <Clock className="w-4 h-4 animate-spin" />
+                          <span>Đang lưu...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-4 h-4" />
+                          <span>LƯU CHỈNH SỬA</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
               ) : (
                 <div className="text-[15.5px] leading-[1.7] text-slate-900 bg-white p-4 rounded-xl border border-blue-200 shadow-2xs font-normal">
-                  {currentProposedText}
+                  {displayedProposalText}
                 </div>
               )}
             </div>
 
             {/* Integrity warning if placeholders present */}
-            {currentProposedText.includes('[CẦN') || currentProposedText.includes('[CHỜ') || currentProposedText.includes('[GV') ? (
+            {displayedProposalText.includes('[CẦN') || displayedProposalText.includes('[CHỜ') || displayedProposalText.includes('[GV') ? (
               <div className="p-3 bg-amber-100/80 border border-amber-300 rounded-lg text-[13px] text-amber-950 font-medium flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-amber-700 shrink-0" />
                 <span>Đoạn đề xuất có thẻ <code>[GV điền: ...]</code> để Thầy/Cô bổ sung thông tin thực tế trước khi nộp.</span>
@@ -701,7 +815,7 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => handleCopy(currentProposedText)}
+                  onClick={() => handleCopy(displayedProposalText)}
                   className="px-3 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-[13px] font-semibold inline-flex items-center gap-1.5 cursor-pointer shadow-2xs transition-colors"
                 >
                   {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
@@ -711,10 +825,7 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
                 {!isEditingCustom && (
                   <button
                     type="button"
-                    onClick={() => {
-                      setCustomProposedText(currentProposedText);
-                      setIsEditingCustom(true);
-                    }}
+                    onClick={handleStartEditing}
                     className="px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 text-[13px] font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors"
                   >
                     <Edit3 className="w-3.5 h-3.5" />
@@ -753,7 +864,9 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
             <History className="w-4.5 h-4.5 text-slate-600" />
             <span>6. TRẠNG THÁI & NHẬT KÝ XỬ LÝ CỦA TÁC GIẢ</span>
           </span>
-          <span className="text-[13px] text-slate-500 font-mono">ID: {card.id}</span>
+          <span className="text-[13px] font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-lg">
+            Vấn đề {String(currentIndex + 1).padStart(2, '0')}
+          </span>
         </div>
 
         <div className="space-y-3">
@@ -803,7 +916,7 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
               className="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-[13.5px] rounded-xl inline-flex items-center gap-2 cursor-pointer shadow-2xs transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
-              <span>← Vấn đề trước: #{prevCard.id}</span>
+              <span>← Vấn đề trước</span>
             </button>
           )}
 
@@ -813,7 +926,7 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
               onClick={() => onSelectCard(nextCard)}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-[700] text-[13.5px] rounded-xl inline-flex items-center gap-2 cursor-pointer shadow-2xs transition-colors"
             >
-              <span>Vấn đề tiếp theo: #{nextCard.id} →</span>
+              <span>Vấn đề tiếp theo →</span>
               <ChevronRight className="w-4 h-4" />
             </button>
           )}

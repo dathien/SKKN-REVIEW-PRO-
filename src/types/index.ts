@@ -189,6 +189,8 @@ export interface RedTeamCard {
   likelyCouncilQuestion: string; // Câu hỏi hội đồng có thể đặt
   status: FindingStatus;         // Trạng thái
   userNotes?: string;            // Ghi chú của người dùng
+  notesSavedAt?: string;         // Thời điểm lưu ghi chú
+  customProposalText?: string;   // Đoạn đề xuất do giáo viên trực tiếp chỉnh sửa
 }
 
 export interface NoveltyComparisonItem {
@@ -415,6 +417,7 @@ export interface SKKNAnalysisResult {
   missingContents?: MissingContentItem[];
   supportTemplates?: SupportTemplateItem[];
   changeSet?: ChangeSetItem[];
+  customProposals?: Record<string, { tier?: string; text: string; updatedAt?: string }>;
   councilQuestions: CouncilQuestion[];
   priorityActions: PriorityActionItem[];
   rescoreHistory?: RescoreComparison;
@@ -543,6 +546,7 @@ export interface EvaluationItem {
   originalText?: string;
   draftText?: string;
   changeSet?: ChangeSetItem[];
+  customProposals?: Record<string, { tier?: string; text: string; updatedAt?: string }>;
 }
 
 export interface StorageAuditLog {

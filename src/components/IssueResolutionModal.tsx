@@ -1074,7 +1074,7 @@ export const IssueResolutionModal: React.FC<IssueResolutionModalProps> = ({
                   </div>
                 )}
                 <div className="text-[13px] text-slate-500 pt-1.5 border-t border-slate-200">
-                  <span className="font-bold">Mã vấn đề:</span> {card.id}
+                  <span className="font-bold">Thứ tự vấn đề:</span> Vấn đề {String(currentIndex + 1).padStart(2, '0')}
                 </div>
               </div>
             )}

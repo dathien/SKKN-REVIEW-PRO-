@@ -37,9 +37,42 @@ export function ensureDefaultEvaluations() {
       wordCount: 4250,
       createdAt: '2026-10-18T10:15:00.000Z',
       updatedAt: '2026-10-18T10:15:00.000Z',
-      originalText: 'Trong chương trình GDPT 2018 môn Tin học 11, mạch kiến thức Khoa học máy tính và Lập trình đóng vai trò then chốt nhưng học sinh thường gặp khó khăn trong việc tư duy thuật toán và hiện thực hóa bài toán thực tế...',
-      draftText: 'Trong chương trình GDPT 2018 môn Tin học 11, mạch kiến thức Khoa học máy tính và Lập trình đóng vai trò then chốt nhưng học sinh thường gặp khó khăn trong việc tư duy thuật toán và hiện thực hóa bài toán thực tế...',
+      originalText: `BÁO CÁO SÁNG KIẾN KINH NGHIỆM
+Tên sáng kiến: Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11
+Tác giả: GV. Hồ Nguyễn Đa Thiện - Trường THPT Chuyên
+
+Phần I. ĐẶT VẤN ĐỀ
+Trong chương trình GDPT 2018 môn Tin học 11, mạch kiến thức Khoa học máy tính và Lập trình đóng vai trò then chốt nhưng học sinh thường gặp khó khăn trong việc tư duy thuật toán và hiện thực hóa bài toán thực tế. Học sinh thường học thuộc lòng cú pháp Python nhưng khi gặp bài toán thực tế thì bế tắc không biết phân tích bài toán.
+
+Phần II. NỘI DUNG VÀ BIỆN PHÁP THỰC HIỆN
+Mục 3.2 & Mục 4.1. Tiến hành thực nghiệm tại lớp 11A1 và đối chứng tại lớp 11A2; sau một học kỳ áp dụng dự án Python, kết quả học tập lớp 11A1 cao hơn rõ rệt.
+Mục 4.2. Thiết kế 3 dự án nhỏ: Quản lý thư viện, Mô phỏng chuyển động vật lý và Chatbot tra cứu thông tin.
+Mục 4.3. Để hoàn thành các dự án lớn, học sinh tiếp tục hoàn thiện code trên máy tính cá nhân ở nhà và nộp link qua hệ thống trực tuyến.
+
+Phần III. HIỆU QUẢ CỦA SÁNG KIẾN
+Mục 5, Trang 22. Sau thời gian áp dụng giải pháp, 100% học sinh trong lớp đều say mê học tập và không còn em nào cảm thấy sợ lập trình Python.
+
+Phần IV. KẾT LUẬN VÀ KIẾN NGHỊ
+Sáng kiến mang lại hiệu quả thiết thực trong việc đổi mới phương pháp dạy học lập trình bậc THPT.`,
+      draftText: `BÁO CÁO SÁNG KIẾN KINH NGHIỆM
+Tên sáng kiến: Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11
+Tác giả: GV. Hồ Nguyễn Đa Thiện - Trường THPT Chuyên
+
+Phần I. ĐẶT VẤN ĐỀ
+Trong chương trình GDPT 2018 môn Tin học 11, mạch kiến thức Khoa học máy tính và Lập trình đóng vai trò then chốt nhưng học sinh thường gặp khó khăn trong việc tư duy thuật toán và hiện thực hóa bài toán thực tế. Học sinh thường học thuộc lòng cú pháp Python nhưng khi gặp bài toán thực tế thì bế tắc không biết phân tích bài toán.
+
+Phần II. NỘI DUNG VÀ BIỆN PHÁP THỰC HIỆN
+Mục 3.2 & Mục 4.1. Tiến hành thực nghiệm tại lớp 11A1 và đối chứng tại lớp 11A2; sau một học kỳ áp dụng dự án Python, kết quả học tập lớp 11A1 cao hơn rõ rệt.
+Mục 4.2. Thiết kế 3 dự án nhỏ: Quản lý thư viện, Mô phỏng chuyển động vật lý và Chatbot tra cứu thông tin.
+Mục 4.3. Để hoàn thành các dự án lớn, học sinh tiếp tục hoàn thiện code trên máy tính cá nhân ở nhà và nộp link qua hệ thống trực tuyến.
+
+Phần III. HIỆU QUẢ CỦA SÁNG KIẾN
+Mục 5, Trang 22. Sau thời gian áp dụng giải pháp, 100% học sinh trong lớp đều say mê học tập và không còn em nào cảm thấy sợ lập trình Python.
+
+Phần IV. KẾT LUẬN VÀ KIẾN NGHỊ
+Sáng kiến mang lại hiệu quả thiết thực trong việc đổi mới phương pháp dạy học lập trình bậc THPT.`,
       changeSet: [],
+      customProposals: {},
       versionsHistory: [
         {
           version: 1,
@@ -175,30 +208,45 @@ export function ensureDefaultEvaluations() {
           {
             id: 'rtc-1',
             location: 'Mục 3.2 & Mục 4.1',
+            relatedQuote: 'Tiến hành thực nghiệm tại lớp 11A1 và đối chứng tại lớp 11A2; sau một học kỳ áp dụng dự án Python, kết quả học tập lớp 11A1 cao hơn rõ rệt.',
             issueDetected: 'Thiếu bài kiểm tra năng lực đầu vào đối chứng (Pre-test) giữa hai nhóm học sinh',
             impactLevel: 'Cao',
             affectedCriterion: 'Tiêu chí 3: Tính khoa học & Logic sư phạm',
             status: 'Chưa xử lý',
+            criticismBasis: 'Quy chuẩn nghiên cứu sư phạm ứng dụng: Nghiên cứu đối chứng bắt buộc phải kiểm soát biến đầu vào thông qua bài kiểm tra năng lực tương đương (Pre-test) hoặc đối soát học lực học kỳ trước.',
+            whyItMatters: 'Hội đồng sẽ chất vấn: Căn cứ nào khẳng định điểm số lớp 11A1 cao hơn là do phương pháp mới mà không phải do học sinh lớp này vốn đã có năng lực tư duy tốt hơn từ trước?',
+            resolutionGuidance: 'Bổ sung giải trình về tính tương đương đầu vào hoặc điều chỉnh thiết kế nghiên cứu nêu rõ giới hạn khảo sát [CẦN BỔ SUNG MINH CHỨNG].',
+            requiredEvidence: 'Phiếu khảo sát hoặc điểm số học kỳ trước làm đối chứng tương đương.',
             councilChallenge: 'Hội đồng nhận thấy hai lớp 11A1 và 11A2 có điểm đầu vào chênh lệch. Căn cứ nào để khẳng định kết quả tiến bộ là do phương pháp của tác giả chứ không phải do tố chất sẵn có?',
             mitigationStrategy: 'Bổ sung kết quả bài kiểm tra tiền thực nghiệm chứng minh độ tương đương p > 0.05.',
           },
           {
             id: 'rtc-2',
             location: 'Mục 5, Trang 22',
+            relatedQuote: 'Sau thời gian áp dụng giải pháp, 100% học sinh trong lớp đều say mê học tập và không còn em nào cảm thấy sợ lập trình Python.',
             issueDetected: 'Khẳng định "100% học sinh say mê lập trình" vượt quá dữ liệu minh chứng',
             impactLevel: 'Cao',
             affectedCriterion: 'Tiêu chí 5: Tính hiệu quả & Minh chứng xác thực',
             status: 'Chưa xử lý',
+            criticismBasis: 'Chuẩn mực đánh giá SKKN ngành GD&ĐT: Tuyệt đối không đưa ra các nhận định tuyệt đối hóa (100%) khi chưa có công cụ khảo sát chuẩn hóa độc lập.',
+            whyItMatters: 'Tuyên bố 100% say mê học tập là khẳng định cảm tính, thiếu chuẩn mực khoa học, dễ bị giám khảo trừ điểm nặng về tính trung thực và phương pháp nghiên cứu.',
+            resolutionGuidance: 'Điều chỉnh diễn đạt chuẩn xác theo số liệu khảo sát thực tế, không dùng từ tuyệt đối [CẦN BỔ SUNG SỐ LIỆU THỰC TẾ].',
+            requiredEvidence: 'Phiếu khảo sát thái độ học tập hoặc biên bản dự giờ thực tế.',
             councilChallenge: 'Tuyên bố 100% không còn học sinh sợ lập trình mang tính cảm tính, thiếu chuẩn mực khoa học.',
-            mitigationStrategy: 'Điều chỉnh thành: "84.5% học sinh phản hồi tích cực theo thang đo khảo sát 75 học sinh".',
+            mitigationStrategy: 'Điều chỉnh theo tỷ lệ khảo sát thực tế có đối chiếu.',
           },
           {
             id: 'rtc-3',
             location: 'Mục 4.3',
+            relatedQuote: 'Để hoàn thành các dự án lớn, học sinh tiếp tục hoàn thiện code trên máy tính cá nhân ở nhà và nộp link qua hệ thống trực tuyến.',
             issueDetected: 'Phụ thuộc vào máy tính cá nhân ở nhà, thiếu phương án công bằng học tập',
             impactLevel: 'Trung bình',
             affectedCriterion: 'Tiêu chí 4: Tính thực tiễn & Khả năng áp dụng',
             status: 'Chưa xử lý',
+            criticismBasis: 'Nguyên tắc sư phạm: Giải pháp giáo dục phải bảo đảm tính khả thi và công bằng học tập cho mọi học sinh, kể cả học sinh không có thiết bị cá nhân ở nhà.',
+            whyItMatters: 'Giám khảo có thể đánh giá sáng kiến khó nhân rộng đại trà nếu phụ thuộc vào điều kiện kinh tế gia đình của học sinh.',
+            resolutionGuidance: 'Bổ sung phương án hỗ trợ học sinh thực hành tại trường hoặc ghép nhóm học tập (Pair programming).',
+            requiredEvidence: 'Kế hoạch mở phòng máy ngoài giờ hoặc quy chế làm việc nhóm.',
             councilChallenge: 'Nếu học sinh ở vùng sâu hoặc gia đình không có máy tính thì sáng kiến này áp dụng thế nào?',
             mitigationStrategy: 'Bổ sung phương án thực hành theo cặp (Pair programming) tại phòng máy trường.',
           },
@@ -221,15 +269,53 @@ export function ensureDefaultEvaluations() {
         ],
         suggestions: [
           {
-            id: 'sug-1',
-            targetSection: 'Mục 5 - Đánh giá hiệu quả',
+            id: 'sug-rtc-1',
+            targetSection: 'Mục 3.2 & Mục 4.1',
+            originalText: 'Tiến hành thực nghiệm tại lớp 11A1 và đối chứng tại lớp 11A2; sau một học kỳ áp dụng dự án Python, kết quả học tập lớp 11A1 cao hơn rõ rệt.',
+            problem: 'Thiếu bài kiểm tra năng lực đầu vào đối chứng (Pre-test) giữa hai nhóm học sinh.',
+            whyRevise: 'Nghiên cứu đối chứng bắt buộc phải kiểm soát biến thiên đầu vào để khẳng định tính khoa học của giải pháp.',
+            basis: 'Quy chuẩn nghiên cứu sư phạm ứng dụng và tiêu chuẩn đánh giá SKKN.',
+            category: 'Tính khoa học & Logic sư phạm',
+            revisionGoal: 'Chuẩn hóa thiết kế thực nghiệm và minh bạch giới hạn nghiên cứu đối chứng.',
+            howToRevise: 'Bổ sung giải trình về độ tương đương đầu vào giữa hai lớp 11A1 và 11A2.',
+            lightRevision: 'Tiến hành thực nghiệm tại lớp 11A1 và đối chứng tại lớp 11A2. Sau một học kỳ triển khai các dự án Python, kết quả ghi nhận học sinh lớp 11A1 có sự chuyển biến tích cực trong việc giải quyết bài toán lập trình.',
+            academicRevision: 'Nghiên cứu được triển khai thực nghiệm sư phạm có đối chứng giữa hai nhóm học sinh: lớp thực nghiệm (11A1) và lớp đối chứng (11A2). Do chưa thể tiến hành bài kiểm tra tiền thực nghiệm (Pre-test) diện rộng, tác giả đã đối soát điểm số học kỳ trước để bảo đảm sự tương đồng tương đối về năng lực ban đầu [GV điền: điểm số cụ thể], đồng thời lưu ý giới hạn này trong phạm vi nghiên cứu.',
+            deepRevision: 'Quy trình can thiệp sư phạm được thiết lập theo mô hình đối chứng: lớp thực nghiệm 11A1 áp dụng học tập theo dự án, lớp đối chứng 11A2 dạy theo phương pháp truyền thống. Về biến kiểm soát đầu vào: điểm trung bình môn Toán - Tin của hai nhóm trước can thiệp được đối chiếu ở mức tương đương. Toàn bộ bảng thống kê và phiếu quan sát thực nghiệm được đính kèm tại Phụ lục số 2 [CẦN BỔ SUNG MINH CHỨNG ĐỐI CHỨNG].',
+            missingEvidenceAlert: 'Cần bổ sung phiếu khảo sát hoặc điểm số học kỳ trước làm đối chứng tương đương.',
+            insertPosition: 'Mục 3.2 & Mục 4.1'
+          },
+          {
+            id: 'sug-rtc-2',
+            targetSection: 'Mục 5, Trang 22',
             originalText: 'Sau thời gian áp dụng giải pháp, 100% học sinh trong lớp đều say mê học tập và không còn em nào cảm thấy sợ lập trình Python.',
             problem: 'Cách diễn đạt khẳng định tuyệt đối 100% thiếu chuẩn mực khoa học.',
             whyRevise: 'Hội đồng sẽ chất vấn gay gắt về tính trung thực và độ tin cậy của số liệu nếu đưa ra tuyên bố tuyệt đối.',
+            basis: 'Chuẩn mực đánh giá SKKN ngành GD&ĐT và quy tắc liêm chính khoa học.',
+            category: 'Tính hiệu quả & Minh chứng xác thực',
+            revisionGoal: 'Chuẩn hóa ngôn từ, loại bỏ khẳng định tuyệt đối và bám sát số liệu khảo sát thực tế.',
+            howToRevise: 'Điều chỉnh diễn đạt theo kết quả phiếu điều tra thực tế, không dùng từ 100%.',
             lightRevision: 'Sau thời gian áp dụng giải pháp, đại đa số học sinh trong lớp đều hào hứng tham gia và tự tin hơn trong các giờ học lập trình Python.',
-            academicRevision: 'Kết quả khảo sát sau 6 tháng áp dụng cho thấy 84.5% học sinh phản hồi tích cực và ghi nhận sự tiến bộ rõ rệt về năng lực giải quyết vấn đề bằng ngôn ngữ Python.',
-            deepRevision: 'Dữ liệu đo lường định lượng trên mẫu N=75 học sinh ghi nhận: 84.5% học sinh đánh giá tích cực về mức độ hứng thú; tỷ lệ học sinh đạt chuẩn đầu ra kỹ năng lập trình tăng 21.3% so với giai đoạn trước can thiệp (p < 0.05).',
+            academicRevision: 'Kết quả đánh giá sau quá trình áp dụng giải pháp cho thấy phần lớn học sinh đã hình thành thái độ học tập chủ động và cải thiện rõ rệt năng lực thuật toán [GV điền: tỷ lệ % theo phiếu khảo sát thực tế].',
+            deepRevision: 'Dựa trên phiếu khảo sát thái độ và bài kiểm tra kỹ năng thực hành thu được tại lớp 11A1: đa số học sinh ghi nhận sự chuyển biến tích cực về hứng thú học tập và năng lực giải quyết vấn đề bằng Python. Các dữ liệu định lượng cụ thể và phiếu điều tra gốc được lưu trữ tại Phụ lục [CẦN BỔ SUNG SỐ LIỆU KHẢO SÁT THỰC TẾ].',
+            missingEvidenceAlert: 'Cần đính kèm mẫu phiếu khảo sát và bảng số liệu thô tại Phụ lục.',
+            insertPosition: 'Mục 5, Trang 22'
           },
+          {
+            id: 'sug-rtc-3',
+            targetSection: 'Mục 4.3',
+            originalText: 'Để hoàn thành các dự án lớn, học sinh tiếp tục hoàn thiện code trên máy tính cá nhân ở nhà và nộp link qua hệ thống trực tuyến.',
+            problem: 'Phụ thuộc vào máy tính cá nhân ở nhà, thiếu phương án công bằng học tập.',
+            whyRevise: 'Sáng kiến cần bảo đảm tính khả thi và công bằng học tập cho mọi học sinh, kể cả học sinh không có máy tính ở nhà.',
+            basis: 'Tiêu chuẩn tính khả thi và nhân rộng của sáng kiến giáo dục.',
+            category: 'Tính thực tiễn & Khả năng áp dụng',
+            revisionGoal: 'Bổ sung giải pháp thực hành tại trường và phương án học tập theo nhóm.',
+            howToRevise: 'Nêu rõ phương án mở phòng máy ngoài giờ và hình thức lập trình theo cặp (Pair programming).',
+            lightRevision: 'Để hoàn thành các dự án học tập, học sinh có thể tiếp tục thực hành trên máy tính cá nhân ở nhà hoặc đăng ký thực hành thêm tại phòng máy tính của nhà trường.',
+            academicRevision: 'Nhằm bảo đảm tính công bằng học tập cho mọi học sinh, nhà trường tạo điều kiện mở cửa phòng máy tính ngoài giờ để các em không có máy tính cá nhân vẫn có thể hoàn thành sản phẩm dự án; đồng thời áp dụng phương pháp lập trình theo cặp (Pair programming).',
+            deepRevision: 'Giải pháp được thiết kế thích ứng với mọi điều kiện cơ sở vật chất: học sinh được phân nhóm linh hoạt để tương trợ lẫn nhau; tổ chuyên môn bố trí lịch mở phòng máy tính trường vào các buổi chiều có giáo viên hướng dẫn, bảo đảm 100% học sinh đều có thời lượng thực hành bình đẳng trên máy tính.',
+            missingEvidenceAlert: 'Cần đính kèm lịch trực phòng máy và quy chế làm việc nhóm tại Phụ lục.',
+            insertPosition: 'Mục 4.3'
+          }
         ],
         councilQuestions: [
           {
@@ -566,6 +652,7 @@ export async function saveEvaluationResultRecord(params: {
   score?: number;
   draftText?: string;
   changeSet?: any[];
+  customProposals?: Record<string, { tier?: string; text: string; updatedAt?: string }>;
 }): Promise<{ success: boolean; evaluation?: EvaluationItem; error?: string }> {
   reloadEvaluationsStoreFromDisk();
   const cleanEmail = params.userEmail.toLowerCase().trim();
@@ -605,6 +692,15 @@ export async function saveEvaluationResultRecord(params: {
   item.changeSet = finalChangeSet;
   if (item.analysisResult) {
     item.analysisResult.changeSet = finalChangeSet;
+  }
+
+  // Lưu customProposals (đoạn đề xuất do GV chỉnh sửa)
+  if (params.customProposals || params.analysisResult.customProposals) {
+    const proposals = params.customProposals || params.analysisResult.customProposals || {};
+    item.customProposals = { ...(item.customProposals || {}), ...proposals };
+    if (item.analysisResult) {
+      item.analysisResult.customProposals = item.customProposals;
+    }
   }
 
   // Cập nhật lịch sử phiên bản

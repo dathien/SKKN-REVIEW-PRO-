@@ -3844,7 +3844,7 @@ export const AdminPortalModal: React.FC = () => {
               SKKN REVIEW PRO
             </div>
             <div className="text-[11.5px] sm:text-xs text-slate-500 mt-0.5">
-              Copyright © 2026 · Developed by GV.Hồ Nguyễn Đa Thiện
+              Copyright @ 2026- Được phát triển bởi <strong className="font-bold text-slate-700">GV.HỒ NGUYỄN ĐA THIỆN</strong>
             </div>
           </div>
 

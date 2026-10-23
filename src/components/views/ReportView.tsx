@@ -49,17 +49,8 @@ export const ReportView: React.FC<ReportViewProps> = ({ analysis }) => {
   const shouldFixItems = redTeamCards.filter(c => c.impactLevel === 'Trung bình');
   const optimizeItems = redTeamCards.filter(c => c.impactLevel === 'Thấp');
 
-  const handlePrint = (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    try {
-      window.focus();
-      window.print();
-    } catch (err) {
-      console.warn('Lỗi khi kích hoạt window.print():', err);
-    }
+  const handlePrint = () => {
+    window.print();
   };
 
   const handleCopyMarkdown = () => {
@@ -101,7 +92,7 @@ ${rubricCriteria.map((c, i) => `### Tiêu chí ${i + 1}: ${c.criterionName}
 ${rubricCriteria.map(c => `- **${c.criterionName}:** ${c.strengths}`).join('\n')}
 
 ## 5. CÁC VẤN ĐỀ PHÁT HIỆN TỪ HỘI ĐỒNG PHẢN BIỆN (RED TEAM)
-${redTeamCards.map((c) => `- [${c.id}] (${c.impactLevel}) tại ${c.location}: ${c.issueDetected}
+${redTeamCards.map((c, i) => `- [Vấn đề ${String(i + 1).padStart(2, '0')}] (${c.impactLevel}) tại ${c.location}: ${c.issueDetected}
   + Căn cứ phản biện: ${c.criticismBasis}
   + Hướng xử lý: ${c.resolutionGuidance}
   + Minh chứng cần bổ sung: ${c.requiredEvidence}
@@ -109,13 +100,13 @@ ${redTeamCards.map((c) => `- [${c.id}] (${c.impactLevel}) tại ${c.location}: $
 
 ## 6. GỢI Ý SỬA & HOÀN THIỆN
 ### 🔴 PHẢI SỬA TRƯỚC KHI NỘP (${mustFixItems.length} vấn đề):
-${mustFixItems.map(c => `- [${c.id}] ${c.issueDetected} (Tại: ${c.location})\n  * Hướng sửa: ${c.resolutionGuidance}`).join('\n')}
+${mustFixItems.map(c => `- [Vấn đề ${String(redTeamCards.findIndex(x => x.id === c.id) + 1).padStart(2, '0')}] ${c.issueDetected} (Tại: ${c.location})\n  * Hướng sửa: ${c.resolutionGuidance}`).join('\n')}
 
 ### 🟠 NÊN SỬA (${shouldFixItems.length} vấn đề):
-${shouldFixItems.map(c => `- [${c.id}] ${c.issueDetected} (Tại: ${c.location})\n  * Hướng sửa: ${c.resolutionGuidance}`).join('\n')}
+${shouldFixItems.map(c => `- [Vấn đề ${String(redTeamCards.findIndex(x => x.id === c.id) + 1).padStart(2, '0')}] ${c.issueDetected} (Tại: ${c.location})\n  * Hướng sửa: ${c.resolutionGuidance}`).join('\n')}
 
 ### 🟡 TỐI ƯU THÊM (${optimizeItems.length} vấn đề):
-${optimizeItems.map(c => `- [${c.id}] ${c.issueDetected} (Tại: ${c.location})\n  * Hướng sửa: ${c.resolutionGuidance}`).join('\n')}
+${optimizeItems.map(c => `- [Vấn đề ${String(redTeamCards.findIndex(x => x.id === c.id) + 1).padStart(2, '0')}] ${c.issueDetected} (Tại: ${c.location})\n  * Hướng sửa: ${c.resolutionGuidance}`).join('\n')}
 
 ## 7. TÌNH TRẠNG XỬ LÝ CÁC VẤN ĐỀ
 - **Tổng số vấn đề:** ${totalIssues}
@@ -160,7 +151,7 @@ ${rescoreHistory?.remainingIssues?.length ? rescoreHistory.remainingIssues.map(i
   };
 
   return (
-    <div className="space-y-6 pb-16 select-none">
+    <div className="space-y-6 pb-16">
       {/* Top Action Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-4.5 rounded-2xl border border-slate-200 shadow-2xs print:hidden">
         <div>
@@ -327,11 +318,11 @@ ${rescoreHistory?.remainingIssues?.length ? rescoreHistory.remainingIssues.map(i
             5. CÁC VẤN ĐỀ PHÁT HIỆN TỪ HỘI ĐỒNG PHẢN BIỆN (RED TEAM)
           </h2>
           <div className="space-y-3 text-[14.5px] leading-[1.6]">
-            {redTeamCards.map((rc) => (
+            {redTeamCards.map((rc, idx) => (
               <div key={rc.id} className="p-4 rounded-xl border border-rose-200 bg-rose-50/30 space-y-2">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5">
-                  <span className="font-bold text-rose-900 font-mono text-[15px]">
-                    [{rc.id}] {rc.issueDetected}
+                  <span className="font-bold text-rose-900 text-[15px]">
+                    [Vấn đề {String(idx + 1).padStart(2, '0')}] {rc.issueDetected}
                   </span>
                   <span className="text-[12.5px] font-bold px-2.5 py-0.5 rounded bg-rose-100 text-rose-800 self-start sm:self-auto">
                     {rc.location}
@@ -368,7 +359,7 @@ ${rescoreHistory?.remainingIssues?.length ? rescoreHistory.remainingIssues.map(i
               </h3>
               {mustFixItems.map((c) => (
                 <div key={c.id} className="p-3.5 rounded-lg border border-rose-200 bg-rose-50/40 space-y-1">
-                  <strong className="text-slate-900 block text-[15px]">[{c.id}] {c.issueDetected}</strong>
+                  <strong className="text-slate-900 block text-[15px]">[Vấn đề {String(redTeamCards.findIndex(x => x.id === c.id) + 1).padStart(2, '0')}] {c.issueDetected}</strong>
                   <p className="text-slate-700"><strong>Vị trí:</strong> {c.location}</p>
                   <p className="text-slate-800 font-medium"><strong>Hướng xử lý:</strong> {c.resolutionGuidance}</p>
                 </div>
@@ -383,7 +374,7 @@ ${rescoreHistory?.remainingIssues?.length ? rescoreHistory.remainingIssues.map(i
                 </h3>
                 {shouldFixItems.map((c) => (
                   <div key={c.id} className="p-3.5 rounded-lg border border-amber-200 bg-amber-50/40 space-y-1">
-                    <strong className="text-slate-900 block text-[15px]">[{c.id}] {c.issueDetected}</strong>
+                    <strong className="text-slate-900 block text-[15px]">[Vấn đề {String(redTeamCards.findIndex(x => x.id === c.id) + 1).padStart(2, '0')}] {c.issueDetected}</strong>
                     <p className="text-slate-700"><strong>Vị trí:</strong> {c.location}</p>
                     <p className="text-slate-800 font-medium"><strong>Hướng xử lý:</strong> {c.resolutionGuidance}</p>
                   </div>
@@ -399,7 +390,7 @@ ${rescoreHistory?.remainingIssues?.length ? rescoreHistory.remainingIssues.map(i
                 </h3>
                 {optimizeItems.map((c) => (
                   <div key={c.id} className="p-3.5 rounded-lg border border-blue-200 bg-blue-50/40 space-y-1">
-                    <strong className="text-slate-900 block text-[15px]">[{c.id}] {c.issueDetected}</strong>
+                    <strong className="text-slate-900 block text-[15px]">[Vấn đề {String(redTeamCards.findIndex(x => x.id === c.id) + 1).padStart(2, '0')}] {c.issueDetected}</strong>
                     <p className="text-slate-700"><strong>Vị trí:</strong> {c.location}</p>
                     <p className="text-slate-800 font-medium"><strong>Hướng xử lý:</strong> {c.resolutionGuidance}</p>
                   </div>

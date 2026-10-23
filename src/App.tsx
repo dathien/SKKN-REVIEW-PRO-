@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Sidebar, ActiveTab, AppMode } from './components/Sidebar';
 import { Header } from './components/Header';
 import { FileUploadModal } from './components/FileUploadModal';
@@ -57,7 +57,19 @@ import {
 
 export default function App() {
   const { user, guestId, role, hasQuotaForMode, openQuotaModal, updateUserQuota, isAdmin, openAdminModal, isLoading: isAuthLoading, isLoggedIn, openAuthModal } = useAuth();
-  const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
+
+  // URL & Storage Initial State (Context restoration after F5)
+  const initialUrlState = useMemo(() => {
+    if (typeof window === 'undefined') return {};
+    const params = new URLSearchParams(window.location.search);
+    const evalId = params.get('evalId') || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_current_eval_id') : null);
+    const tab = (params.get('tab') as ActiveTab) || (typeof localStorage !== 'undefined' ? (localStorage.getItem('skkn_active_tab') as ActiveTab) : null);
+    const issueId = params.get('issueId') || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_viewing_rebuttal_card_id') : null);
+    const tier = (params.get('tier') as 'light' | 'academic' | 'deep') || (typeof localStorage !== 'undefined' ? (localStorage.getItem('skkn_selected_tier') as any) : null);
+    return { evalId, tab, issueId, tier };
+  }, []);
+
+  const [activeTab, setActiveTab] = useState<ActiveTab>(initialUrlState.tab || 'dashboard');
   const [selectedSampleIndex, setSelectedSampleIndex] = useState<number>(0);
   const [analysis, setAnalysis] = useState<SKKNAnalysisResult>(sampleInitiative1);
   const [customAnalysis, setCustomAnalysis] = useState<SKKNAnalysisResult | null>(null);
@@ -122,12 +134,7 @@ export default function App() {
   const [uploadInitialMethod, setUploadInitialMethod] = useState<'file' | 'paste'>('file');
 
   // Quản lý lưu trữ hồ sơ cá nhân & Bản gốc v1 bất biến vs Bản nháp (Requirement B & C)
-  const [currentEvaluationId, setCurrentEvaluationId] = useState<string | null>(() => {
-    if (typeof localStorage !== 'undefined') {
-      return localStorage.getItem('skkn_current_eval_id') || null;
-    }
-    return null;
-  });
+  const [currentEvaluationId, setCurrentEvaluationId] = useState<string | null>(initialUrlState.evalId || null);
   const [originalSkknText, setOriginalSkknText] = useState<string>('');
   const [draftSkknText, setDraftSkknText] = useState<string>('');
   const [originalDocxBuffer, setOriginalDocxBuffer] = useState<ArrayBuffer | null>(null);
@@ -146,8 +153,9 @@ export default function App() {
   } | null>(null);
 
   // Academic Rebuttal dedicated page state (Section II)
-  const [viewingRebuttalCardId, setViewingRebuttalCardId] = useState<string | null>(null);
+  const [viewingRebuttalCardId, setViewingRebuttalCardId] = useState<string | null>(initialUrlState.issueId || null);
   const [rebuttalReturnTab, setRebuttalReturnTab] = useState<ActiveTab>('dashboard');
+  const [selectedRevisionTier, setSelectedRevisionTier] = useState<'light' | 'academic' | 'deep'>(initialUrlState.tier || 'academic');
   const [targetSuggestionCardId, setTargetSuggestionCardId] = useState<string | null>(null);
 
   const handleOpenAcademicRebuttal = (card: RedTeamCard, returnTab: ActiveTab = activeTab) => {
@@ -162,11 +170,94 @@ export default function App() {
     setTargetSuggestionCardId(card.id);
   };
 
-  // Tự động đóng các trang chi tiết khi đổi tab chính
+  // Sync URL search params and localStorage on state change
   useEffect(() => {
-    setViewingRebuttalCardId(null);
-    setIsViewingProfileDetail(false);
-  }, [activeTab]);
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (currentEvaluationId) {
+      params.set('evalId', currentEvaluationId);
+      localStorage.setItem('skkn_current_eval_id', currentEvaluationId);
+    } else {
+      params.delete('evalId');
+      localStorage.removeItem('skkn_current_eval_id');
+    }
+
+    if (activeTab) {
+      params.set('tab', activeTab);
+      localStorage.setItem('skkn_active_tab', activeTab);
+    }
+
+    if (viewingRebuttalCardId) {
+      params.set('issueId', viewingRebuttalCardId);
+      localStorage.setItem('skkn_viewing_rebuttal_card_id', viewingRebuttalCardId);
+    } else {
+      params.delete('issueId');
+      localStorage.removeItem('skkn_viewing_rebuttal_card_id');
+    }
+
+    if (selectedRevisionTier) {
+      params.set('tier', selectedRevisionTier);
+      localStorage.setItem('skkn_selected_tier', selectedRevisionTier);
+    }
+
+    const newQuery = params.toString();
+    const newUrl = newQuery ? `${window.location.pathname}?${newQuery}` : window.location.pathname;
+    window.history.replaceState({}, '', newUrl);
+  }, [currentEvaluationId, activeTab, viewingRebuttalCardId, selectedRevisionTier]);
+
+  // Khôi phục hồ sơ và vị trí làm việc tự động sau khi F5
+  const hasRestoredInitialEvalRef = useRef(false);
+  useEffect(() => {
+    const restoreInitialEvaluation = async () => {
+      const targetEvalId = currentEvaluationId || initialUrlState.evalId;
+      if (!targetEvalId || hasRestoredInitialEvalRef.current) return;
+      hasRestoredInitialEvalRef.current = true;
+
+      try {
+        const sessionToken = (user as any)?.sessionToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_session_token') : '') || '';
+        const userEmail = user?.email || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_user_email') : '') || '';
+        const resp = await fetch(`/api/user/evaluations/get?id=${encodeURIComponent(targetEvalId)}`, {
+          headers: {
+            'x-session-token': sessionToken,
+            'x-user-email': userEmail,
+          },
+        });
+        const contentType = resp.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) return;
+        const data = await resp.json();
+        if (data.success && data.evaluation?.analysisResult) {
+          setCurrentEvaluationId(targetEvalId);
+          setCustomAnalysis(data.evaluation.analysisResult);
+          setAnalysis(data.evaluation.analysisResult);
+          setDraftSkknText(data.evaluation.draftText || data.evaluation.originalText || '');
+          setOriginalSkknText(data.evaluation.originalText || '');
+          setWorkflowStatus('COMPLETED');
+          setIsDemoMode(false);
+          setIsUploadWorkspace(false);
+          setSaveStatus('saved');
+
+          // Restore exact activeTab & issueId
+          if (initialUrlState.tab) {
+            setActiveTab(initialUrlState.tab);
+          }
+          if (initialUrlState.issueId) {
+            const hasIssue = data.evaluation.analysisResult.redTeamCards?.some((c: any) => c.id === initialUrlState.issueId);
+            if (hasIssue) {
+              setViewingRebuttalCardId(initialUrlState.issueId);
+            }
+          }
+        } else if (data.error && (resp.status === 403 || data.error.includes('Bảo mật') || data.error.includes('quyền'))) {
+          console.warn('Không có quyền truy cập hồ sơ này:', data.error);
+          setCurrentEvaluationId(null);
+          localStorage.removeItem('skkn_current_eval_id');
+        }
+      } catch (err) {
+        console.error('Lỗi khi khôi phục ngữ cảnh sau F5:', err);
+      }
+    };
+
+    restoreInitialEvaluation();
+  }, [user?.email, currentEvaluationId]);
 
   // Tự động lưu hồ sơ sau khi thẩm định thành công
   const autoSaveEvaluation = async (
@@ -393,6 +484,64 @@ export default function App() {
         }).catch(err => console.error('Lỗi lưu trạng thái vấn đề:', err));
       } catch (_) {}
     }
+  };
+
+  // Lưu bản đề xuất chỉnh sửa của giáo viên bền vững theo tài khoản, hồ sơ và mức sửa
+  const handleSaveCustomProposal = async (
+    cardId: string,
+    tier: 'light' | 'academic' | 'deep',
+    text: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    const proposalKey = `${cardId}_${tier}`;
+    const now = new Date().toISOString();
+    const updatedProposals = {
+      ...(analysis.customProposals || {}),
+      [proposalKey]: { tier, text, updatedAt: now }
+    };
+
+    // 1. Cập nhật ngay React State
+    setAnalysis(prev => ({
+      ...prev,
+      customProposals: updatedProposals
+    }));
+    if (customAnalysis) {
+      setCustomAnalysis(prev => prev ? ({
+        ...prev,
+        customProposals: updatedProposals
+      }) : null);
+    }
+
+    // 2. Gửi lưu bền vững lên Backend nếu đã đăng nhập và có hồ sơ
+    if (currentEvaluationId && isLoggedIn && user?.email) {
+      try {
+        const sessionToken = (user as any)?.sessionToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_session_token') : '') || '';
+        const resp = await fetch('/api/user/evaluations/save-result', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-session-token': sessionToken,
+            'x-user-email': user.email,
+          },
+          body: JSON.stringify({
+            evaluationId: currentEvaluationId,
+            customProposals: updatedProposals,
+            analysisResult: {
+              ...analysis,
+              customProposals: updatedProposals
+            }
+          }),
+        });
+        const data = await resp.json();
+        if (!data.success) {
+          return { success: false, error: data.error || 'Máy chủ từ chối lưu đoạn đề xuất.' };
+        }
+        return { success: true };
+      } catch (err: any) {
+        return { success: false, error: err?.message || 'Lỗi mạng khi lưu đề xuất.' };
+      }
+    }
+
+    return { success: true };
   };
 
   // Perform AI Analysis from server with Automatic Retry, Timeout, Classification & Preservation
@@ -1224,6 +1373,10 @@ export default function App() {
                     card={selectedCard}
                     cards={currentAnalysis.redTeamCards}
                     suggestions={currentAnalysis.suggestions}
+                    customProposals={currentAnalysis.customProposals}
+                    onSaveCustomProposal={handleSaveCustomProposal}
+                    initialTier={selectedRevisionTier}
+                    onTierChange={(tier) => setSelectedRevisionTier(tier)}
                     onSelectCard={(nextCard) => setViewingRebuttalCardId(nextCard.id)}
                     onUpdateStatus={handleUpdateCardStatus}
                     onBack={() => {
@@ -1452,14 +1605,10 @@ export default function App() {
           </div>
         </div>
 
-        {/* Footer Toàn Ứng Dụng (Mục 5, 6, 7, 8) */}
+        {/* Footer Toàn Ứng Dụng */}
         <footer className="w-full border-t border-slate-200/80 bg-white/60 backdrop-blur-xs py-3 sm:py-3.5 px-4 text-center shrink-0">
-          <p className="text-[12.5px] sm:text-[13px] font-[500] text-slate-500 leading-normal">
-            <span>Copyright © 2026</span>
-            <span className="hidden sm:inline text-slate-400"> · </span>
-            <span className="block sm:inline mt-0.5 sm:mt-0">
-              Developed by <span className="font-[600] text-slate-700">GV.Hồ Nguyễn Đa Thiện</span>
-            </span>
+          <p className="text-[12.5px] sm:text-[13px] text-slate-600 leading-normal text-center">
+            Copyright @ 2026- Được phát triển bởi <strong className="font-bold text-slate-800">GV.HỒ NGUYỄN ĐA THIỆN</strong>
           </p>
         </footer>
       </main>

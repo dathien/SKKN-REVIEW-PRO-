@@ -394,9 +394,42 @@ function ensureDefaultEvaluations() {
       wordCount: 4250,
       createdAt: "2026-10-18T10:15:00.000Z",
       updatedAt: "2026-10-18T10:15:00.000Z",
-      originalText: "Trong ch\u01B0\u01A1ng tr\xECnh GDPT 2018 m\xF4n Tin h\u1ECDc 11, m\u1EA1ch ki\u1EBFn th\u1EE9c Khoa h\u1ECDc m\xE1y t\xEDnh v\xE0 L\u1EADp tr\xECnh \u0111\xF3ng vai tr\xF2 then ch\u1ED1t nh\u01B0ng h\u1ECDc sinh th\u01B0\u1EDDng g\u1EB7p kh\xF3 kh\u0103n trong vi\u1EC7c t\u01B0 duy thu\u1EADt to\xE1n v\xE0 hi\u1EC7n th\u1EF1c h\xF3a b\xE0i to\xE1n th\u1EF1c t\u1EBF...",
-      draftText: "Trong ch\u01B0\u01A1ng tr\xECnh GDPT 2018 m\xF4n Tin h\u1ECDc 11, m\u1EA1ch ki\u1EBFn th\u1EE9c Khoa h\u1ECDc m\xE1y t\xEDnh v\xE0 L\u1EADp tr\xECnh \u0111\xF3ng vai tr\xF2 then ch\u1ED1t nh\u01B0ng h\u1ECDc sinh th\u01B0\u1EDDng g\u1EB7p kh\xF3 kh\u0103n trong vi\u1EC7c t\u01B0 duy thu\u1EADt to\xE1n v\xE0 hi\u1EC7n th\u1EF1c h\xF3a b\xE0i to\xE1n th\u1EF1c t\u1EBF...",
+      originalText: `B\xC1O C\xC1O S\xC1NG KI\u1EBEN KINH NGHI\u1EC6M
+T\xEAn s\xE1ng ki\u1EBFn: \u1EE8ng d\u1EE5ng l\u1EADp tr\xECnh Python v\xE0 d\u1EF1 \xE1n th\u1EF1c t\u1EBF nh\u1EB1m n\xE2ng cao n\u0103ng l\u1EF1c gi\u1EA3i quy\u1EBFt v\u1EA5n \u0111\u1EC1 m\xF4n Tin h\u1ECDc 11
+T\xE1c gi\u1EA3: GV. H\u1ED3 Nguy\u1EC5n \u0110a Thi\u1EC7n - Tr\u01B0\u1EDDng THPT Chuy\xEAn
+
+Ph\u1EA7n I. \u0110\u1EB6T V\u1EA4N \u0110\u1EC0
+Trong ch\u01B0\u01A1ng tr\xECnh GDPT 2018 m\xF4n Tin h\u1ECDc 11, m\u1EA1ch ki\u1EBFn th\u1EE9c Khoa h\u1ECDc m\xE1y t\xEDnh v\xE0 L\u1EADp tr\xECnh \u0111\xF3ng vai tr\xF2 then ch\u1ED1t nh\u01B0ng h\u1ECDc sinh th\u01B0\u1EDDng g\u1EB7p kh\xF3 kh\u0103n trong vi\u1EC7c t\u01B0 duy thu\u1EADt to\xE1n v\xE0 hi\u1EC7n th\u1EF1c h\xF3a b\xE0i to\xE1n th\u1EF1c t\u1EBF. H\u1ECDc sinh th\u01B0\u1EDDng h\u1ECDc thu\u1ED9c l\xF2ng c\xFA ph\xE1p Python nh\u01B0ng khi g\u1EB7p b\xE0i to\xE1n th\u1EF1c t\u1EBF th\xEC b\u1EBF t\u1EAFc kh\xF4ng bi\u1EBFt ph\xE2n t\xEDch b\xE0i to\xE1n.
+
+Ph\u1EA7n II. N\u1ED8I DUNG V\xC0 BI\u1EC6N PH\xC1P TH\u1EF0C HI\u1EC6N
+M\u1EE5c 3.2 & M\u1EE5c 4.1. Ti\u1EBFn h\xE0nh th\u1EF1c nghi\u1EC7m t\u1EA1i l\u1EDBp 11A1 v\xE0 \u0111\u1ED1i ch\u1EE9ng t\u1EA1i l\u1EDBp 11A2; sau m\u1ED9t h\u1ECDc k\u1EF3 \xE1p d\u1EE5ng d\u1EF1 \xE1n Python, k\u1EBFt qu\u1EA3 h\u1ECDc t\u1EADp l\u1EDBp 11A1 cao h\u01A1n r\xF5 r\u1EC7t.
+M\u1EE5c 4.2. Thi\u1EBFt k\u1EBF 3 d\u1EF1 \xE1n nh\u1ECF: Qu\u1EA3n l\xFD th\u01B0 vi\u1EC7n, M\xF4 ph\u1ECFng chuy\u1EC3n \u0111\u1ED9ng v\u1EADt l\xFD v\xE0 Chatbot tra c\u1EE9u th\xF4ng tin.
+M\u1EE5c 4.3. \u0110\u1EC3 ho\xE0n th\xE0nh c\xE1c d\u1EF1 \xE1n l\u1EDBn, h\u1ECDc sinh ti\u1EBFp t\u1EE5c ho\xE0n thi\u1EC7n code tr\xEAn m\xE1y t\xEDnh c\xE1 nh\xE2n \u1EDF nh\xE0 v\xE0 n\u1ED9p link qua h\u1EC7 th\u1ED1ng tr\u1EF1c tuy\u1EBFn.
+
+Ph\u1EA7n III. HI\u1EC6U QU\u1EA2 C\u1EE6A S\xC1NG KI\u1EBEN
+M\u1EE5c 5, Trang 22. Sau th\u1EDDi gian \xE1p d\u1EE5ng gi\u1EA3i ph\xE1p, 100% h\u1ECDc sinh trong l\u1EDBp \u0111\u1EC1u say m\xEA h\u1ECDc t\u1EADp v\xE0 kh\xF4ng c\xF2n em n\xE0o c\u1EA3m th\u1EA5y s\u1EE3 l\u1EADp tr\xECnh Python.
+
+Ph\u1EA7n IV. K\u1EBET LU\u1EACN V\xC0 KI\u1EBEN NGH\u1ECA
+S\xE1ng ki\u1EBFn mang l\u1EA1i hi\u1EC7u qu\u1EA3 thi\u1EBFt th\u1EF1c trong vi\u1EC7c \u0111\u1ED5i m\u1EDBi ph\u01B0\u01A1ng ph\xE1p d\u1EA1y h\u1ECDc l\u1EADp tr\xECnh b\u1EADc THPT.`,
+      draftText: `B\xC1O C\xC1O S\xC1NG KI\u1EBEN KINH NGHI\u1EC6M
+T\xEAn s\xE1ng ki\u1EBFn: \u1EE8ng d\u1EE5ng l\u1EADp tr\xECnh Python v\xE0 d\u1EF1 \xE1n th\u1EF1c t\u1EBF nh\u1EB1m n\xE2ng cao n\u0103ng l\u1EF1c gi\u1EA3i quy\u1EBFt v\u1EA5n \u0111\u1EC1 m\xF4n Tin h\u1ECDc 11
+T\xE1c gi\u1EA3: GV. H\u1ED3 Nguy\u1EC5n \u0110a Thi\u1EC7n - Tr\u01B0\u1EDDng THPT Chuy\xEAn
+
+Ph\u1EA7n I. \u0110\u1EB6T V\u1EA4N \u0110\u1EC0
+Trong ch\u01B0\u01A1ng tr\xECnh GDPT 2018 m\xF4n Tin h\u1ECDc 11, m\u1EA1ch ki\u1EBFn th\u1EE9c Khoa h\u1ECDc m\xE1y t\xEDnh v\xE0 L\u1EADp tr\xECnh \u0111\xF3ng vai tr\xF2 then ch\u1ED1t nh\u01B0ng h\u1ECDc sinh th\u01B0\u1EDDng g\u1EB7p kh\xF3 kh\u0103n trong vi\u1EC7c t\u01B0 duy thu\u1EADt to\xE1n v\xE0 hi\u1EC7n th\u1EF1c h\xF3a b\xE0i to\xE1n th\u1EF1c t\u1EBF. H\u1ECDc sinh th\u01B0\u1EDDng h\u1ECDc thu\u1ED9c l\xF2ng c\xFA ph\xE1p Python nh\u01B0ng khi g\u1EB7p b\xE0i to\xE1n th\u1EF1c t\u1EBF th\xEC b\u1EBF t\u1EAFc kh\xF4ng bi\u1EBFt ph\xE2n t\xEDch b\xE0i to\xE1n.
+
+Ph\u1EA7n II. N\u1ED8I DUNG V\xC0 BI\u1EC6N PH\xC1P TH\u1EF0C HI\u1EC6N
+M\u1EE5c 3.2 & M\u1EE5c 4.1. Ti\u1EBFn h\xE0nh th\u1EF1c nghi\u1EC7m t\u1EA1i l\u1EDBp 11A1 v\xE0 \u0111\u1ED1i ch\u1EE9ng t\u1EA1i l\u1EDBp 11A2; sau m\u1ED9t h\u1ECDc k\u1EF3 \xE1p d\u1EE5ng d\u1EF1 \xE1n Python, k\u1EBFt qu\u1EA3 h\u1ECDc t\u1EADp l\u1EDBp 11A1 cao h\u01A1n r\xF5 r\u1EC7t.
+M\u1EE5c 4.2. Thi\u1EBFt k\u1EBF 3 d\u1EF1 \xE1n nh\u1ECF: Qu\u1EA3n l\xFD th\u01B0 vi\u1EC7n, M\xF4 ph\u1ECFng chuy\u1EC3n \u0111\u1ED9ng v\u1EADt l\xFD v\xE0 Chatbot tra c\u1EE9u th\xF4ng tin.
+M\u1EE5c 4.3. \u0110\u1EC3 ho\xE0n th\xE0nh c\xE1c d\u1EF1 \xE1n l\u1EDBn, h\u1ECDc sinh ti\u1EBFp t\u1EE5c ho\xE0n thi\u1EC7n code tr\xEAn m\xE1y t\xEDnh c\xE1 nh\xE2n \u1EDF nh\xE0 v\xE0 n\u1ED9p link qua h\u1EC7 th\u1ED1ng tr\u1EF1c tuy\u1EBFn.
+
+Ph\u1EA7n III. HI\u1EC6U QU\u1EA2 C\u1EE6A S\xC1NG KI\u1EBEN
+M\u1EE5c 5, Trang 22. Sau th\u1EDDi gian \xE1p d\u1EE5ng gi\u1EA3i ph\xE1p, 100% h\u1ECDc sinh trong l\u1EDBp \u0111\u1EC1u say m\xEA h\u1ECDc t\u1EADp v\xE0 kh\xF4ng c\xF2n em n\xE0o c\u1EA3m th\u1EA5y s\u1EE3 l\u1EADp tr\xECnh Python.
+
+Ph\u1EA7n IV. K\u1EBET LU\u1EACN V\xC0 KI\u1EBEN NGH\u1ECA
+S\xE1ng ki\u1EBFn mang l\u1EA1i hi\u1EC7u qu\u1EA3 thi\u1EBFt th\u1EF1c trong vi\u1EC7c \u0111\u1ED5i m\u1EDBi ph\u01B0\u01A1ng ph\xE1p d\u1EA1y h\u1ECDc l\u1EADp tr\xECnh b\u1EADc THPT.`,
       changeSet: [],
+      customProposals: {},
       versionsHistory: [
         {
           version: 1,
@@ -532,30 +565,45 @@ function ensureDefaultEvaluations() {
           {
             id: "rtc-1",
             location: "M\u1EE5c 3.2 & M\u1EE5c 4.1",
+            relatedQuote: "Ti\u1EBFn h\xE0nh th\u1EF1c nghi\u1EC7m t\u1EA1i l\u1EDBp 11A1 v\xE0 \u0111\u1ED1i ch\u1EE9ng t\u1EA1i l\u1EDBp 11A2; sau m\u1ED9t h\u1ECDc k\u1EF3 \xE1p d\u1EE5ng d\u1EF1 \xE1n Python, k\u1EBFt qu\u1EA3 h\u1ECDc t\u1EADp l\u1EDBp 11A1 cao h\u01A1n r\xF5 r\u1EC7t.",
             issueDetected: "Thi\u1EBFu b\xE0i ki\u1EC3m tra n\u0103ng l\u1EF1c \u0111\u1EA7u v\xE0o \u0111\u1ED1i ch\u1EE9ng (Pre-test) gi\u1EEFa hai nh\xF3m h\u1ECDc sinh",
             impactLevel: "Cao",
             affectedCriterion: "Ti\xEAu ch\xED 3: T\xEDnh khoa h\u1ECDc & Logic s\u01B0 ph\u1EA1m",
             status: "Ch\u01B0a x\u1EED l\xFD",
+            criticismBasis: "Quy chu\u1EA9n nghi\xEAn c\u1EE9u s\u01B0 ph\u1EA1m \u1EE9ng d\u1EE5ng: Nghi\xEAn c\u1EE9u \u0111\u1ED1i ch\u1EE9ng b\u1EAFt bu\u1ED9c ph\u1EA3i ki\u1EC3m so\xE1t bi\u1EBFn \u0111\u1EA7u v\xE0o th\xF4ng qua b\xE0i ki\u1EC3m tra n\u0103ng l\u1EF1c t\u01B0\u01A1ng \u0111\u01B0\u01A1ng (Pre-test) ho\u1EB7c \u0111\u1ED1i so\xE1t h\u1ECDc l\u1EF1c h\u1ECDc k\u1EF3 tr\u01B0\u1EDBc.",
+            whyItMatters: "H\u1ED9i \u0111\u1ED3ng s\u1EBD ch\u1EA5t v\u1EA5n: C\u0103n c\u1EE9 n\xE0o kh\u1EB3ng \u0111\u1ECBnh \u0111i\u1EC3m s\u1ED1 l\u1EDBp 11A1 cao h\u01A1n l\xE0 do ph\u01B0\u01A1ng ph\xE1p m\u1EDBi m\xE0 kh\xF4ng ph\u1EA3i do h\u1ECDc sinh l\u1EDBp n\xE0y v\u1ED1n \u0111\xE3 c\xF3 n\u0103ng l\u1EF1c t\u01B0 duy t\u1ED1t h\u01A1n t\u1EEB tr\u01B0\u1EDBc?",
+            resolutionGuidance: "B\u1ED5 sung gi\u1EA3i tr\xECnh v\u1EC1 t\xEDnh t\u01B0\u01A1ng \u0111\u01B0\u01A1ng \u0111\u1EA7u v\xE0o ho\u1EB7c \u0111i\u1EC1u ch\u1EC9nh thi\u1EBFt k\u1EBF nghi\xEAn c\u1EE9u n\xEAu r\xF5 gi\u1EDBi h\u1EA1n kh\u1EA3o s\xE1t [C\u1EA6N B\u1ED4 SUNG MINH CH\u1EE8NG].",
+            requiredEvidence: "Phi\u1EBFu kh\u1EA3o s\xE1t ho\u1EB7c \u0111i\u1EC3m s\u1ED1 h\u1ECDc k\u1EF3 tr\u01B0\u1EDBc l\xE0m \u0111\u1ED1i ch\u1EE9ng t\u01B0\u01A1ng \u0111\u01B0\u01A1ng.",
             councilChallenge: "H\u1ED9i \u0111\u1ED3ng nh\u1EADn th\u1EA5y hai l\u1EDBp 11A1 v\xE0 11A2 c\xF3 \u0111i\u1EC3m \u0111\u1EA7u v\xE0o ch\xEAnh l\u1EC7ch. C\u0103n c\u1EE9 n\xE0o \u0111\u1EC3 kh\u1EB3ng \u0111\u1ECBnh k\u1EBFt qu\u1EA3 ti\u1EBFn b\u1ED9 l\xE0 do ph\u01B0\u01A1ng ph\xE1p c\u1EE7a t\xE1c gi\u1EA3 ch\u1EE9 kh\xF4ng ph\u1EA3i do t\u1ED1 ch\u1EA5t s\u1EB5n c\xF3?",
             mitigationStrategy: "B\u1ED5 sung k\u1EBFt qu\u1EA3 b\xE0i ki\u1EC3m tra ti\u1EC1n th\u1EF1c nghi\u1EC7m ch\u1EE9ng minh \u0111\u1ED9 t\u01B0\u01A1ng \u0111\u01B0\u01A1ng p > 0.05."
           },
           {
             id: "rtc-2",
             location: "M\u1EE5c 5, Trang 22",
+            relatedQuote: "Sau th\u1EDDi gian \xE1p d\u1EE5ng gi\u1EA3i ph\xE1p, 100% h\u1ECDc sinh trong l\u1EDBp \u0111\u1EC1u say m\xEA h\u1ECDc t\u1EADp v\xE0 kh\xF4ng c\xF2n em n\xE0o c\u1EA3m th\u1EA5y s\u1EE3 l\u1EADp tr\xECnh Python.",
             issueDetected: 'Kh\u1EB3ng \u0111\u1ECBnh "100% h\u1ECDc sinh say m\xEA l\u1EADp tr\xECnh" v\u01B0\u1EE3t qu\xE1 d\u1EEF li\u1EC7u minh ch\u1EE9ng',
             impactLevel: "Cao",
             affectedCriterion: "Ti\xEAu ch\xED 5: T\xEDnh hi\u1EC7u qu\u1EA3 & Minh ch\u1EE9ng x\xE1c th\u1EF1c",
             status: "Ch\u01B0a x\u1EED l\xFD",
+            criticismBasis: "Chu\u1EA9n m\u1EF1c \u0111\xE1nh gi\xE1 SKKN ng\xE0nh GD&\u0110T: Tuy\u1EC7t \u0111\u1ED1i kh\xF4ng \u0111\u01B0a ra c\xE1c nh\u1EADn \u0111\u1ECBnh tuy\u1EC7t \u0111\u1ED1i h\xF3a (100%) khi ch\u01B0a c\xF3 c\xF4ng c\u1EE5 kh\u1EA3o s\xE1t chu\u1EA9n h\xF3a \u0111\u1ED9c l\u1EADp.",
+            whyItMatters: "Tuy\xEAn b\u1ED1 100% say m\xEA h\u1ECDc t\u1EADp l\xE0 kh\u1EB3ng \u0111\u1ECBnh c\u1EA3m t\xEDnh, thi\u1EBFu chu\u1EA9n m\u1EF1c khoa h\u1ECDc, d\u1EC5 b\u1ECB gi\xE1m kh\u1EA3o tr\u1EEB \u0111i\u1EC3m n\u1EB7ng v\u1EC1 t\xEDnh trung th\u1EF1c v\xE0 ph\u01B0\u01A1ng ph\xE1p nghi\xEAn c\u1EE9u.",
+            resolutionGuidance: "\u0110i\u1EC1u ch\u1EC9nh di\u1EC5n \u0111\u1EA1t chu\u1EA9n x\xE1c theo s\u1ED1 li\u1EC7u kh\u1EA3o s\xE1t th\u1EF1c t\u1EBF, kh\xF4ng d\xF9ng t\u1EEB tuy\u1EC7t \u0111\u1ED1i [C\u1EA6N B\u1ED4 SUNG S\u1ED0 LI\u1EC6U TH\u1EF0C T\u1EBE].",
+            requiredEvidence: "Phi\u1EBFu kh\u1EA3o s\xE1t th\xE1i \u0111\u1ED9 h\u1ECDc t\u1EADp ho\u1EB7c bi\xEAn b\u1EA3n d\u1EF1 gi\u1EDD th\u1EF1c t\u1EBF.",
             councilChallenge: "Tuy\xEAn b\u1ED1 100% kh\xF4ng c\xF2n h\u1ECDc sinh s\u1EE3 l\u1EADp tr\xECnh mang t\xEDnh c\u1EA3m t\xEDnh, thi\u1EBFu chu\u1EA9n m\u1EF1c khoa h\u1ECDc.",
-            mitigationStrategy: '\u0110i\u1EC1u ch\u1EC9nh th\xE0nh: "84.5% h\u1ECDc sinh ph\u1EA3n h\u1ED3i t\xEDch c\u1EF1c theo thang \u0111o kh\u1EA3o s\xE1t 75 h\u1ECDc sinh".'
+            mitigationStrategy: "\u0110i\u1EC1u ch\u1EC9nh theo t\u1EF7 l\u1EC7 kh\u1EA3o s\xE1t th\u1EF1c t\u1EBF c\xF3 \u0111\u1ED1i chi\u1EBFu."
           },
           {
             id: "rtc-3",
             location: "M\u1EE5c 4.3",
+            relatedQuote: "\u0110\u1EC3 ho\xE0n th\xE0nh c\xE1c d\u1EF1 \xE1n l\u1EDBn, h\u1ECDc sinh ti\u1EBFp t\u1EE5c ho\xE0n thi\u1EC7n code tr\xEAn m\xE1y t\xEDnh c\xE1 nh\xE2n \u1EDF nh\xE0 v\xE0 n\u1ED9p link qua h\u1EC7 th\u1ED1ng tr\u1EF1c tuy\u1EBFn.",
             issueDetected: "Ph\u1EE5 thu\u1ED9c v\xE0o m\xE1y t\xEDnh c\xE1 nh\xE2n \u1EDF nh\xE0, thi\u1EBFu ph\u01B0\u01A1ng \xE1n c\xF4ng b\u1EB1ng h\u1ECDc t\u1EADp",
             impactLevel: "Trung b\xECnh",
             affectedCriterion: "Ti\xEAu ch\xED 4: T\xEDnh th\u1EF1c ti\u1EC5n & Kh\u1EA3 n\u0103ng \xE1p d\u1EE5ng",
             status: "Ch\u01B0a x\u1EED l\xFD",
+            criticismBasis: "Nguy\xEAn t\u1EAFc s\u01B0 ph\u1EA1m: Gi\u1EA3i ph\xE1p gi\xE1o d\u1EE5c ph\u1EA3i b\u1EA3o \u0111\u1EA3m t\xEDnh kh\u1EA3 thi v\xE0 c\xF4ng b\u1EB1ng h\u1ECDc t\u1EADp cho m\u1ECDi h\u1ECDc sinh, k\u1EC3 c\u1EA3 h\u1ECDc sinh kh\xF4ng c\xF3 thi\u1EBFt b\u1ECB c\xE1 nh\xE2n \u1EDF nh\xE0.",
+            whyItMatters: "Gi\xE1m kh\u1EA3o c\xF3 th\u1EC3 \u0111\xE1nh gi\xE1 s\xE1ng ki\u1EBFn kh\xF3 nh\xE2n r\u1ED9ng \u0111\u1EA1i tr\xE0 n\u1EBFu ph\u1EE5 thu\u1ED9c v\xE0o \u0111i\u1EC1u ki\u1EC7n kinh t\u1EBF gia \u0111\xECnh c\u1EE7a h\u1ECDc sinh.",
+            resolutionGuidance: "B\u1ED5 sung ph\u01B0\u01A1ng \xE1n h\u1ED7 tr\u1EE3 h\u1ECDc sinh th\u1EF1c h\xE0nh t\u1EA1i tr\u01B0\u1EDDng ho\u1EB7c gh\xE9p nh\xF3m h\u1ECDc t\u1EADp (Pair programming).",
+            requiredEvidence: "K\u1EBF ho\u1EA1ch m\u1EDF ph\xF2ng m\xE1y ngo\xE0i gi\u1EDD ho\u1EB7c quy ch\u1EBF l\xE0m vi\u1EC7c nh\xF3m.",
             councilChallenge: "N\u1EBFu h\u1ECDc sinh \u1EDF v\xF9ng s\xE2u ho\u1EB7c gia \u0111\xECnh kh\xF4ng c\xF3 m\xE1y t\xEDnh th\xEC s\xE1ng ki\u1EBFn n\xE0y \xE1p d\u1EE5ng th\u1EBF n\xE0o?",
             mitigationStrategy: "B\u1ED5 sung ph\u01B0\u01A1ng \xE1n th\u1EF1c h\xE0nh theo c\u1EB7p (Pair programming) t\u1EA1i ph\xF2ng m\xE1y tr\u01B0\u1EDDng."
           }
@@ -578,14 +626,52 @@ function ensureDefaultEvaluations() {
         ],
         suggestions: [
           {
-            id: "sug-1",
-            targetSection: "M\u1EE5c 5 - \u0110\xE1nh gi\xE1 hi\u1EC7u qu\u1EA3",
+            id: "sug-rtc-1",
+            targetSection: "M\u1EE5c 3.2 & M\u1EE5c 4.1",
+            originalText: "Ti\u1EBFn h\xE0nh th\u1EF1c nghi\u1EC7m t\u1EA1i l\u1EDBp 11A1 v\xE0 \u0111\u1ED1i ch\u1EE9ng t\u1EA1i l\u1EDBp 11A2; sau m\u1ED9t h\u1ECDc k\u1EF3 \xE1p d\u1EE5ng d\u1EF1 \xE1n Python, k\u1EBFt qu\u1EA3 h\u1ECDc t\u1EADp l\u1EDBp 11A1 cao h\u01A1n r\xF5 r\u1EC7t.",
+            problem: "Thi\u1EBFu b\xE0i ki\u1EC3m tra n\u0103ng l\u1EF1c \u0111\u1EA7u v\xE0o \u0111\u1ED1i ch\u1EE9ng (Pre-test) gi\u1EEFa hai nh\xF3m h\u1ECDc sinh.",
+            whyRevise: "Nghi\xEAn c\u1EE9u \u0111\u1ED1i ch\u1EE9ng b\u1EAFt bu\u1ED9c ph\u1EA3i ki\u1EC3m so\xE1t bi\u1EBFn thi\xEAn \u0111\u1EA7u v\xE0o \u0111\u1EC3 kh\u1EB3ng \u0111\u1ECBnh t\xEDnh khoa h\u1ECDc c\u1EE7a gi\u1EA3i ph\xE1p.",
+            basis: "Quy chu\u1EA9n nghi\xEAn c\u1EE9u s\u01B0 ph\u1EA1m \u1EE9ng d\u1EE5ng v\xE0 ti\xEAu chu\u1EA9n \u0111\xE1nh gi\xE1 SKKN.",
+            category: "T\xEDnh khoa h\u1ECDc & Logic s\u01B0 ph\u1EA1m",
+            revisionGoal: "Chu\u1EA9n h\xF3a thi\u1EBFt k\u1EBF th\u1EF1c nghi\u1EC7m v\xE0 minh b\u1EA1ch gi\u1EDBi h\u1EA1n nghi\xEAn c\u1EE9u \u0111\u1ED1i ch\u1EE9ng.",
+            howToRevise: "B\u1ED5 sung gi\u1EA3i tr\xECnh v\u1EC1 \u0111\u1ED9 t\u01B0\u01A1ng \u0111\u01B0\u01A1ng \u0111\u1EA7u v\xE0o gi\u1EEFa hai l\u1EDBp 11A1 v\xE0 11A2.",
+            lightRevision: "Ti\u1EBFn h\xE0nh th\u1EF1c nghi\u1EC7m t\u1EA1i l\u1EDBp 11A1 v\xE0 \u0111\u1ED1i ch\u1EE9ng t\u1EA1i l\u1EDBp 11A2. Sau m\u1ED9t h\u1ECDc k\u1EF3 tri\u1EC3n khai c\xE1c d\u1EF1 \xE1n Python, k\u1EBFt qu\u1EA3 ghi nh\u1EADn h\u1ECDc sinh l\u1EDBp 11A1 c\xF3 s\u1EF1 chuy\u1EC3n bi\u1EBFn t\xEDch c\u1EF1c trong vi\u1EC7c gi\u1EA3i quy\u1EBFt b\xE0i to\xE1n l\u1EADp tr\xECnh.",
+            academicRevision: "Nghi\xEAn c\u1EE9u \u0111\u01B0\u1EE3c tri\u1EC3n khai th\u1EF1c nghi\u1EC7m s\u01B0 ph\u1EA1m c\xF3 \u0111\u1ED1i ch\u1EE9ng gi\u1EEFa hai nh\xF3m h\u1ECDc sinh: l\u1EDBp th\u1EF1c nghi\u1EC7m (11A1) v\xE0 l\u1EDBp \u0111\u1ED1i ch\u1EE9ng (11A2). Do ch\u01B0a th\u1EC3 ti\u1EBFn h\xE0nh b\xE0i ki\u1EC3m tra ti\u1EC1n th\u1EF1c nghi\u1EC7m (Pre-test) di\u1EC7n r\u1ED9ng, t\xE1c gi\u1EA3 \u0111\xE3 \u0111\u1ED1i so\xE1t \u0111i\u1EC3m s\u1ED1 h\u1ECDc k\u1EF3 tr\u01B0\u1EDBc \u0111\u1EC3 b\u1EA3o \u0111\u1EA3m s\u1EF1 t\u01B0\u01A1ng \u0111\u1ED3ng t\u01B0\u01A1ng \u0111\u1ED1i v\u1EC1 n\u0103ng l\u1EF1c ban \u0111\u1EA7u [GV \u0111i\u1EC1n: \u0111i\u1EC3m s\u1ED1 c\u1EE5 th\u1EC3], \u0111\u1ED3ng th\u1EDDi l\u01B0u \xFD gi\u1EDBi h\u1EA1n n\xE0y trong ph\u1EA1m vi nghi\xEAn c\u1EE9u.",
+            deepRevision: "Quy tr\xECnh can thi\u1EC7p s\u01B0 ph\u1EA1m \u0111\u01B0\u1EE3c thi\u1EBFt l\u1EADp theo m\xF4 h\xECnh \u0111\u1ED1i ch\u1EE9ng: l\u1EDBp th\u1EF1c nghi\u1EC7m 11A1 \xE1p d\u1EE5ng h\u1ECDc t\u1EADp theo d\u1EF1 \xE1n, l\u1EDBp \u0111\u1ED1i ch\u1EE9ng 11A2 d\u1EA1y theo ph\u01B0\u01A1ng ph\xE1p truy\u1EC1n th\u1ED1ng. V\u1EC1 bi\u1EBFn ki\u1EC3m so\xE1t \u0111\u1EA7u v\xE0o: \u0111i\u1EC3m trung b\xECnh m\xF4n To\xE1n - Tin c\u1EE7a hai nh\xF3m tr\u01B0\u1EDBc can thi\u1EC7p \u0111\u01B0\u1EE3c \u0111\u1ED1i chi\u1EBFu \u1EDF m\u1EE9c t\u01B0\u01A1ng \u0111\u01B0\u01A1ng. To\xE0n b\u1ED9 b\u1EA3ng th\u1ED1ng k\xEA v\xE0 phi\u1EBFu quan s\xE1t th\u1EF1c nghi\u1EC7m \u0111\u01B0\u1EE3c \u0111\xEDnh k\xE8m t\u1EA1i Ph\u1EE5 l\u1EE5c s\u1ED1 2 [C\u1EA6N B\u1ED4 SUNG MINH CH\u1EE8NG \u0110\u1ED0I CH\u1EE8NG].",
+            missingEvidenceAlert: "C\u1EA7n b\u1ED5 sung phi\u1EBFu kh\u1EA3o s\xE1t ho\u1EB7c \u0111i\u1EC3m s\u1ED1 h\u1ECDc k\u1EF3 tr\u01B0\u1EDBc l\xE0m \u0111\u1ED1i ch\u1EE9ng t\u01B0\u01A1ng \u0111\u01B0\u01A1ng.",
+            insertPosition: "M\u1EE5c 3.2 & M\u1EE5c 4.1"
+          },
+          {
+            id: "sug-rtc-2",
+            targetSection: "M\u1EE5c 5, Trang 22",
             originalText: "Sau th\u1EDDi gian \xE1p d\u1EE5ng gi\u1EA3i ph\xE1p, 100% h\u1ECDc sinh trong l\u1EDBp \u0111\u1EC1u say m\xEA h\u1ECDc t\u1EADp v\xE0 kh\xF4ng c\xF2n em n\xE0o c\u1EA3m th\u1EA5y s\u1EE3 l\u1EADp tr\xECnh Python.",
             problem: "C\xE1ch di\u1EC5n \u0111\u1EA1t kh\u1EB3ng \u0111\u1ECBnh tuy\u1EC7t \u0111\u1ED1i 100% thi\u1EBFu chu\u1EA9n m\u1EF1c khoa h\u1ECDc.",
             whyRevise: "H\u1ED9i \u0111\u1ED3ng s\u1EBD ch\u1EA5t v\u1EA5n gay g\u1EAFt v\u1EC1 t\xEDnh trung th\u1EF1c v\xE0 \u0111\u1ED9 tin c\u1EADy c\u1EE7a s\u1ED1 li\u1EC7u n\u1EBFu \u0111\u01B0a ra tuy\xEAn b\u1ED1 tuy\u1EC7t \u0111\u1ED1i.",
+            basis: "Chu\u1EA9n m\u1EF1c \u0111\xE1nh gi\xE1 SKKN ng\xE0nh GD&\u0110T v\xE0 quy t\u1EAFc li\xEAm ch\xEDnh khoa h\u1ECDc.",
+            category: "T\xEDnh hi\u1EC7u qu\u1EA3 & Minh ch\u1EE9ng x\xE1c th\u1EF1c",
+            revisionGoal: "Chu\u1EA9n h\xF3a ng\xF4n t\u1EEB, lo\u1EA1i b\u1ECF kh\u1EB3ng \u0111\u1ECBnh tuy\u1EC7t \u0111\u1ED1i v\xE0 b\xE1m s\xE1t s\u1ED1 li\u1EC7u kh\u1EA3o s\xE1t th\u1EF1c t\u1EBF.",
+            howToRevise: "\u0110i\u1EC1u ch\u1EC9nh di\u1EC5n \u0111\u1EA1t theo k\u1EBFt qu\u1EA3 phi\u1EBFu \u0111i\u1EC1u tra th\u1EF1c t\u1EBF, kh\xF4ng d\xF9ng t\u1EEB 100%.",
             lightRevision: "Sau th\u1EDDi gian \xE1p d\u1EE5ng gi\u1EA3i ph\xE1p, \u0111\u1EA1i \u0111a s\u1ED1 h\u1ECDc sinh trong l\u1EDBp \u0111\u1EC1u h\xE0o h\u1EE9ng tham gia v\xE0 t\u1EF1 tin h\u01A1n trong c\xE1c gi\u1EDD h\u1ECDc l\u1EADp tr\xECnh Python.",
-            academicRevision: "K\u1EBFt qu\u1EA3 kh\u1EA3o s\xE1t sau 6 th\xE1ng \xE1p d\u1EE5ng cho th\u1EA5y 84.5% h\u1ECDc sinh ph\u1EA3n h\u1ED3i t\xEDch c\u1EF1c v\xE0 ghi nh\u1EADn s\u1EF1 ti\u1EBFn b\u1ED9 r\xF5 r\u1EC7t v\u1EC1 n\u0103ng l\u1EF1c gi\u1EA3i quy\u1EBFt v\u1EA5n \u0111\u1EC1 b\u1EB1ng ng\xF4n ng\u1EEF Python.",
-            deepRevision: "D\u1EEF li\u1EC7u \u0111o l\u01B0\u1EDDng \u0111\u1ECBnh l\u01B0\u1EE3ng tr\xEAn m\u1EABu N=75 h\u1ECDc sinh ghi nh\u1EADn: 84.5% h\u1ECDc sinh \u0111\xE1nh gi\xE1 t\xEDch c\u1EF1c v\u1EC1 m\u1EE9c \u0111\u1ED9 h\u1EE9ng th\xFA; t\u1EF7 l\u1EC7 h\u1ECDc sinh \u0111\u1EA1t chu\u1EA9n \u0111\u1EA7u ra k\u1EF9 n\u0103ng l\u1EADp tr\xECnh t\u0103ng 21.3% so v\u1EDBi giai \u0111o\u1EA1n tr\u01B0\u1EDBc can thi\u1EC7p (p < 0.05)."
+            academicRevision: "K\u1EBFt qu\u1EA3 \u0111\xE1nh gi\xE1 sau qu\xE1 tr\xECnh \xE1p d\u1EE5ng gi\u1EA3i ph\xE1p cho th\u1EA5y ph\u1EA7n l\u1EDBn h\u1ECDc sinh \u0111\xE3 h\xECnh th\xE0nh th\xE1i \u0111\u1ED9 h\u1ECDc t\u1EADp ch\u1EE7 \u0111\u1ED9ng v\xE0 c\u1EA3i thi\u1EC7n r\xF5 r\u1EC7t n\u0103ng l\u1EF1c thu\u1EADt to\xE1n [GV \u0111i\u1EC1n: t\u1EF7 l\u1EC7 % theo phi\u1EBFu kh\u1EA3o s\xE1t th\u1EF1c t\u1EBF].",
+            deepRevision: "D\u1EF1a tr\xEAn phi\u1EBFu kh\u1EA3o s\xE1t th\xE1i \u0111\u1ED9 v\xE0 b\xE0i ki\u1EC3m tra k\u1EF9 n\u0103ng th\u1EF1c h\xE0nh thu \u0111\u01B0\u1EE3c t\u1EA1i l\u1EDBp 11A1: \u0111a s\u1ED1 h\u1ECDc sinh ghi nh\u1EADn s\u1EF1 chuy\u1EC3n bi\u1EBFn t\xEDch c\u1EF1c v\u1EC1 h\u1EE9ng th\xFA h\u1ECDc t\u1EADp v\xE0 n\u0103ng l\u1EF1c gi\u1EA3i quy\u1EBFt v\u1EA5n \u0111\u1EC1 b\u1EB1ng Python. C\xE1c d\u1EEF li\u1EC7u \u0111\u1ECBnh l\u01B0\u1EE3ng c\u1EE5 th\u1EC3 v\xE0 phi\u1EBFu \u0111i\u1EC1u tra g\u1ED1c \u0111\u01B0\u1EE3c l\u01B0u tr\u1EEF t\u1EA1i Ph\u1EE5 l\u1EE5c [C\u1EA6N B\u1ED4 SUNG S\u1ED0 LI\u1EC6U KH\u1EA2O S\xC1T TH\u1EF0C T\u1EBE].",
+            missingEvidenceAlert: "C\u1EA7n \u0111\xEDnh k\xE8m m\u1EABu phi\u1EBFu kh\u1EA3o s\xE1t v\xE0 b\u1EA3ng s\u1ED1 li\u1EC7u th\xF4 t\u1EA1i Ph\u1EE5 l\u1EE5c.",
+            insertPosition: "M\u1EE5c 5, Trang 22"
+          },
+          {
+            id: "sug-rtc-3",
+            targetSection: "M\u1EE5c 4.3",
+            originalText: "\u0110\u1EC3 ho\xE0n th\xE0nh c\xE1c d\u1EF1 \xE1n l\u1EDBn, h\u1ECDc sinh ti\u1EBFp t\u1EE5c ho\xE0n thi\u1EC7n code tr\xEAn m\xE1y t\xEDnh c\xE1 nh\xE2n \u1EDF nh\xE0 v\xE0 n\u1ED9p link qua h\u1EC7 th\u1ED1ng tr\u1EF1c tuy\u1EBFn.",
+            problem: "Ph\u1EE5 thu\u1ED9c v\xE0o m\xE1y t\xEDnh c\xE1 nh\xE2n \u1EDF nh\xE0, thi\u1EBFu ph\u01B0\u01A1ng \xE1n c\xF4ng b\u1EB1ng h\u1ECDc t\u1EADp.",
+            whyRevise: "S\xE1ng ki\u1EBFn c\u1EA7n b\u1EA3o \u0111\u1EA3m t\xEDnh kh\u1EA3 thi v\xE0 c\xF4ng b\u1EB1ng h\u1ECDc t\u1EADp cho m\u1ECDi h\u1ECDc sinh, k\u1EC3 c\u1EA3 h\u1ECDc sinh kh\xF4ng c\xF3 m\xE1y t\xEDnh \u1EDF nh\xE0.",
+            basis: "Ti\xEAu chu\u1EA9n t\xEDnh kh\u1EA3 thi v\xE0 nh\xE2n r\u1ED9ng c\u1EE7a s\xE1ng ki\u1EBFn gi\xE1o d\u1EE5c.",
+            category: "T\xEDnh th\u1EF1c ti\u1EC5n & Kh\u1EA3 n\u0103ng \xE1p d\u1EE5ng",
+            revisionGoal: "B\u1ED5 sung gi\u1EA3i ph\xE1p th\u1EF1c h\xE0nh t\u1EA1i tr\u01B0\u1EDDng v\xE0 ph\u01B0\u01A1ng \xE1n h\u1ECDc t\u1EADp theo nh\xF3m.",
+            howToRevise: "N\xEAu r\xF5 ph\u01B0\u01A1ng \xE1n m\u1EDF ph\xF2ng m\xE1y ngo\xE0i gi\u1EDD v\xE0 h\xECnh th\u1EE9c l\u1EADp tr\xECnh theo c\u1EB7p (Pair programming).",
+            lightRevision: "\u0110\u1EC3 ho\xE0n th\xE0nh c\xE1c d\u1EF1 \xE1n h\u1ECDc t\u1EADp, h\u1ECDc sinh c\xF3 th\u1EC3 ti\u1EBFp t\u1EE5c th\u1EF1c h\xE0nh tr\xEAn m\xE1y t\xEDnh c\xE1 nh\xE2n \u1EDF nh\xE0 ho\u1EB7c \u0111\u0103ng k\xFD th\u1EF1c h\xE0nh th\xEAm t\u1EA1i ph\xF2ng m\xE1y t\xEDnh c\u1EE7a nh\xE0 tr\u01B0\u1EDDng.",
+            academicRevision: "Nh\u1EB1m b\u1EA3o \u0111\u1EA3m t\xEDnh c\xF4ng b\u1EB1ng h\u1ECDc t\u1EADp cho m\u1ECDi h\u1ECDc sinh, nh\xE0 tr\u01B0\u1EDDng t\u1EA1o \u0111i\u1EC1u ki\u1EC7n m\u1EDF c\u1EEDa ph\xF2ng m\xE1y t\xEDnh ngo\xE0i gi\u1EDD \u0111\u1EC3 c\xE1c em kh\xF4ng c\xF3 m\xE1y t\xEDnh c\xE1 nh\xE2n v\u1EABn c\xF3 th\u1EC3 ho\xE0n th\xE0nh s\u1EA3n ph\u1EA9m d\u1EF1 \xE1n; \u0111\u1ED3ng th\u1EDDi \xE1p d\u1EE5ng ph\u01B0\u01A1ng ph\xE1p l\u1EADp tr\xECnh theo c\u1EB7p (Pair programming).",
+            deepRevision: "Gi\u1EA3i ph\xE1p \u0111\u01B0\u1EE3c thi\u1EBFt k\u1EBF th\xEDch \u1EE9ng v\u1EDBi m\u1ECDi \u0111i\u1EC1u ki\u1EC7n c\u01A1 s\u1EDF v\u1EADt ch\u1EA5t: h\u1ECDc sinh \u0111\u01B0\u1EE3c ph\xE2n nh\xF3m linh ho\u1EA1t \u0111\u1EC3 t\u01B0\u01A1ng tr\u1EE3 l\u1EABn nhau; t\u1ED5 chuy\xEAn m\xF4n b\u1ED1 tr\xED l\u1ECBch m\u1EDF ph\xF2ng m\xE1y t\xEDnh tr\u01B0\u1EDDng v\xE0o c\xE1c bu\u1ED5i chi\u1EC1u c\xF3 gi\xE1o vi\xEAn h\u01B0\u1EDBng d\u1EABn, b\u1EA3o \u0111\u1EA3m 100% h\u1ECDc sinh \u0111\u1EC1u c\xF3 th\u1EDDi l\u01B0\u1EE3ng th\u1EF1c h\xE0nh b\xECnh \u0111\u1EB3ng tr\xEAn m\xE1y t\xEDnh.",
+            missingEvidenceAlert: "C\u1EA7n \u0111\xEDnh k\xE8m l\u1ECBch tr\u1EF1c ph\xF2ng m\xE1y v\xE0 quy ch\u1EBF l\xE0m vi\u1EC7c nh\xF3m t\u1EA1i Ph\u1EE5 l\u1EE5c.",
+            insertPosition: "M\u1EE5c 4.3"
           }
         ],
         councilQuestions: [
@@ -866,6 +952,13 @@ async function saveEvaluationResultRecord(params) {
   item.changeSet = finalChangeSet;
   if (item.analysisResult) {
     item.analysisResult.changeSet = finalChangeSet;
+  }
+  if (params.customProposals || params.analysisResult.customProposals) {
+    const proposals = params.customProposals || params.analysisResult.customProposals || {};
+    item.customProposals = { ...item.customProposals || {}, ...proposals };
+    if (item.analysisResult) {
+      item.analysisResult.customProposals = item.customProposals;
+    }
   }
   item.versionsHistory = item.versionsHistory || [];
   const existingV = item.versionsHistory.find((v) => v.version === item.currentVersion);
@@ -1311,7 +1404,7 @@ async function handler(req, res) {
       if (!auth) {
         return res.status(401).json({ error: "Y\xEAu c\u1EA7u \u0111\u0103ng nh\u1EADp \u0111\u1EC3 l\u01B0u k\u1EBFt qu\u1EA3 h\u1ED3 s\u01A1" });
       }
-      const { evaluationId, analysisResult, title, subject, score, draftText, changeSet } = body || {};
+      const { evaluationId, analysisResult, title, subject, score, draftText, changeSet, customProposals } = body || {};
       if (!evaluationId || !analysisResult) {
         return res.status(400).json({ error: "Thi\u1EBFu m\xE3 h\u1ED3 s\u01A1 ho\u1EB7c k\u1EBFt qu\u1EA3 ph\xE2n t\xEDch" });
       }
@@ -1323,7 +1416,8 @@ async function handler(req, res) {
         subject,
         score,
         draftText,
-        changeSet
+        changeSet,
+        customProposals
       });
       if (!result.success) {
         const isForbidden = result.error?.includes("B\u1EA3o m\u1EADt");
