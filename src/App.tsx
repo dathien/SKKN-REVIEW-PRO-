@@ -58,14 +58,55 @@ import {
 export default function App() {
   const { user, guestId, role, hasQuotaForMode, openQuotaModal, updateUserQuota, isAdmin, openAdminModal, isLoading: isAuthLoading, isLoggedIn, openAuthModal } = useAuth();
 
-  // URL & Storage Initial State (Context restoration after F5)
+  // URL & Route Initial State (Khôi phục ngữ cảnh khi F5, mở deep link & mặc định TỔNG QUAN khi mở đường dẫn gốc)
   const initialUrlState = useMemo(() => {
-    if (typeof window === 'undefined') return {};
+    if (typeof window === 'undefined') {
+      return { tab: 'dashboard' as ActiveTab, evalId: null, issueId: null, tier: 'academic' as const };
+    }
     const params = new URLSearchParams(window.location.search);
-    const evalId = params.get('evalId') || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_current_eval_id') : null);
-    const tab = (params.get('tab') as ActiveTab) || (typeof localStorage !== 'undefined' ? (localStorage.getItem('skkn_active_tab') as ActiveTab) : null);
-    const issueId = params.get('issueId') || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_viewing_rebuttal_card_id') : null);
-    const tier = (params.get('tier') as 'light' | 'academic' | 'deep') || (typeof localStorage !== 'undefined' ? (localStorage.getItem('skkn_selected_tier') as any) : null);
+
+    // Dọn dẹp triệt để skkn_active_tab trong localStorage để tránh rò rỉ chuyển hướng sang các phiên/tab mới
+    try {
+      localStorage.removeItem('skkn_active_tab');
+    } catch (_) {}
+
+    const evalIdParam = params.get('evalId');
+    const tabParam = params.get('tab') as ActiveTab | null;
+    const issueIdParam = params.get('issueId');
+    const tierParam = params.get('tier') as 'light' | 'academic' | 'deep' | null;
+
+    const validTabs: ActiveTab[] = [
+      'my_evaluations',
+      'dashboard',
+      'rubric',
+      'red_team',
+      'novelty',
+      'evidence',
+      'data_logic',
+      'ai_markers',
+      'similarity_citations',
+      'suggestions',
+      'council',
+      'rescore',
+      'report'
+    ];
+
+    // Quy tắc điều hướng:
+    // 1. Khi mở đường dẫn gốc (không có tab trên URL): mặc định luôn là 'dashboard' (TỔNG QUAN)
+    // 2. Khi F5 hoặc deep link có ?tab=...: lấy đúng tab hợp lệ tương ứng
+    const tab: ActiveTab = (tabParam && validTabs.includes(tabParam)) ? tabParam : 'dashboard';
+    const evalId = evalIdParam && evalIdParam.trim() ? evalIdParam.trim() : null;
+    const issueId = issueIdParam && issueIdParam.trim() ? issueIdParam.trim() : null;
+    const tier = (tierParam === 'light' || tierParam === 'academic' || tierParam === 'deep') ? tierParam : 'academic';
+
+    // Nếu mở đường dẫn gốc (không có evalId trên URL), dọn dẹp các key tạm để không bị nạp hồ sơ cũ ngoài ý muốn
+    if (!evalId) {
+      try {
+        localStorage.removeItem('skkn_current_eval_id');
+        localStorage.removeItem('skkn_viewing_rebuttal_card_id');
+      } catch (_) {}
+    }
+
     return { evalId, tab, issueId, tier };
   }, []);
 
@@ -170,34 +211,42 @@ export default function App() {
     setTargetSuggestionCardId(card.id);
   };
 
-  // Sync URL search params and localStorage on state change
+  // Sync URL search params on state change
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
+
+    // 1. Đồng bộ evalId vào URL
     if (currentEvaluationId) {
       params.set('evalId', currentEvaluationId);
-      localStorage.setItem('skkn_current_eval_id', currentEvaluationId);
+      try {
+        localStorage.setItem('skkn_current_eval_id', currentEvaluationId);
+      } catch (_) {}
     } else {
       params.delete('evalId');
-      localStorage.removeItem('skkn_current_eval_id');
+      try {
+        localStorage.removeItem('skkn_current_eval_id');
+      } catch (_) {}
     }
 
-    if (activeTab) {
+    // 2. Đồng bộ tab vào URL:
+    // Nếu ở TỔNG QUAN (dashboard) khi chưa chọn hồ sơ và không xem vấn đề phản biện: giữ URL sạch ('/')
+    // Nếu ở các tab khác (ví dụ: 'my_evaluations', 'suggestions', 'rescore'...) hoặc đang có hồ sơ: ghi rõ tab vào URL để F5 khôi phục chính xác
+    if (activeTab === 'dashboard' && !currentEvaluationId && !viewingRebuttalCardId) {
+      params.delete('tab');
+    } else if (activeTab) {
       params.set('tab', activeTab);
-      localStorage.setItem('skkn_active_tab', activeTab);
     }
 
+    // 3. Đồng bộ issueId và tier cho Phản biện học thuật
     if (viewingRebuttalCardId) {
       params.set('issueId', viewingRebuttalCardId);
-      localStorage.setItem('skkn_viewing_rebuttal_card_id', viewingRebuttalCardId);
+      if (selectedRevisionTier) {
+        params.set('tier', selectedRevisionTier);
+      }
     } else {
       params.delete('issueId');
-      localStorage.removeItem('skkn_viewing_rebuttal_card_id');
-    }
-
-    if (selectedRevisionTier) {
-      params.set('tier', selectedRevisionTier);
-      localStorage.setItem('skkn_selected_tier', selectedRevisionTier);
+      params.delete('tier');
     }
 
     const newQuery = params.toString();
