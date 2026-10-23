@@ -39,6 +39,7 @@ export interface AcademicRebuttalViewProps {
   skknFullText?: string;
   customProposals?: Record<string, { tier?: string; text: string; updatedAt?: string }>;
   onSaveCustomProposal?: (cardId: string, tier: 'light' | 'academic' | 'deep', text: string) => Promise<{ success: boolean; error?: string }>;
+  onSaveTeacherNotes?: (cardId: string, notes: string) => Promise<{ success: boolean; error?: string }>;
   initialTier?: 'light' | 'academic' | 'deep';
   onTierChange?: (tier: 'light' | 'academic' | 'deep') => void;
 }
@@ -109,16 +110,28 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
   skknFullText = '',
   customProposals = {},
   onSaveCustomProposal,
+  onSaveTeacherNotes,
   initialTier = 'academic',
   onTierChange
 }) => {
   const [selectedTier, setSelectedTier] = useState<'light' | 'academic' | 'deep'>(initialTier);
   const [copied, setCopied] = useState(false);
-  const [teacherNotes, setTeacherNotes] = useState(card.userNotes || '');
+  const [teacherNotes, setTeacherNotes] = useState(() => {
+    if (card.userNotes) return card.userNotes;
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const local = localStorage.getItem(`skkn_note_${card.id}`);
+        if (local) return local;
+      }
+    } catch (_) {}
+    return '';
+  });
   const [isEditingCustom, setIsEditingCustom] = useState(false);
   const [customProposedText, setCustomProposedText] = useState('');
   const [isSavingProposal, setIsSavingProposal] = useState(false);
   const [proposalSaveError, setProposalSaveError] = useState<string | null>(null);
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [notesSaveError, setNotesSaveError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // PB-002 Fact confirmation state
@@ -130,11 +143,20 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
   const [customSampleCount, setCustomSampleCount] = useState<string>('');
   const [isSampleConfirmed, setIsSampleConfirmed] = useState(false);
 
-  // Sync notes and reset edit state when switching cards
+  // Sync notes and reset edit state when switching cards or when card data updates
   useEffect(() => {
-    setTeacherNotes(card.userNotes || '');
+    let effectiveNote = card.userNotes || '';
+    if (!effectiveNote) {
+      try {
+        if (typeof localStorage !== 'undefined') {
+          effectiveNote = localStorage.getItem(`skkn_note_${card.id}`) || '';
+        }
+      } catch (_) {}
+    }
+    setTeacherNotes(effectiveNote);
     setIsEditingCustom(false);
     setProposalSaveError(null);
+    setNotesSaveError(null);
     setCopied(false);
     setIsSampleConfirmed(false);
     setSampleChoice('');
@@ -143,9 +165,9 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
 
     // Mark as in-progress if currently open/unhandled
     if (card.status === 'Chưa xử lý' || card.status === 'open' || !card.status) {
-      onUpdateStatus(card.id, 'Đang xử lý');
+      onUpdateStatus(card.id, 'Đang xử lý', effectiveNote);
     }
-  }, [card.id]);
+  }, [card.id, card.userNotes]);
 
   // Current index & pagination
   const allCards = cards.length > 0 ? cards : [card];
@@ -229,9 +251,21 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
     return effectiveSuggestion.deepRevision;
   }, [selectedTier, effectiveSuggestion]);
 
-  // 2. Saved Proposal (confirmed saved by teacher)
+  // 2. Saved Proposal (confirmed saved by teacher, with local backup)
   const savedProposalKey = `${card.id}_${selectedTier}`;
-  const savedProposal = customProposals?.[savedProposalKey]?.text || (card as any)?.customProposals?.[selectedTier];
+  const localSavedProposal = useMemo(() => {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const item = localStorage.getItem(`skkn_proposal_${savedProposalKey}`);
+        if (item) {
+          const parsed = JSON.parse(item);
+          return parsed?.text || null;
+        }
+      }
+    } catch (_) {}
+    return null;
+  }, [savedProposalKey]);
+  const savedProposal = customProposals?.[savedProposalKey]?.text || localSavedProposal || (card as any)?.customProposals?.[selectedTier];
 
   // 3. Displayed Proposal in Box 5 (Saved Proposal > AI Proposal)
   const displayedProposalText = savedProposal || aiProposalText;
@@ -257,10 +291,35 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const handleSaveNotes = () => {
-    onUpdateStatus(card.id, card.status, teacherNotes);
-    setToastMessage('Đã lưu ghi chú của Thầy/Cô thành công!');
-    setTimeout(() => setToastMessage(null), 3000);
+  const handleSaveNotes = async () => {
+    setIsSavingNotes(true);
+    setNotesSaveError(null);
+
+    // Lưu backup vào localStorage ngay lập tức
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(`skkn_note_${card.id}`, teacherNotes);
+      }
+    } catch (_) {}
+
+    try {
+      if (onSaveTeacherNotes) {
+        const res = await onSaveTeacherNotes(card.id, teacherNotes);
+        if (!res.success) {
+          setIsSavingNotes(false);
+          setNotesSaveError(res.error || 'Máy chủ không thể lưu ghi chú. Vui lòng thử lại.');
+          return;
+        }
+      } else {
+        onUpdateStatus(card.id, card.status, teacherNotes);
+      }
+      setIsSavingNotes(false);
+      setToastMessage('✓ Đã lưu ghi chú của Thầy/Cô thành công!');
+      setTimeout(() => setToastMessage(null), 3000);
+    } catch (err: any) {
+      setIsSavingNotes(false);
+      setNotesSaveError(err?.message || 'Lỗi mạng khi lưu ghi chú.');
+    }
   };
 
   const handleCopy = (text: string) => {
@@ -875,11 +934,21 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
           </label>
           <textarea
             value={teacherNotes}
-            onChange={(e) => setTeacherNotes(e.target.value)}
+            onChange={(e) => {
+              setTeacherNotes(e.target.value);
+              setNotesSaveError(null);
+            }}
             placeholder="Ghi lại các việc Thầy/Cô đã làm để khắc phục vấn đề này (ví dụ: đã kiểm tra lại số liệu sổ điểm lớp 11A2, đã cập nhật phụ lục minh chứng 3)..."
             rows={3}
             className="w-full p-3.5 text-[14.5px] bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 leading-relaxed font-sans"
           />
+
+          {notesSaveError && (
+            <div className="p-3 bg-rose-50 border border-rose-300 rounded-xl text-[13.5px] text-rose-800 font-semibold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{notesSaveError}</span>
+            </div>
+          )}
 
           <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
             <span className="text-[13px] text-slate-500 italic">
@@ -889,9 +958,20 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
             <button
               type="button"
               onClick={handleSaveNotes}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-[650] text-[13.5px] rounded-xl transition-all cursor-pointer shadow-2xs"
+              disabled={isSavingNotes}
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-900 disabled:opacity-60 text-white font-[650] text-[13.5px] rounded-xl transition-all cursor-pointer shadow-2xs inline-flex items-center gap-2"
             >
-              Lưu ghi chú xử lý
+              {isSavingNotes ? (
+                <>
+                  <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Đang lưu ghi chú...</span>
+                </>
+              ) : (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Lưu ghi chú xử lý</span>
+                </>
+              )}
             </button>
           </div>
         </div>

@@ -234,7 +234,7 @@ export default async function handler(req: any, res: any) {
       if (!auth) {
         return res.status(401).json({ error: 'Yêu cầu đăng nhập để lưu kết quả hồ sơ' });
       }
-      const { evaluationId, analysisResult, title, subject, score, draftText, changeSet, customProposals } = body || {};
+      const { evaluationId, analysisResult, title, subject, score, draftText, changeSet, customProposals, teacherNotes } = body || {};
       if (!evaluationId || !analysisResult) {
         return res.status(400).json({ error: 'Thiếu mã hồ sơ hoặc kết quả phân tích' });
       }
@@ -248,7 +248,8 @@ export default async function handler(req: any, res: any) {
         draftText,
         changeSet,
         customProposals,
-      });
+        teacherNotes,
+      } as any);
       if (!result.success) {
         const isForbidden = result.error?.includes('Bảo mật');
         return res.status(isForbidden ? 403 : 400).json(result);

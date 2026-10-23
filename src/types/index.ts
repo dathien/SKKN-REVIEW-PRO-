@@ -418,6 +418,7 @@ export interface SKKNAnalysisResult {
   supportTemplates?: SupportTemplateItem[];
   changeSet?: ChangeSetItem[];
   customProposals?: Record<string, { tier?: string; text: string; updatedAt?: string }>;
+  teacherNotes?: Record<string, string>;
   councilQuestions: CouncilQuestion[];
   priorityActions: PriorityActionItem[];
   rescoreHistory?: RescoreComparison;
@@ -547,6 +548,7 @@ export interface EvaluationItem {
   draftText?: string;
   changeSet?: ChangeSetItem[];
   customProposals?: Record<string, { tier?: string; text: string; updatedAt?: string }>;
+  teacherNotes?: Record<string, string>;
 }
 
 export interface StorageAuditLog {

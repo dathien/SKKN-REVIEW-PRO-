@@ -637,6 +637,29 @@ export async function getEvaluationDetail(evalId: string, userEmail: string): Pr
     }
   }
 
+  // Đảm bảo đồng bộ tuyệt đối customProposals và teacherNotes khi trả về
+  if (item.analysisResult) {
+    if (item.customProposals) {
+      item.analysisResult.customProposals = {
+        ...(item.analysisResult.customProposals || {}),
+        ...item.customProposals,
+      };
+    }
+    if (item.teacherNotes) {
+      (item.analysisResult as any).teacherNotes = {
+        ...((item.analysisResult as any).teacherNotes || {}),
+        ...item.teacherNotes,
+      };
+      if (Array.isArray(item.analysisResult.redTeamCards)) {
+        item.analysisResult.redTeamCards.forEach(c => {
+          if ((c.userNotes === undefined || c.userNotes === null || c.userNotes === '') && item.teacherNotes?.[c.id]) {
+            c.userNotes = item.teacherNotes[c.id];
+          }
+        });
+      }
+    }
+  }
+
   return { success: true, evaluation: item };
 }
 
@@ -672,12 +695,65 @@ export async function saveEvaluationResultRecord(params: {
     : (params.analysisResult.rubricCriteria?.reduce((acc, c) => acc + (c.proposedScore ?? 0), 0) ?? item.score);
 
   // CẬP NHẬT KẾT QUẢ & BẢN NHÁP (BẢO VỆ NGUYÊN BẢN V1 KHÔNG THAY ĐỔI)
-  item.analysisResult = params.analysisResult;
   item.score = calculatedScore;
   item.status = 'COMPLETED';
   item.updatedAt = now;
   if (params.title?.trim()) item.title = params.title.trim();
   if (params.subject?.trim()) item.subject = params.subject.trim();
+
+  // 1. Bảo toàn và đồng bộ hai chiều customProposals (không bao giờ bị ghi đè mất)
+  const mergedProposals: Record<string, { tier?: string; text: string; updatedAt?: string }> = {
+    ...(item.customProposals || {}),
+    ...(item.analysisResult?.customProposals || {}),
+    ...(params.customProposals || {}),
+    ...(params.analysisResult?.customProposals || {}),
+  };
+  item.customProposals = mergedProposals;
+
+  // 2. Bảo toàn và đồng bộ hai chiều teacherNotes (không bao giờ bị ghi đè mất)
+  const mergedNotes: Record<string, string> = {
+    ...(item.teacherNotes || {}),
+    ...((item.analysisResult as any)?.teacherNotes || {}),
+    ...((params as any).teacherNotes || {}),
+    ...((params.analysisResult as any)?.teacherNotes || {}),
+  };
+
+  // Trích xuất notes từ params.analysisResult.redTeamCards nếu có
+  if (Array.isArray(params.analysisResult?.redTeamCards)) {
+    params.analysisResult.redTeamCards.forEach(c => {
+      if (c.userNotes !== undefined && c.userNotes !== null) {
+        mergedNotes[c.id] = c.userNotes;
+      }
+    });
+  }
+  item.teacherNotes = mergedNotes;
+
+  // 3. Đồng bộ redTeamCards (giữ nguyên userNotes và status của từng card đã lưu)
+  let synchronizedCards = params.analysisResult?.redTeamCards || item.analysisResult?.redTeamCards || [];
+  if (Array.isArray(synchronizedCards)) {
+    const existingCardsMap = new Map((item.analysisResult?.redTeamCards || []).map(c => [c.id, c]));
+    synchronizedCards = synchronizedCards.map(newCard => {
+      const existing = existingCardsMap.get(newCard.id);
+      const noteFromMap = mergedNotes[newCard.id];
+      const effectiveNote = newCard.userNotes !== undefined
+        ? newCard.userNotes
+        : (noteFromMap !== undefined ? noteFromMap : (existing?.userNotes || ''));
+      return {
+        ...(existing || {}),
+        ...newCard,
+        userNotes: effectiveNote,
+        status: newCard.status || existing?.status || 'Chưa xử lý',
+      };
+    });
+  }
+
+  // 4. Lưu analysisResult hoàn chỉnh và đồng bộ
+  item.analysisResult = {
+    ...params.analysisResult,
+    redTeamCards: synchronizedCards,
+    customProposals: mergedProposals,
+    teacherNotes: mergedNotes,
+  };
 
   // Lưu bản nháp đã sửa và danh sách thay đổi changeSet
   if (params.draftText !== undefined) {
@@ -692,15 +768,6 @@ export async function saveEvaluationResultRecord(params: {
   item.changeSet = finalChangeSet;
   if (item.analysisResult) {
     item.analysisResult.changeSet = finalChangeSet;
-  }
-
-  // Lưu customProposals (đoạn đề xuất do GV chỉnh sửa)
-  if (params.customProposals || params.analysisResult.customProposals) {
-    const proposals = params.customProposals || params.analysisResult.customProposals || {};
-    item.customProposals = { ...(item.customProposals || {}), ...proposals };
-    if (item.analysisResult) {
-      item.analysisResult.customProposals = item.customProposals;
-    }
   }
 
   // Cập nhật lịch sử phiên bản

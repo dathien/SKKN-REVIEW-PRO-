@@ -205,12 +205,17 @@ export default function App() {
     window.history.replaceState({}, '', newUrl);
   }, [currentEvaluationId, activeTab, viewingRebuttalCardId, selectedRevisionTier]);
 
-  // Khôi phục hồ sơ và vị trí làm việc tự động sau khi F5
+  // Trạng thái đang khôi phục hồ sơ sau F5
+  const [isRestoringEvaluation, setIsRestoringEvaluation] = useState<boolean>(Boolean(initialUrlState.evalId));
   const hasRestoredInitialEvalRef = useRef(false);
+
   useEffect(() => {
     const restoreInitialEvaluation = async () => {
       const targetEvalId = currentEvaluationId || initialUrlState.evalId;
-      if (!targetEvalId || hasRestoredInitialEvalRef.current) return;
+      if (!targetEvalId || hasRestoredInitialEvalRef.current) {
+        setIsRestoringEvaluation(false);
+        return;
+      }
       hasRestoredInitialEvalRef.current = true;
 
       try {
@@ -223,12 +228,44 @@ export default function App() {
           },
         });
         const contentType = resp.headers.get('content-type') || '';
-        if (!contentType.includes('application/json')) return;
+        if (!contentType.includes('application/json')) {
+          setIsRestoringEvaluation(false);
+          return;
+        }
         const data = await resp.json();
         if (data.success && data.evaluation?.analysisResult) {
+          // Hợp nhất đồng bộ customProposals và teacherNotes từ backend và cache cục bộ
+          const restoredProposals: Record<string, any> = {
+            ...(data.evaluation.customProposals || {}),
+            ...(data.evaluation.analysisResult.customProposals || {}),
+          };
+          const restoredNotes: Record<string, string> = {
+            ...(data.evaluation.teacherNotes || {}),
+            ...(data.evaluation.analysisResult.teacherNotes || {}),
+          };
+
+          try {
+            if (typeof localStorage !== 'undefined') {
+              const localProposals = JSON.parse(localStorage.getItem('skkn_all_custom_proposals') || '{}');
+              Object.assign(restoredProposals, localProposals);
+              const localNotes = JSON.parse(localStorage.getItem('skkn_all_teacher_notes') || '{}');
+              Object.assign(restoredNotes, localNotes);
+            }
+          } catch (_) {}
+
+          const fullAnalysis: SKKNAnalysisResult = {
+            ...data.evaluation.analysisResult,
+            customProposals: restoredProposals,
+            teacherNotes: restoredNotes,
+            redTeamCards: (data.evaluation.analysisResult.redTeamCards || []).map((c: any) => ({
+              ...c,
+              userNotes: c.userNotes !== undefined && c.userNotes !== null && c.userNotes !== '' ? c.userNotes : (restoredNotes[c.id] || ''),
+            })),
+          };
+
           setCurrentEvaluationId(targetEvalId);
-          setCustomAnalysis(data.evaluation.analysisResult);
-          setAnalysis(data.evaluation.analysisResult);
+          setCustomAnalysis(fullAnalysis);
+          setAnalysis(fullAnalysis);
           setDraftSkknText(data.evaluation.draftText || data.evaluation.originalText || '');
           setOriginalSkknText(data.evaluation.originalText || '');
           setWorkflowStatus('COMPLETED');
@@ -241,7 +278,7 @@ export default function App() {
             setActiveTab(initialUrlState.tab);
           }
           if (initialUrlState.issueId) {
-            const hasIssue = data.evaluation.analysisResult.redTeamCards?.some((c: any) => c.id === initialUrlState.issueId);
+            const hasIssue = fullAnalysis.redTeamCards?.some((c: any) => c.id === initialUrlState.issueId);
             if (hasIssue) {
               setViewingRebuttalCardId(initialUrlState.issueId);
             }
@@ -253,6 +290,8 @@ export default function App() {
         }
       } catch (err) {
         console.error('Lỗi khi khôi phục ngữ cảnh sau F5:', err);
+      } finally {
+        setIsRestoringEvaluation(false);
       }
     };
 
@@ -446,27 +485,30 @@ export default function App() {
 
   // Update card status
   const handleUpdateCardStatus = (id: string, status: FindingStatus, notes?: string) => {
+    const updatedCards = analysis.redTeamCards.map(c =>
+      c.id === id ? { ...c, status, userNotes: notes !== undefined ? notes : c.userNotes } : c
+    );
+    const updatedTeacherNotes = {
+      ...(analysis.teacherNotes || {}),
+      ...(notes !== undefined ? { [id]: notes } : {}),
+    };
+
     setAnalysis(prev => ({
       ...prev,
-      redTeamCards: prev.redTeamCards.map(c =>
-        c.id === id ? { ...c, status, userNotes: notes !== undefined ? notes : c.userNotes } : c
-      )
+      teacherNotes: updatedTeacherNotes,
+      redTeamCards: updatedCards,
     }));
     if (customAnalysis) {
       setCustomAnalysis(prev => prev ? ({
         ...prev,
-        redTeamCards: prev.redTeamCards.map(c =>
-          c.id === id ? { ...c, status, userNotes: notes !== undefined ? notes : c.userNotes } : c
-        )
+        teacherNotes: updatedTeacherNotes,
+        redTeamCards: updatedCards,
       }) : null);
     }
 
     if (currentEvaluationId && isLoggedIn && user?.email) {
       try {
         const sessionToken = (user as any)?.sessionToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_session_token') : '') || '';
-        const updatedCards = analysis.redTeamCards.map(c =>
-          c.id === id ? { ...c, status, userNotes: notes !== undefined ? notes : c.userNotes } : c
-        );
         fetch('/api/user/evaluations/save-result', {
           method: 'POST',
           headers: {
@@ -476,8 +518,12 @@ export default function App() {
           },
           body: JSON.stringify({
             evaluationId: currentEvaluationId,
+            customProposals: analysis.customProposals,
+            teacherNotes: updatedTeacherNotes,
             analysisResult: {
               ...analysis,
+              customProposals: analysis.customProposals,
+              teacherNotes: updatedTeacherNotes,
               redTeamCards: updatedCards,
             },
           }),
@@ -511,7 +557,17 @@ export default function App() {
       }) : null);
     }
 
-    // 2. Gửi lưu bền vững lên Backend nếu đã đăng nhập và có hồ sơ
+    // 2. Backup tức thì vào localStorage
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(`skkn_proposal_${proposalKey}`, JSON.stringify({ tier, text, updatedAt: now }));
+        const currentAll = JSON.parse(localStorage.getItem('skkn_all_custom_proposals') || '{}');
+        currentAll[proposalKey] = { tier, text, updatedAt: now };
+        localStorage.setItem('skkn_all_custom_proposals', JSON.stringify(currentAll));
+      }
+    } catch (_) {}
+
+    // 3. Gửi lưu bền vững lên Backend nếu đã đăng nhập và có hồ sơ
     if (currentEvaluationId && isLoggedIn && user?.email) {
       try {
         const sessionToken = (user as any)?.sessionToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_session_token') : '') || '';
@@ -525,9 +581,11 @@ export default function App() {
           body: JSON.stringify({
             evaluationId: currentEvaluationId,
             customProposals: updatedProposals,
+            teacherNotes: analysis.teacherNotes,
             analysisResult: {
               ...analysis,
-              customProposals: updatedProposals
+              customProposals: updatedProposals,
+              teacherNotes: analysis.teacherNotes,
             }
           }),
         });
@@ -538,6 +596,79 @@ export default function App() {
         return { success: true };
       } catch (err: any) {
         return { success: false, error: err?.message || 'Lỗi mạng khi lưu đề xuất.' };
+      }
+    }
+
+    return { success: true };
+  };
+
+  // Lưu ghi chú xử lý của giáo viên bền vững theo tài khoản, hồ sơ và vấn đề phản biện
+  const handleSaveTeacherNotes = async (
+    cardId: string,
+    notes: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    const updatedCards = analysis.redTeamCards.map(c =>
+      c.id === cardId ? { ...c, userNotes: notes } : c
+    );
+    const updatedTeacherNotes = {
+      ...(analysis.teacherNotes || {}),
+      [cardId]: notes,
+    };
+
+    // 1. Cập nhật ngay React State
+    setAnalysis(prev => ({
+      ...prev,
+      teacherNotes: updatedTeacherNotes,
+      redTeamCards: updatedCards,
+    }));
+    if (customAnalysis) {
+      setCustomAnalysis(prev => prev ? ({
+        ...prev,
+        teacherNotes: updatedTeacherNotes,
+        redTeamCards: updatedCards,
+      }) : null);
+    }
+
+    // 2. Backup tức thì vào localStorage
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(`skkn_note_${cardId}`, notes);
+        const currentAllNotes = JSON.parse(localStorage.getItem('skkn_all_teacher_notes') || '{}');
+        currentAllNotes[cardId] = notes;
+        localStorage.setItem('skkn_all_teacher_notes', JSON.stringify(currentAllNotes));
+      }
+    } catch (_) {}
+
+    // 3. Gửi lưu bền vững lên Backend nếu có hồ sơ và tài khoản
+    if (currentEvaluationId && isLoggedIn && user?.email) {
+      try {
+        const sessionToken = (user as any)?.sessionToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_session_token') : '') || '';
+        const resp = await fetch('/api/user/evaluations/save-result', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-session-token': sessionToken,
+            'x-user-email': user.email,
+          },
+          body: JSON.stringify({
+            evaluationId: currentEvaluationId,
+            teacherNotes: updatedTeacherNotes,
+            customProposals: analysis.customProposals,
+            analysisResult: {
+              ...analysis,
+              teacherNotes: updatedTeacherNotes,
+              customProposals: analysis.customProposals,
+              redTeamCards: updatedCards,
+            },
+          }),
+        });
+        const data = await resp.json();
+        if (!data.success) {
+          return { success: false, error: data.error || 'Máy chủ không thể lưu ghi chú.' };
+        }
+        return { success: true };
+      } catch (err: any) {
+        return { success: false, error: err?.message || 'Lỗi kết nối khi lưu ghi chú.' };
       }
     }
 
@@ -1172,6 +1303,23 @@ export default function App() {
     return <AdminPortalModal />;
   }
 
+  // Khi đang khôi phục dữ liệu hồ sơ sau F5, hiển thị màn hình nạp dữ liệu để tránh race-condition với dữ liệu mẫu
+  if (isRestoringEvaluation && !customAnalysis) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-slate-900 text-white font-sans p-4">
+        <div className="max-w-md w-full bg-slate-950 border border-slate-800 rounded-2xl p-8 text-center shadow-2xl space-y-4">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <h2 className="text-[17px] font-bold text-white tracking-tight">
+            Đang tải và khôi phục hồ sơ SKKN...
+          </h2>
+          <p className="text-[13.5px] text-slate-400 leading-relaxed">
+            Hệ thống đang phục hồi đồng bộ dữ liệu phản biện, đoạn đề xuất chỉnh sửa và ghi chú xử lý của Thầy/Cô.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-100 font-sans text-slate-800">
       {/* Left Sidebar */}
@@ -1375,6 +1523,7 @@ export default function App() {
                     suggestions={currentAnalysis.suggestions}
                     customProposals={currentAnalysis.customProposals}
                     onSaveCustomProposal={handleSaveCustomProposal}
+                    onSaveTeacherNotes={handleSaveTeacherNotes}
                     initialTier={selectedRevisionTier}
                     onTierChange={(tier) => setSelectedRevisionTier(tier)}
                     onSelectCard={(nextCard) => setViewingRebuttalCardId(nextCard.id)}

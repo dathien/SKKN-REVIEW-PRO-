@@ -922,6 +922,27 @@ async function getEvaluationDetail(evalId, userEmail) {
       }
     }
   }
+  if (item.analysisResult) {
+    if (item.customProposals) {
+      item.analysisResult.customProposals = {
+        ...(item.analysisResult.customProposals || {}),
+        ...item.customProposals,
+      };
+    }
+    if (item.teacherNotes) {
+      item.analysisResult.teacherNotes = {
+        ...(item.analysisResult.teacherNotes || {}),
+        ...item.teacherNotes,
+      };
+      if (Array.isArray(item.analysisResult.redTeamCards)) {
+        item.analysisResult.redTeamCards.forEach(c => {
+          if ((c.userNotes === undefined || c.userNotes === null || c.userNotes === '') && item.teacherNotes?.[c.id]) {
+            c.userNotes = item.teacherNotes[c.id];
+          }
+        });
+      }
+    }
+  }
   return { success: true, evaluation: item };
 }
 async function saveEvaluationResultRecord(params) {
@@ -936,12 +957,64 @@ async function saveEvaluationResultRecord(params) {
   }
   const now = (/* @__PURE__ */ new Date()).toISOString();
   const calculatedScore = typeof params.score === "number" ? params.score : params.analysisResult.rubricCriteria?.reduce((acc, c) => acc + (c.proposedScore ?? 0), 0) ?? item.score;
-  item.analysisResult = params.analysisResult;
   item.score = calculatedScore;
   item.status = "COMPLETED";
   item.updatedAt = now;
   if (params.title?.trim()) item.title = params.title.trim();
   if (params.subject?.trim()) item.subject = params.subject.trim();
+
+  // 1. Bảo toàn và đồng bộ hai chiều customProposals
+  const mergedProposals = {
+    ...(item.customProposals || {}),
+    ...(item.analysisResult?.customProposals || {}),
+    ...(params.customProposals || {}),
+    ...(params.analysisResult?.customProposals || {}),
+  };
+  item.customProposals = mergedProposals;
+
+  // 2. Bảo toàn và đồng bộ hai chiều teacherNotes
+  const mergedNotes = {
+    ...(item.teacherNotes || {}),
+    ...(item.analysisResult?.teacherNotes || {}),
+    ...(params.teacherNotes || {}),
+    ...(params.analysisResult?.teacherNotes || {}),
+  };
+  if (Array.isArray(params.analysisResult?.redTeamCards)) {
+    params.analysisResult.redTeamCards.forEach(c => {
+      if (c.userNotes !== undefined && c.userNotes !== null) {
+        mergedNotes[c.id] = c.userNotes;
+      }
+    });
+  }
+  item.teacherNotes = mergedNotes;
+
+  // 3. Đồng bộ redTeamCards
+  let synchronizedCards = params.analysisResult?.redTeamCards || item.analysisResult?.redTeamCards || [];
+  if (Array.isArray(synchronizedCards)) {
+    const existingCardsMap = new Map((item.analysisResult?.redTeamCards || []).map(c => [c.id, c]));
+    synchronizedCards = synchronizedCards.map(newCard => {
+      const existing = existingCardsMap.get(newCard.id);
+      const noteFromMap = mergedNotes[newCard.id];
+      const effectiveNote = newCard.userNotes !== undefined
+        ? newCard.userNotes
+        : (noteFromMap !== undefined ? noteFromMap : (existing?.userNotes || ''));
+      return {
+        ...(existing || {}),
+        ...newCard,
+        userNotes: effectiveNote,
+        status: newCard.status || existing?.status || 'Chưa xử lý',
+      };
+    });
+  }
+
+  // 4. Gán analysisResult hoàn chỉnh
+  item.analysisResult = {
+    ...params.analysisResult,
+    redTeamCards: synchronizedCards,
+    customProposals: mergedProposals,
+    teacherNotes: mergedNotes,
+  };
+
   if (params.draftText !== void 0) {
     item.draftText = params.draftText;
     if (!item.originalText) {
@@ -952,13 +1025,6 @@ async function saveEvaluationResultRecord(params) {
   item.changeSet = finalChangeSet;
   if (item.analysisResult) {
     item.analysisResult.changeSet = finalChangeSet;
-  }
-  if (params.customProposals || params.analysisResult.customProposals) {
-    const proposals = params.customProposals || params.analysisResult.customProposals || {};
-    item.customProposals = { ...item.customProposals || {}, ...proposals };
-    if (item.analysisResult) {
-      item.analysisResult.customProposals = item.customProposals;
-    }
   }
   item.versionsHistory = item.versionsHistory || [];
   const existingV = item.versionsHistory.find((v) => v.version === item.currentVersion);
@@ -1404,7 +1470,7 @@ async function handler(req, res) {
       if (!auth) {
         return res.status(401).json({ error: "Y\xEAu c\u1EA7u \u0111\u0103ng nh\u1EADp \u0111\u1EC3 l\u01B0u k\u1EBFt qu\u1EA3 h\u1ED3 s\u01A1" });
       }
-      const { evaluationId, analysisResult, title, subject, score, draftText, changeSet, customProposals } = body || {};
+      const { evaluationId, analysisResult, title, subject, score, draftText, changeSet, customProposals, teacherNotes } = body || {};
       if (!evaluationId || !analysisResult) {
         return res.status(400).json({ error: "Thi\u1EBFu m\xE3 h\u1ED3 s\u01A1 ho\u1EB7c k\u1EBFt qu\u1EA3 ph\xE2n t\xEDch" });
       }
@@ -1417,7 +1483,8 @@ async function handler(req, res) {
         score,
         draftText,
         changeSet,
-        customProposals
+        customProposals,
+        teacherNotes
       });
       if (!result.success) {
         const isForbidden = result.error?.includes("B\u1EA3o m\u1EADt");
