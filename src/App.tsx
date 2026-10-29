@@ -54,6 +54,7 @@ import {
   EvaluationItem,
   ChangeSetItem
 } from './types';
+import { normalizeTeacherNotes, resolveCardTeacherNote } from './utils/evaluationNotes';
 
 export default function App() {
   const { user, guestId, role, hasQuotaForMode, openQuotaModal, updateUserQuota, isAdmin, openAdminModal, isLoading: isAuthLoading, isLoggedIn, openAuthModal } = useAuth();
@@ -283,35 +284,85 @@ export default function App() {
         }
         const data = await resp.json();
         if (data.success && data.evaluation?.analysisResult) {
-          // Hợp nhất đồng bộ customProposals và teacherNotes từ backend và cache cục bộ
+          // Hợp nhất đồng bộ customProposals từ backend và cache cục bộ
           const restoredProposals: Record<string, any> = {
             ...(data.evaluation.customProposals || {}),
             ...(data.evaluation.analysisResult.customProposals || {}),
           };
-          const restoredNotes: Record<string, string> = {
+
+          // NGUỒN DỮ LIỆU GHI CHÚ CHÍNH THỨC:
+          // Thu thập từ server (cả evaluation.teacherNotes và evaluation.analysisResult.teacherNotes)
+          const serverNotesRaw = {
             ...(data.evaluation.teacherNotes || {}),
-            ...(data.evaluation.analysisResult.teacherNotes || {}),
+            ...(data.evaluation.analysisResult?.teacherNotes || {}),
           };
 
+          // Thu thập từ localStorage (cả từ điển theo hồ sơ, scoped keys và legacy)
+          const localNotesCollected: Record<string, string> = {};
           try {
             if (typeof localStorage !== 'undefined') {
+              const userEmailKey = (user?.email || localStorage.getItem('skkn_user_email') || 'guest').toLowerCase().trim();
+              const evalKey = targetEvalId;
+
+              // 1. Từ điển ghi chú riêng của hồ sơ
+              const evalNotesStr = localStorage.getItem(`skkn_eval_notes_${evalKey}`);
+              if (evalNotesStr) {
+                try {
+                  Object.assign(localNotesCollected, JSON.parse(evalNotesStr));
+                } catch (_) {}
+              }
+
+              // 2. Từ điển tổng hợp skkn_all_teacher_notes
+              const allNotesStr = localStorage.getItem('skkn_all_teacher_notes');
+              if (allNotesStr) {
+                try {
+                  Object.assign(localNotesCollected, JSON.parse(allNotesStr));
+                } catch (_) {}
+              }
+
+              // 3. Quét các khóa scoped theo tài khoản và hồ sơ
+              for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && k.startsWith(`skkn_note_${userEmailKey}_${evalKey}_`)) {
+                  const cardKey = k.replace(`skkn_note_${userEmailKey}_${evalKey}_`, '');
+                  const val = localStorage.getItem(k);
+                  if (cardKey && val) {
+                    localNotesCollected[cardKey] = val;
+                  }
+                }
+              }
+
+              // Proposals
               const localProposals = JSON.parse(localStorage.getItem('skkn_all_custom_proposals') || '{}');
               Object.assign(restoredProposals, localProposals);
-              const localNotes = JSON.parse(localStorage.getItem('skkn_all_teacher_notes') || '{}');
-              Object.assign(restoredNotes, localNotes);
             }
           } catch (_) {}
 
+          // Chuẩn hóa triệt để: loại bỏ mọi khóa rác có tiền tố, chỉ giữ cardId chuẩn
+          const restoredNotes = normalizeTeacherNotes({
+            ...serverNotesRaw,
+            ...localNotesCollected,
+          }, targetEvalId);
+
+          // Đồng bộ vào synchronizedCards:
+          // BẢO VỆ GHI CHÚ: Nếu restoredNotes[c.id] có nội dung (giáo viên đã nhập/sửa),
+          // đây là dữ liệu mới nhất, TUYỆT ĐỐI không để c.userNotes cũ từ đĩa server ghi đè lên!
           const synchronizedCards = (data.evaluation.analysisResult.redTeamCards || []).map((c: any) => {
-            const note = (c.userNotes && typeof c.userNotes === 'string' && c.userNotes.trim())
-              ? c.userNotes
-              : (restoredNotes[c.id] || '');
-            if (note && !restoredNotes[c.id]) {
-              restoredNotes[c.id] = note;
+            let cleanCardId = c.id;
+            const noteFromRestored = restoredNotes[cleanCardId];
+            const noteFromCard = (c.userNotes && typeof c.userNotes === 'string') ? c.userNotes.trim() : '';
+
+            let finalNote = '';
+            if (typeof noteFromRestored === 'string' && noteFromRestored.trim()) {
+              finalNote = noteFromRestored;
+            } else if (noteFromCard) {
+              finalNote = noteFromCard;
+              restoredNotes[cleanCardId] = noteFromCard;
             }
+
             return {
               ...c,
-              userNotes: note,
+              userNotes: finalNote,
             };
           });
 
@@ -421,8 +472,12 @@ export default function App() {
           headers,
           body: JSON.stringify({
             evaluationId: currentEvaluationId,
+            teacherNotes: resultToSave.teacherNotes || analysis.teacherNotes,
+            customProposals: resultToSave.customProposals || analysis.customProposals,
             analysisResult: {
               ...resultToSave,
+              teacherNotes: resultToSave.teacherNotes || analysis.teacherNotes,
+              customProposals: resultToSave.customProposals || analysis.customProposals,
               changeSet: payloadChangeSet,
             },
             title: docTitle,
@@ -666,14 +721,26 @@ export default function App() {
     cardId: string,
     notes: string
   ): Promise<{ success: boolean; error?: string }> => {
+    const evalKey = currentEvaluationId || 'default';
+    const userEmailKey = (user?.email || 'guest').toLowerCase().trim();
+
+    // Chuẩn hóa cardId: bỏ mọi tiền tố nếu có
+    let cleanCardId = cardId.trim();
+    if (evalKey && cleanCardId.startsWith(`${evalKey}_`)) {
+      cleanCardId = cleanCardId.slice(`${evalKey}_`.length);
+    }
+
     const updatedCards = analysis.redTeamCards.map(c =>
-      c.id === cardId ? { ...c, userNotes: notes } : c
+      c.id === cleanCardId ? { ...c, userNotes: notes } : c
     );
-    const updatedTeacherNotes = {
+
+    // Cập nhật teacherNotes dictionary với khóa chuẩn cleanCardId
+    // Đồng thời dọn dẹp các khóa rác có tiền tố
+    const updatedTeacherNotes = normalizeTeacherNotes({
       ...(analysis.teacherNotes || {}),
       ...(customAnalysis?.teacherNotes || {}),
-      [cardId]: notes,
-    };
+      [cleanCardId]: notes,
+    }, evalKey);
 
     // 1. Cập nhật ngay React State
     setAnalysis(prev => ({
@@ -689,17 +756,21 @@ export default function App() {
       }) : null);
     }
 
-    // 2. Backup tức thì vào localStorage với scoped key và legacy key
+    // 2. Backup tức thì vào localStorage với chuẩn hóa khóa
     try {
       if (typeof localStorage !== 'undefined') {
-        const userEmailKey = (user?.email || 'guest').toLowerCase().trim();
-        const evalKey = currentEvaluationId || 'default';
-        localStorage.setItem(`skkn_note_${userEmailKey}_${evalKey}_${cardId}`, notes);
-        localStorage.setItem(`skkn_note_${cardId}`, notes);
+        localStorage.setItem(`skkn_note_${userEmailKey}_${evalKey}_${cleanCardId}`, notes);
+        localStorage.setItem(`skkn_note_${cleanCardId}`, notes);
 
+        // Lưu từ điển riêng của hồ sơ
+        const currentEvalNotes = JSON.parse(localStorage.getItem(`skkn_eval_notes_${evalKey}`) || '{}');
+        currentEvalNotes[cleanCardId] = notes;
+        localStorage.setItem(`skkn_eval_notes_${evalKey}`, JSON.stringify(currentEvalNotes));
+
+        // Cập nhật skkn_all_teacher_notes (CHỈ DÙNG KHÓA CHUẨN cleanCardId, xóa khóa ghép cũ)
         const currentAllNotes = JSON.parse(localStorage.getItem('skkn_all_teacher_notes') || '{}');
-        currentAllNotes[cardId] = notes;
-        currentAllNotes[`${evalKey}_${cardId}`] = notes;
+        delete currentAllNotes[`${evalKey}_${cleanCardId}`];
+        currentAllNotes[cleanCardId] = notes;
         localStorage.setItem('skkn_all_teacher_notes', JSON.stringify(currentAllNotes));
       }
     } catch (_) {}

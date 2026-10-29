@@ -13,7 +13,7 @@
       "licenseKey": "SKKN-ADMIN-SYSTEM",
       "licenseExpiresAt": null,
       "createdAt": "2026-10-07T00:29:18.129Z",
-      "lastActiveAt": "2026-10-23T08:35:26.640Z",
+      "lastActiveAt": "2026-10-29T15:33:53.065Z",
       "isBlocked": false,
       "picture": "https://lh3.googleusercontent.com/a/ACg8ocJ_uW-RC5IuVcgYYhb8i9A16OPkteLCs4CLI63kdGbWptuEgXbj=s96-c"
     },
@@ -30,7 +30,7 @@
       "licenseKey": "SKKN-PRO-2025-VIP",
       "licenseExpiresAt": null,
       "createdAt": "2026-10-07T00:29:36.299Z",
-      "lastActiveAt": "2026-10-23T08:35:26.562Z",
+      "lastActiveAt": "2026-10-29T15:33:52.935Z",
       "isBlocked": false
     },
     "giaovien.test@gmail.com": {
@@ -47,7 +47,7 @@
       "licenseExpiresAt": null,
       "freeAccess": false,
       "createdAt": "2026-10-07T08:26:28.778Z",
-      "lastActiveAt": "2026-10-23T08:35:26.601Z",
+      "lastActiveAt": "2026-10-29T15:33:52.999Z",
       "isBlocked": false
     },
     "giaovien.moi.2026@gmail.com": {
@@ -95,7 +95,7 @@
       "licenseExpiresAt": null,
       "freeAccess": false,
       "createdAt": "2026-10-09T15:04:50.633Z",
-      "lastActiveAt": "2026-10-23T08:35:26.501Z",
+      "lastActiveAt": "2026-10-29T15:33:52.862Z",
       "isBlocked": false
     },
     "new_teacher@school.edu.vn": {
@@ -110,7 +110,7 @@
       },
       "licenseExpiresAt": null,
       "createdAt": "2026-10-09T15:05:17.128Z",
-      "lastActiveAt": "2026-10-23T08:35:26.628Z",
+      "lastActiveAt": "2026-10-29T15:33:53.043Z",
       "isBlocked": false,
       "freeAccess": false
     },
@@ -292,7 +292,7 @@
     }
   },
   "stats": {
-    "totalAnalyses": 79
+    "totalAnalyses": 82
   },
   "settings": {
     "guestEasyLimit": 3,

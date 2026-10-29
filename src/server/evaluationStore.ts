@@ -1,11 +1,17 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import crypto from 'crypto';
 import { EvaluationItem, EvaluationVersionItem, StorageAuditLog, StorageStats, SKKNAnalysisResult } from '../types/index';
 import { findUserByEmailOrId, ROOT_ADMIN_EMAILS } from './authStore';
+import { normalizeTeacherNotes } from '../utils/evaluationNotes';
+
+export { normalizeTeacherNotes };
 
 const DATA_DIR = path.resolve('data');
 const EVALUATIONS_FILE = path.join(DATA_DIR, 'evaluations_store.json');
+const TMP_DATA_DIR = path.join(os.tmpdir(), 'skkn_data');
+const TMP_EVALUATIONS_FILE = path.join(TMP_DATA_DIR, 'evaluations_store.json');
 
 interface EvaluationsStoreData {
   evaluations: Record<string, EvaluationItem>;
@@ -343,7 +349,7 @@ Sáng kiến mang lại hiệu quả thiết thực trong việc đổi mới ph
 export function loadEvaluationsStore() {
   try {
     if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+      try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (_) {}
     }
     if (fs.existsSync(EVALUATIONS_FILE)) {
       const content = fs.readFileSync(EVALUATIONS_FILE, 'utf-8');
@@ -353,8 +359,32 @@ export function loadEvaluationsStore() {
         auditLogs: parsed.auditLogs || [],
       };
     }
+    // Nếu có dữ liệu mới hơn được lưu tạm trong /tmp (đặc biệt trong môi trường Vercel serverless)
+    if (fs.existsSync(TMP_EVALUATIONS_FILE)) {
+      try {
+        const tmpContent = fs.readFileSync(TMP_EVALUATIONS_FILE, 'utf-8');
+        const tmpParsed = JSON.parse(tmpContent);
+        if (tmpParsed && tmpParsed.evaluations) {
+          Object.entries(tmpParsed.evaluations).forEach(([id, item]: [string, any]) => {
+            store.evaluations[id] = {
+              ...(store.evaluations[id] || {}),
+              ...item,
+            };
+          });
+        }
+      } catch (_) {}
+    }
     // Đảm bảo hồ sơ Tin học 11 điểm 35.0 của người dùng dathien2412@gmail.com luôn được khôi phục bền vững
     ensureDefaultEvaluations();
+    // Chuẩn hóa toàn bộ teacherNotes trong store để loại bỏ mọi khóa rác có tiền tố
+    Object.values(store.evaluations).forEach(item => {
+      if (item.teacherNotes) {
+        item.teacherNotes = normalizeTeacherNotes(item.teacherNotes, item.id);
+      }
+      if (item.analysisResult && (item.analysisResult as any).teacherNotes) {
+        (item.analysisResult as any).teacherNotes = normalizeTeacherNotes((item.analysisResult as any).teacherNotes, item.id);
+      }
+    });
   } catch (err) {
     console.error('Không thể tải evaluations_store.json, khởi tạo bộ nhớ rỗng:', err);
     ensureDefaultEvaluations();
@@ -374,21 +404,54 @@ export function reloadEvaluationsStoreFromDisk() {
         store.auditLogs = parsed.auditLogs || [];
       }
     }
+    // Hợp nhất dữ liệu từ /tmp nếu có
+    if (fs.existsSync(TMP_EVALUATIONS_FILE)) {
+      try {
+        const tmpContent = fs.readFileSync(TMP_EVALUATIONS_FILE, 'utf-8');
+        const tmpParsed = JSON.parse(tmpContent);
+        if (tmpParsed && tmpParsed.evaluations) {
+          Object.entries(tmpParsed.evaluations).forEach(([id, item]: [string, any]) => {
+            store.evaluations[id] = {
+              ...(store.evaluations[id] || {}),
+              ...item,
+            };
+          });
+        }
+      } catch (_) {}
+    }
     ensureDefaultEvaluations();
+    Object.values(store.evaluations).forEach(item => {
+      if (item.teacherNotes) {
+        item.teacherNotes = normalizeTeacherNotes(item.teacherNotes, item.id);
+      }
+      if (item.analysisResult && (item.analysisResult as any).teacherNotes) {
+        (item.analysisResult as any).teacherNotes = normalizeTeacherNotes((item.analysisResult as any).teacherNotes, item.id);
+      }
+    });
   } catch (_) {
     ensureDefaultEvaluations();
   }
 }
 
 export function saveEvaluationsStore() {
+  const serialized = JSON.stringify(store, null, 2);
+  // 1. Thử lưu vào DATA_DIR (thành công trên môi trường cục bộ/Node server)
   try {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
-    fs.writeFileSync(EVALUATIONS_FILE, JSON.stringify(store, null, 2), 'utf-8');
+    fs.writeFileSync(EVALUATIONS_FILE, serialized, 'utf-8');
   } catch (err) {
-    console.error('Không thể lưu evaluations_store.json vào đĩa:', err);
+    // Filesystem có thể là read-only trên Vercel/Serverless
   }
+
+  // 2. Đồng thời luôn ghi vào TMP_DATA_DIR (bảo đảm quyền ghi 100% trên AWS Lambda / Vercel Serverless)
+  try {
+    if (!fs.existsSync(TMP_DATA_DIR)) {
+      fs.mkdirSync(TMP_DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(TMP_EVALUATIONS_FILE, serialized, 'utf-8');
+  } catch (_) {}
 }
 
 // Helper ghi nhận nhật ký lưu trữ bền vững (STORAGE_AUDIT)
@@ -645,21 +708,29 @@ export async function getEvaluationDetail(evalId: string, userEmail: string): Pr
         ...item.customProposals,
       };
     }
-    item.teacherNotes = item.teacherNotes || {};
+    
+    // NGUỒN DỮ LIỆU CHÍNH THỨC CHO GHI CHÚ:
+    // Hợp nhất và chuẩn hóa tuyệt đối giữa item.teacherNotes, analysisResult.teacherNotes và cards
+    const rawNotesToMerge = {
+      ...((item.analysisResult as any).teacherNotes || {}),
+      ...(item.teacherNotes || {}),
+    };
+    const cleanNotes = normalizeTeacherNotes(rawNotesToMerge, item.id);
+
+    // Đồng bộ vào cards
     if (Array.isArray(item.analysisResult.redTeamCards)) {
       item.analysisResult.redTeamCards.forEach(c => {
-        if (c.userNotes && c.userNotes.trim() && !item.teacherNotes![c.id]) {
-          item.teacherNotes![c.id] = c.userNotes;
-        }
-        if ((!c.userNotes || !c.userNotes.trim()) && item.teacherNotes?.[c.id]) {
-          c.userNotes = item.teacherNotes[c.id];
+        const cleanCardNote = cleanNotes[c.id];
+        if (typeof cleanCardNote === 'string' && cleanCardNote.trim()) {
+          c.userNotes = cleanCardNote;
+        } else if (c.userNotes && typeof c.userNotes === 'string' && c.userNotes.trim() && !cleanNotes[c.id]) {
+          cleanNotes[c.id] = c.userNotes.trim();
         }
       });
     }
-    (item.analysisResult as any).teacherNotes = {
-      ...((item.analysisResult as any).teacherNotes || {}),
-      ...item.teacherNotes,
-    };
+
+    item.teacherNotes = cleanNotes;
+    (item.analysisResult as any).teacherNotes = { ...cleanNotes };
   }
 
   return { success: true, evaluation: item };
@@ -713,40 +784,45 @@ export async function saveEvaluationResultRecord(params: {
   };
   item.customProposals = mergedProposals;
 
-  // 2. Bảo toàn và đồng bộ hai chiều teacherNotes (tuyệt đối không bao giờ bị ghi đè mất hoặc bị chuỗi rỗng xóa)
-  const mergedNotes: Record<string, string> = {
-    ...(item.teacherNotes || {}),
-    ...((item.analysisResult as any)?.teacherNotes || {}),
+  // 2. CHUẨN HÓA VÀ THỐNG NHẤT NGUỒN DỮ LIỆU GHI CHÚ CHÍNH THỨC:
+  // Thu thập ghi chú từ tất cả các nguồn và chuẩn hóa khóa theo cardId thuần
+  const rawMergedNotes: Record<string, string> = {
+    ...normalizeTeacherNotes((item.analysisResult as any)?.teacherNotes, params.evaluationId),
+    ...normalizeTeacherNotes(item.teacherNotes, params.evaluationId),
   };
 
   // 2.1. Đọc notes từ params.analysisResult.redTeamCards (chỉ lấy nếu có nội dung)
   if (Array.isArray(params.analysisResult?.redTeamCards)) {
     params.analysisResult.redTeamCards.forEach(c => {
       if (typeof c.userNotes === 'string' && c.userNotes.trim()) {
-        mergedNotes[c.id] = c.userNotes;
+        rawMergedNotes[c.id] = c.userNotes.trim();
       }
     });
   }
 
-  // 2.2. Đọc notes từ params.analysisResult.teacherNotes (nếu có nội dung)
+  // 2.2. Đọc notes từ params.analysisResult.teacherNotes (chuẩn hóa khóa)
   if ((params.analysisResult as any)?.teacherNotes && typeof (params.analysisResult as any).teacherNotes === 'object') {
-    Object.entries((params.analysisResult as any).teacherNotes).forEach(([cardId, noteText]) => {
+    const norm = normalizeTeacherNotes((params.analysisResult as any).teacherNotes, params.evaluationId);
+    Object.entries(norm).forEach(([cardId, noteText]) => {
       if (typeof noteText === 'string' && noteText.trim()) {
-        mergedNotes[cardId] = noteText;
+        rawMergedNotes[cardId] = noteText;
       }
     });
   }
 
   // 2.3. Ưu tiên cao nhất: params.teacherNotes được truyền trực tiếp từ hành động lưu của giáo viên
   if (params.teacherNotes && typeof params.teacherNotes === 'object') {
-    Object.entries(params.teacherNotes).forEach(([cardId, noteText]) => {
+    const normDirect = normalizeTeacherNotes(params.teacherNotes, params.evaluationId);
+    Object.entries(normDirect).forEach(([cardId, noteText]) => {
       if (typeof noteText === 'string') {
-        mergedNotes[cardId] = noteText;
+        rawMergedNotes[cardId] = noteText;
       }
     });
   }
 
-  item.teacherNotes = mergedNotes;
+  // Chuẩn hóa triệt để: không còn khóa ghép kiểu "evalId_cardId"
+  const finalCleanNotes = normalizeTeacherNotes(rawMergedNotes, params.evaluationId);
+  item.teacherNotes = finalCleanNotes;
 
   // 3. Đồng bộ redTeamCards (giữ nguyên userNotes và status của từng card đã lưu)
   let synchronizedCards = params.analysisResult?.redTeamCards || item.analysisResult?.redTeamCards || [];
@@ -754,20 +830,20 @@ export async function saveEvaluationResultRecord(params: {
     const existingCardsMap = new Map((item.analysisResult?.redTeamCards || []).map(c => [c.id, c]));
     synchronizedCards = synchronizedCards.map(newCard => {
       const existing = existingCardsMap.get(newCard.id);
-      const noteFromMap = mergedNotes[newCard.id];
+      const noteFromMap = finalCleanNotes[newCard.id];
 
       // Thứ tự ưu tiên xác định ghi chú của card:
       // Ưu tiên 1 (Tuyệt đối): params.teacherNotes nếu giáo viên chủ động lưu ghi chú cho card này
-      // Ưu tiên 2: Ghi chú mới từ newCard nếu có nội dung
-      // Ưu tiên 3: Ghi chú trong bảng mergedNotes của hồ sơ
+      // Ưu tiên 2: noteFromMap (từ từ điển finalCleanNotes chuẩn)
+      // Ưu tiên 3: Ghi chú mới từ newCard nếu có nội dung
       // Ưu tiên 4: Ghi chú đã lưu trước đó trong existing card
       let effectiveNote = '';
-      if (params.teacherNotes && params.teacherNotes[newCard.id] !== undefined) {
-        effectiveNote = params.teacherNotes[newCard.id];
-      } else if (typeof newCard.userNotes === 'string' && newCard.userNotes.trim()) {
-        effectiveNote = newCard.userNotes;
+      if (params.teacherNotes && (params.teacherNotes[newCard.id] !== undefined || params.teacherNotes[`${params.evaluationId}_${newCard.id}`] !== undefined)) {
+        effectiveNote = finalCleanNotes[newCard.id] ?? '';
       } else if (typeof noteFromMap === 'string' && noteFromMap.trim()) {
         effectiveNote = noteFromMap;
+      } else if (typeof newCard.userNotes === 'string' && newCard.userNotes.trim()) {
+        effectiveNote = newCard.userNotes;
       } else if (typeof existing?.userNotes === 'string' && existing.userNotes.trim()) {
         effectiveNote = existing.userNotes;
       }
@@ -781,12 +857,12 @@ export async function saveEvaluationResultRecord(params: {
     });
   }
 
-  // 4. Lưu analysisResult hoàn chỉnh và đồng bộ
+  // 4. Lưu analysisResult hoàn chỉnh và đồng bộ 100%
   item.analysisResult = {
     ...params.analysisResult,
     redTeamCards: synchronizedCards,
     customProposals: mergedProposals,
-    teacherNotes: mergedNotes,
+    teacherNotes: finalCleanNotes,
   };
 
   // Lưu bản nháp đã sửa và danh sách thay đổi changeSet
@@ -832,7 +908,7 @@ export async function saveEvaluationResultRecord(params: {
     status: 'SUCCESS',
   });
 
-  // Đồng bộ lên Google Drive / Sheets
+  // Đồng bộ lên Google Drive / Sheets với item.analysisResult ĐÃ ĐỒNG BỘ HOÀN TOÀN
   if (process.env.LICENSE_API_URL) {
     const remote = await callAppsScriptStorage('saveEvaluationResult', {
       evaluationId: item.id,
@@ -841,7 +917,7 @@ export async function saveEvaluationResultRecord(params: {
       score: item.score,
       status: item.status,
       title: item.title,
-      analysisResult: JSON.stringify(params.analysisResult),
+      analysisResult: JSON.stringify(item.analysisResult),
       operatorEmail: cleanEmail,
     });
     if (remote.success && remote.data?.latestResultFileId) {

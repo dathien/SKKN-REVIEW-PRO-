@@ -15,14 +15,14 @@
       "originalFileSize": 48520,
       "wordCount": 4250,
       "createdAt": "2026-10-18T10:15:00.000Z",
-      "updatedAt": "2026-10-29T13:24:19.339Z",
+      "updatedAt": "2026-10-29T15:32:35.049Z",
       "originalText": "BÁO CÁO SÁNG KIẾN KINH NGHIỆM\nTên sáng kiến: Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\nTác giả: GV. Hồ Nguyễn Đa Thiện - Trường THPT Chuyên\n\nPhần I. ĐẶT VẤN ĐỀ\nTrong chương trình GDPT 2018 môn Tin học 11, mạch kiến thức Khoa học máy tính và Lập trình đóng vai trò then chốt nhưng học sinh thường gặp khó khăn trong việc tư duy thuật toán và hiện thực hóa bài toán thực tế. Học sinh thường học thuộc lòng cú pháp Python nhưng khi gặp bài toán thực tế thì bế tắc không biết phân tích bài toán.\n\nPhần II. NỘI DUNG VÀ BIỆN PHÁP THỰC HIỆN\nMục 3.2 & Mục 4.1. Tiến hành thực nghiệm tại lớp 11A1 và đối chứng tại lớp 11A2; sau một học kỳ áp dụng dự án Python, kết quả học tập lớp 11A1 cao hơn rõ rệt.\nMục 4.2. Thiết kế 3 dự án nhỏ: Quản lý thư viện, Mô phỏng chuyển động vật lý và Chatbot tra cứu thông tin.\nMục 4.3. Để hoàn thành các dự án lớn, học sinh tiếp tục hoàn thiện code trên máy tính cá nhân ở nhà và nộp link qua hệ thống trực tuyến.\n\nPhần III. HIỆU QUẢ CỦA SÁNG KIẾN\nMục 5, Trang 22. Sau thời gian áp dụng giải pháp, 100% học sinh trong lớp đều say mê học tập và không còn em nào cảm thấy sợ lập trình Python.\n\nPhần IV. KẾT LUẬN VÀ KIẾN NGHỊ\nSáng kiến mang lại hiệu quả thiết thực trong việc đổi mới phương pháp dạy học lập trình bậc THPT.",
       "draftText": "BÁO CÁO SÁNG KIẾN KINH NGHIỆM\nTên sáng kiến: Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\nTác giả: GV. Hồ Nguyễn Đa Thiện - Trường THPT Chuyên\n\nPhần I. ĐẶT VẤN ĐỀ\nTrong chương trình GDPT 2018 môn Tin học 11, mạch kiến thức Khoa học máy tính và Lập trình đóng vai trò then chốt nhưng học sinh thường gặp khó khăn trong việc tư duy thuật toán và hiện thực hóa bài toán thực tế. Học sinh thường học thuộc lòng cú pháp Python nhưng khi gặp bài toán thực tế thì bế tắc không biết phân tích bài toán.\n\nPhần II. NỘI DUNG VÀ BIỆN PHÁP THỰC HIỆN\nMục 3.2 & Mục 4.1. Tiến hành thực nghiệm tại lớp 11A1 và đối chứng tại lớp 11A2; sau một học kỳ áp dụng dự án Python, kết quả học tập lớp 11A1 cao hơn rõ rệt.\nMục 4.2. Thiết kế 3 dự án nhỏ: Quản lý thư viện, Mô phỏng chuyển động vật lý và Chatbot tra cứu thông tin.\nMục 4.3. Để hoàn thành các dự án lớn, học sinh tiếp tục hoàn thiện code trên máy tính cá nhân ở nhà và nộp link qua hệ thống trực tuyến.\n\nPhần III. HIỆU QUẢ CỦA SÁNG KIẾN\nMục 5, Trang 22. Sau thời gian áp dụng giải pháp, 100% học sinh trong lớp đều say mê học tập và không còn em nào cảm thấy sợ lập trình Python.\n\nPhần IV. KẾT LUẬN VÀ KIẾN NGHỊ\nSáng kiến mang lại hiệu quả thiết thực trong việc đổi mới phương pháp dạy học lập trình bậc THPT.",
       "changeSet": [],
       "versionsHistory": [
         {
           "version": 1,
-          "createdAt": "2026-10-29T13:24:19.339Z",
+          "createdAt": "2026-10-29T15:32:35.049Z",
           "score": 35,
           "notes": "Thẩm định lần đầu (Bản gốc v1) - Đạt 35.0/100 điểm Rubric",
           "resultSummary": "Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11"
@@ -201,7 +201,7 @@
             "whyItMatters": "Hội đồng sẽ chất vấn: Căn cứ nào khẳng định điểm số lớp 11A1 cao hơn là do phương pháp mới mà không phải do học sinh lớp này vốn đã có năng lực tư duy tốt hơn từ trước?",
             "resolutionGuidance": "Bổ sung giải trình về tính tương đương đầu vào hoặc điều chỉnh thiết kế nghiên cứu nêu rõ giới hạn khảo sát [CẦN BỔ SUNG MINH CHỨNG].",
             "requiredEvidence": "Phiếu khảo sát hoặc điểm số học kỳ trước làm đối chứng tương đương.",
-            "userNotes": "Ghi chú GV kiểm thử: Đã rà soát mẫu khảo sát 75 học sinh"
+            "userNotes": "Ghi chú thử nghiệm L-02 (Bản sửa mới nhất): Đã cập nhật phụ lục minh chứng 3 và đối soát điểm số học kỳ"
           },
           {
             "id": "rtc-2",
@@ -217,7 +217,7 @@
             "whyItMatters": "Tuyên bố 100% say mê học tập là khẳng định cảm tính, thiếu chuẩn mực khoa học, dễ bị giám khảo trừ điểm nặng về tính trung thực và phương pháp nghiên cứu.",
             "resolutionGuidance": "Điều chỉnh diễn đạt chuẩn xác theo số liệu khảo sát thực tế, không dùng từ tuyệt đối [CẦN BỔ SUNG SỐ LIỆU THỰC TẾ].",
             "requiredEvidence": "Phiếu khảo sát thái độ học tập hoặc biên bản dự giờ thực tế.",
-            "userNotes": "Ghi chú GV kiểm thử: Đã hiệu chỉnh số liệu thực nghiệm Mục 5"
+            "userNotes": "Ghi chú vấn đề 2: Đã điều chỉnh con số 100% thành 84.5% theo mẫu khảo sát"
           },
           {
             "id": "rtc-3",
@@ -373,8 +373,8 @@
           }
         },
         "teacherNotes": {
-          "rtc-1": "Ghi chú GV kiểm thử: Đã rà soát mẫu khảo sát 75 học sinh",
-          "rtc-2": "Ghi chú GV kiểm thử: Đã hiệu chỉnh số liệu thực nghiệm Mục 5",
+          "rtc-1": "Ghi chú thử nghiệm L-02 (Bản sửa mới nhất): Đã cập nhật phụ lục minh chứng 3 và đối soát điểm số học kỳ",
+          "rtc-2": "Ghi chú vấn đề 2: Đã điều chỉnh con số 100% thành 84.5% theo mẫu khảo sát",
           "rtc-3": ""
         }
       },
@@ -401,13 +401,263 @@
         }
       },
       "teacherNotes": {
-        "rtc-1": "Ghi chú GV kiểm thử: Đã rà soát mẫu khảo sát 75 học sinh",
-        "rtc-2": "Ghi chú GV kiểm thử: Đã hiệu chỉnh số liệu thực nghiệm Mục 5",
+        "rtc-1": "Ghi chú thử nghiệm L-02 (Bản sửa mới nhất): Đã cập nhật phụ lục minh chứng 3 và đối soát điểm số học kỳ",
+        "rtc-2": "Ghi chú vấn đề 2: Đã điều chỉnh con số 100% thành 84.5% theo mẫu khảo sát",
         "rtc-3": ""
       }
     }
   },
   "auditLogs": [
+    {
+      "auditId": "audit_1793288033061_wc0ix",
+      "timestamp": "2026-10-29T15:33:53.061Z",
+      "action": "DELETE",
+      "userId": "usr_1791361588777_veinc",
+      "userEmail": "giaovien.test@gmail.com",
+      "evaluationId": "eval_1793288033006_0a2db1",
+      "details": "Xóa hồ sơ: \"Ứng dụng sơ đồ tư duy kết hợp phần mềm tương tác môn Lịch sử 8 (Đã nâng cấp)\"",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793288033032_303bx",
+      "timestamp": "2026-10-29T15:33:53.032Z",
+      "action": "SAVE_RESULT",
+      "userId": "usr_1791361588777_veinc",
+      "userEmail": "giaovien.test@gmail.com",
+      "evaluationId": "eval_1793288033006_0a2db1",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng sơ đồ tư duy kết hợp phần mềm tương tác môn Lịch sử 8 (Đã nâng cấp)\" (Điểm: 38)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793288033011_ne2im",
+      "timestamp": "2026-10-29T15:33:53.011Z",
+      "action": "CREATE",
+      "userId": "usr_1791361588777_veinc",
+      "userEmail": "giaovien.test@gmail.com",
+      "evaluationId": "eval_1793288033006_0a2db1",
+      "details": "Tạo hồ sơ mới: \"Ứng dụng sơ đồ tư duy kết hợp phần mềm tương tác môn Lịch sử 8\" (v1)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793288032994_06uzq",
+      "timestamp": "2026-10-29T15:33:52.994Z",
+      "action": "DELETE",
+      "userId": "usr_1791332976299_ra51d",
+      "userEmail": "teacher1@gmail.com",
+      "evaluationId": "eval_1793288032945_4485ee",
+      "details": "Xóa hồ sơ: \"Sáng kiến kinh nghiệm Đã Đổi Tên Thành Công\"",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793288032971_2etct",
+      "timestamp": "2026-10-29T15:33:52.971Z",
+      "action": "RENAME",
+      "userId": "usr_1791332976299_ra51d",
+      "userEmail": "teacher1@gmail.com",
+      "evaluationId": "eval_1793288032945_4485ee",
+      "details": "Đổi tên hồ sơ từ \"Sáng kiến kinh nghiệm Kiểm thử Tự động\" thành \"Sáng kiến kinh nghiệm Đã Đổi Tên Thành Công\"",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793288032950_eqhkv",
+      "timestamp": "2026-10-29T15:33:52.950Z",
+      "action": "CREATE",
+      "userId": "usr_1791332976299_ra51d",
+      "userEmail": "teacher1@gmail.com",
+      "evaluationId": "eval_1793288032945_4485ee",
+      "details": "Tạo hồ sơ mới: \"Sáng kiến kinh nghiệm Kiểm thử Tự động\" (v1)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793288016636_zx9ji",
+      "timestamp": "2026-10-29T15:33:36.636Z",
+      "action": "DELETE",
+      "userId": "usr_1791361588777_veinc",
+      "userEmail": "giaovien.test@gmail.com",
+      "evaluationId": "eval_1793288016570_14497e",
+      "details": "Xóa hồ sơ: \"Ứng dụng sơ đồ tư duy kết hợp phần mềm tương tác môn Lịch sử 8 (Đã nâng cấp)\"",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793288016605_que6p",
+      "timestamp": "2026-10-29T15:33:36.605Z",
+      "action": "SAVE_RESULT",
+      "userId": "usr_1791361588777_veinc",
+      "userEmail": "giaovien.test@gmail.com",
+      "evaluationId": "eval_1793288016570_14497e",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng sơ đồ tư duy kết hợp phần mềm tương tác môn Lịch sử 8 (Đã nâng cấp)\" (Điểm: 38)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793288016575_rxx79",
+      "timestamp": "2026-10-29T15:33:36.575Z",
+      "action": "CREATE",
+      "userId": "usr_1791361588777_veinc",
+      "userEmail": "giaovien.test@gmail.com",
+      "evaluationId": "eval_1793288016570_14497e",
+      "details": "Tạo hồ sơ mới: \"Ứng dụng sơ đồ tư duy kết hợp phần mềm tương tác môn Lịch sử 8\" (v1)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793288016556_zpdvs",
+      "timestamp": "2026-10-29T15:33:36.556Z",
+      "action": "DELETE",
+      "userId": "usr_1791332976299_ra51d",
+      "userEmail": "teacher1@gmail.com",
+      "evaluationId": "eval_1793288016507_bd8299",
+      "details": "Xóa hồ sơ: \"Sáng kiến kinh nghiệm Đã Đổi Tên Thành Công\"",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793288016534_for7c",
+      "timestamp": "2026-10-29T15:33:36.534Z",
+      "action": "RENAME",
+      "userId": "usr_1791332976299_ra51d",
+      "userEmail": "teacher1@gmail.com",
+      "evaluationId": "eval_1793288016507_bd8299",
+      "details": "Đổi tên hồ sơ từ \"Sáng kiến kinh nghiệm Kiểm thử Tự động\" thành \"Sáng kiến kinh nghiệm Đã Đổi Tên Thành Công\"",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793288016513_3vf7o",
+      "timestamp": "2026-10-29T15:33:36.513Z",
+      "action": "CREATE",
+      "userId": "usr_1791332976299_ra51d",
+      "userEmail": "teacher1@gmail.com",
+      "evaluationId": "eval_1793288016507_bd8299",
+      "details": "Tạo hồ sơ mới: \"Sáng kiến kinh nghiệm Kiểm thử Tự động\" (v1)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793287955052_878h9",
+      "timestamp": "2026-10-29T15:32:35.052Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793287953652_fkwys",
+      "timestamp": "2026-10-29T15:32:33.652Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793287952443_r9z30",
+      "timestamp": "2026-10-29T15:32:32.443Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793287951419_v1qj7",
+      "timestamp": "2026-10-29T15:32:31.419Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793287949545_01fm3",
+      "timestamp": "2026-10-29T15:32:29.545Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793287938331_zlokj",
+      "timestamp": "2026-10-29T15:32:18.331Z",
+      "action": "DELETE",
+      "userId": "usr_1791361588777_veinc",
+      "userEmail": "giaovien.test@gmail.com",
+      "evaluationId": "eval_1793287938266_62ddde",
+      "details": "Xóa hồ sơ: \"Ứng dụng sơ đồ tư duy kết hợp phần mềm tương tác môn Lịch sử 8 (Đã nâng cấp)\"",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793287938300_3kqsv",
+      "timestamp": "2026-10-29T15:32:18.300Z",
+      "action": "SAVE_RESULT",
+      "userId": "usr_1791361588777_veinc",
+      "userEmail": "giaovien.test@gmail.com",
+      "evaluationId": "eval_1793287938266_62ddde",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng sơ đồ tư duy kết hợp phần mềm tương tác môn Lịch sử 8 (Đã nâng cấp)\" (Điểm: 38)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793287938271_qunte",
+      "timestamp": "2026-10-29T15:32:18.271Z",
+      "action": "CREATE",
+      "userId": "usr_1791361588777_veinc",
+      "userEmail": "giaovien.test@gmail.com",
+      "evaluationId": "eval_1793287938266_62ddde",
+      "details": "Tạo hồ sơ mới: \"Ứng dụng sơ đồ tư duy kết hợp phần mềm tương tác môn Lịch sử 8\" (v1)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793287938252_z1pg7",
+      "timestamp": "2026-10-29T15:32:18.252Z",
+      "action": "DELETE",
+      "userId": "usr_1791332976299_ra51d",
+      "userEmail": "teacher1@gmail.com",
+      "evaluationId": "eval_1793287938201_b410e6",
+      "details": "Xóa hồ sơ: \"Sáng kiến kinh nghiệm Đã Đổi Tên Thành Công\"",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793287938229_c4he8",
+      "timestamp": "2026-10-29T15:32:18.229Z",
+      "action": "RENAME",
+      "userId": "usr_1791332976299_ra51d",
+      "userEmail": "teacher1@gmail.com",
+      "evaluationId": "eval_1793287938201_b410e6",
+      "details": "Đổi tên hồ sơ từ \"Sáng kiến kinh nghiệm Kiểm thử Tự động\" thành \"Sáng kiến kinh nghiệm Đã Đổi Tên Thành Công\"",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793287938207_0lnvy",
+      "timestamp": "2026-10-29T15:32:18.208Z",
+      "action": "CREATE",
+      "userId": "usr_1791332976299_ra51d",
+      "userEmail": "teacher1@gmail.com",
+      "evaluationId": "eval_1793287938201_b410e6",
+      "details": "Tạo hồ sơ mới: \"Sáng kiến kinh nghiệm Kiểm thử Tự động\" (v1)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793287916365_ovqla",
+      "timestamp": "2026-10-29T15:31:56.365Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793287914524_pvcix",
+      "timestamp": "2026-10-29T15:31:54.524Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
     {
       "auditId": "audit_1793280259343_ovqlg",
       "timestamp": "2026-10-29T13:24:19.343Z",

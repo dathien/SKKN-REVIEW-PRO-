@@ -25,6 +25,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { RedTeamCard, FindingStatus, SuggestionRewrite, ChangeSetItem, PriorityLevel } from '../../types';
+import { resolveCardTeacherNote } from '../../utils/evaluationNotes';
 
 export interface AcademicRebuttalViewProps {
   card: RedTeamCard;
@@ -123,27 +124,15 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
   const [selectedTier, setSelectedTier] = useState<'light' | 'academic' | 'deep'>(initialTier);
   const [copied, setCopied] = useState(false);
 
-  // Hàm xác định ghi chú giáo viên theo thứ tự ưu tiên:
-  // 1. teacherNotesMap từ hồ sơ (đã lưu bền vững trên server/state)
-  // 2. card.userNotes
-  // 3. scoped localStorage theo tài khoản, hồ sơ và mã vấn đề
-  // 4. legacy localStorage
+  // Hàm xác định ghi chú giáo viên theo thứ tự ưu tiên chuẩn hóa (tương thích ngược 100% với cả khóa cũ và khóa mới):
   const resolveEffectiveNote = useCallback((targetCardId: string, directUserNotes?: string) => {
-    if (directUserNotes && directUserNotes.trim()) return directUserNotes;
-    if (teacherNotesMap && teacherNotesMap[targetCardId] && teacherNotesMap[targetCardId].trim()) {
-      return teacherNotesMap[targetCardId];
-    }
-    try {
-      if (typeof localStorage !== 'undefined') {
-        const userEmailKey = (userEmail || 'guest').toLowerCase().trim();
-        const evalKey = evaluationId || 'default';
-        const scopedNote = localStorage.getItem(`skkn_note_${userEmailKey}_${evalKey}_${targetCardId}`);
-        if (scopedNote && scopedNote.trim()) return scopedNote;
-        const legacyNote = localStorage.getItem(`skkn_note_${targetCardId}`);
-        if (legacyNote && legacyNote.trim()) return legacyNote;
-      }
-    } catch (_) {}
-    return '';
+    return resolveCardTeacherNote({
+      cardId: targetCardId,
+      evalId: evaluationId,
+      userEmail,
+      directUserNotes,
+      teacherNotesMap,
+    });
   }, [teacherNotesMap, userEmail, evaluationId]);
 
   const [teacherNotes, setTeacherNotes] = useState(() => resolveEffectiveNote(card.id, card.userNotes));
@@ -307,26 +296,40 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
     setIsSavingNotes(true);
     setNotesSaveError(null);
 
-    // Lưu backup vào localStorage ngay lập tức với key định danh đầy đủ
+    const evalKey = evaluationId || 'default';
+    const userEmailKey = (userEmail || 'guest').toLowerCase().trim();
+    let cleanCardId = card.id.trim();
+    if (evalKey && cleanCardId.startsWith(`${evalKey}_`)) {
+      cleanCardId = cleanCardId.slice(`${evalKey}_`.length);
+    }
+
+    // Lưu backup vào localStorage ngay lập tức với key chuẩn và từ điển hồ sơ
     try {
       if (typeof localStorage !== 'undefined') {
-        const userEmailKey = (userEmail || 'guest').toLowerCase().trim();
-        const evalKey = evaluationId || 'default';
-        localStorage.setItem(`skkn_note_${userEmailKey}_${evalKey}_${card.id}`, teacherNotes);
-        localStorage.setItem(`skkn_note_${card.id}`, teacherNotes);
+        localStorage.setItem(`skkn_note_${userEmailKey}_${evalKey}_${cleanCardId}`, teacherNotes);
+        localStorage.setItem(`skkn_note_${cleanCardId}`, teacherNotes);
+
+        const currentEvalNotes = JSON.parse(localStorage.getItem(`skkn_eval_notes_${evalKey}`) || '{}');
+        currentEvalNotes[cleanCardId] = teacherNotes;
+        localStorage.setItem(`skkn_eval_notes_${evalKey}`, JSON.stringify(currentEvalNotes));
+
+        const currentAllNotes = JSON.parse(localStorage.getItem('skkn_all_teacher_notes') || '{}');
+        delete currentAllNotes[`${evalKey}_${cleanCardId}`];
+        currentAllNotes[cleanCardId] = teacherNotes;
+        localStorage.setItem('skkn_all_teacher_notes', JSON.stringify(currentAllNotes));
       }
     } catch (_) {}
 
     try {
       if (onSaveTeacherNotes) {
-        const res = await onSaveTeacherNotes(card.id, teacherNotes);
+        const res = await onSaveTeacherNotes(cleanCardId, teacherNotes);
         if (!res.success) {
           setIsSavingNotes(false);
           setNotesSaveError(res.error || 'Máy chủ không thể lưu ghi chú. Vui lòng thử lại.');
           return;
         }
       } else {
-        onUpdateStatus(card.id, card.status, teacherNotes);
+        onUpdateStatus(cleanCardId, card.status, teacherNotes);
       }
       setIsSavingNotes(false);
       setToastMessage('✓ Đã lưu ghi chú của Thầy/Cô thành công!');
