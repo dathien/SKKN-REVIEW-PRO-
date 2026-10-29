@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -38,6 +38,9 @@ export interface AcademicRebuttalViewProps {
   changeSet?: ChangeSetItem[];
   skknFullText?: string;
   customProposals?: Record<string, { tier?: string; text: string; updatedAt?: string }>;
+  teacherNotesMap?: Record<string, string>;
+  evaluationId?: string;
+  userEmail?: string;
   onSaveCustomProposal?: (cardId: string, tier: 'light' | 'academic' | 'deep', text: string) => Promise<{ success: boolean; error?: string }>;
   onSaveTeacherNotes?: (cardId: string, notes: string) => Promise<{ success: boolean; error?: string }>;
   initialTier?: 'light' | 'academic' | 'deep';
@@ -109,6 +112,9 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
   changeSet = [],
   skknFullText = '',
   customProposals = {},
+  teacherNotesMap = {},
+  evaluationId,
+  userEmail,
   onSaveCustomProposal,
   onSaveTeacherNotes,
   initialTier = 'academic',
@@ -116,16 +122,31 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
 }) => {
   const [selectedTier, setSelectedTier] = useState<'light' | 'academic' | 'deep'>(initialTier);
   const [copied, setCopied] = useState(false);
-  const [teacherNotes, setTeacherNotes] = useState(() => {
-    if (card.userNotes) return card.userNotes;
+
+  // Hàm xác định ghi chú giáo viên theo thứ tự ưu tiên:
+  // 1. teacherNotesMap từ hồ sơ (đã lưu bền vững trên server/state)
+  // 2. card.userNotes
+  // 3. scoped localStorage theo tài khoản, hồ sơ và mã vấn đề
+  // 4. legacy localStorage
+  const resolveEffectiveNote = useCallback((targetCardId: string, directUserNotes?: string) => {
+    if (directUserNotes && directUserNotes.trim()) return directUserNotes;
+    if (teacherNotesMap && teacherNotesMap[targetCardId] && teacherNotesMap[targetCardId].trim()) {
+      return teacherNotesMap[targetCardId];
+    }
     try {
       if (typeof localStorage !== 'undefined') {
-        const local = localStorage.getItem(`skkn_note_${card.id}`);
-        if (local) return local;
+        const userEmailKey = (userEmail || 'guest').toLowerCase().trim();
+        const evalKey = evaluationId || 'default';
+        const scopedNote = localStorage.getItem(`skkn_note_${userEmailKey}_${evalKey}_${targetCardId}`);
+        if (scopedNote && scopedNote.trim()) return scopedNote;
+        const legacyNote = localStorage.getItem(`skkn_note_${targetCardId}`);
+        if (legacyNote && legacyNote.trim()) return legacyNote;
       }
     } catch (_) {}
     return '';
-  });
+  }, [teacherNotesMap, userEmail, evaluationId]);
+
+  const [teacherNotes, setTeacherNotes] = useState(() => resolveEffectiveNote(card.id, card.userNotes));
   const [isEditingCustom, setIsEditingCustom] = useState(false);
   const [customProposedText, setCustomProposedText] = useState('');
   const [isSavingProposal, setIsSavingProposal] = useState(false);
@@ -143,16 +164,9 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
   const [customSampleCount, setCustomSampleCount] = useState<string>('');
   const [isSampleConfirmed, setIsSampleConfirmed] = useState(false);
 
-  // Sync notes and reset edit state when switching cards or when card data updates
+  // Đồng bộ ghi chú và reset trạng thái khi chuyển card hoặc dữ liệu card cập nhật
   useEffect(() => {
-    let effectiveNote = card.userNotes || '';
-    if (!effectiveNote) {
-      try {
-        if (typeof localStorage !== 'undefined') {
-          effectiveNote = localStorage.getItem(`skkn_note_${card.id}`) || '';
-        }
-      } catch (_) {}
-    }
+    const effectiveNote = resolveEffectiveNote(card.id, card.userNotes);
     setTeacherNotes(effectiveNote);
     setIsEditingCustom(false);
     setProposalSaveError(null);
@@ -163,11 +177,9 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
     setSampleScopeDesc('');
     setCustomSampleCount('');
 
-    // Mark as in-progress if currently open/unhandled
-    if (card.status === 'Chưa xử lý' || card.status === 'open' || !card.status) {
-      onUpdateStatus(card.id, 'Đang xử lý', effectiveNote);
-    }
-  }, [card.id, card.userNotes]);
+    // TUYỆT ĐỐI KHÔNG tự động chuyển trạng thái sang "Đang xử lý" khi mở vấn đề, chuyển trang hay F5.
+    // Trạng thái chỉ thay đổi khi giáo viên chủ động bấm 1 trong 4 nút trạng thái.
+  }, [card.id, card.userNotes, resolveEffectiveNote]);
 
   // Current index & pagination
   const allCards = cards.length > 0 ? cards : [card];
@@ -295,9 +307,12 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
     setIsSavingNotes(true);
     setNotesSaveError(null);
 
-    // Lưu backup vào localStorage ngay lập tức
+    // Lưu backup vào localStorage ngay lập tức với key định danh đầy đủ
     try {
       if (typeof localStorage !== 'undefined') {
+        const userEmailKey = (userEmail || 'guest').toLowerCase().trim();
+        const evalKey = evaluationId || 'default';
+        localStorage.setItem(`skkn_note_${userEmailKey}_${evalKey}_${card.id}`, teacherNotes);
         localStorage.setItem(`skkn_note_${card.id}`, teacherNotes);
       }
     } catch (_) {}
@@ -318,7 +333,7 @@ export const AcademicRebuttalView: React.FC<AcademicRebuttalViewProps> = ({
       setTimeout(() => setToastMessage(null), 3000);
     } catch (err: any) {
       setIsSavingNotes(false);
-      setNotesSaveError(err?.message || 'Lỗi mạng khi lưu ghi chú.');
+      setNotesSaveError(err?.message || 'Lỗi mạng khi lưu ghi chú. Vui lòng thử lại.');
     }
   };
 

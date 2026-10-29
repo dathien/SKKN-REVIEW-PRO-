@@ -302,14 +302,24 @@ export default function App() {
             }
           } catch (_) {}
 
+          const synchronizedCards = (data.evaluation.analysisResult.redTeamCards || []).map((c: any) => {
+            const note = (c.userNotes && typeof c.userNotes === 'string' && c.userNotes.trim())
+              ? c.userNotes
+              : (restoredNotes[c.id] || '');
+            if (note && !restoredNotes[c.id]) {
+              restoredNotes[c.id] = note;
+            }
+            return {
+              ...c,
+              userNotes: note,
+            };
+          });
+
           const fullAnalysis: SKKNAnalysisResult = {
             ...data.evaluation.analysisResult,
             customProposals: restoredProposals,
             teacherNotes: restoredNotes,
-            redTeamCards: (data.evaluation.analysisResult.redTeamCards || []).map((c: any) => ({
-              ...c,
-              userNotes: c.userNotes !== undefined && c.userNotes !== null && c.userNotes !== '' ? c.userNotes : (restoredNotes[c.id] || ''),
-            })),
+            redTeamCards: synchronizedCards,
           };
 
           setCurrentEvaluationId(targetEvalId);
@@ -661,6 +671,7 @@ export default function App() {
     );
     const updatedTeacherNotes = {
       ...(analysis.teacherNotes || {}),
+      ...(customAnalysis?.teacherNotes || {}),
       [cardId]: notes,
     };
 
@@ -678,12 +689,17 @@ export default function App() {
       }) : null);
     }
 
-    // 2. Backup tức thì vào localStorage
+    // 2. Backup tức thì vào localStorage với scoped key và legacy key
     try {
       if (typeof localStorage !== 'undefined') {
+        const userEmailKey = (user?.email || 'guest').toLowerCase().trim();
+        const evalKey = currentEvaluationId || 'default';
+        localStorage.setItem(`skkn_note_${userEmailKey}_${evalKey}_${cardId}`, notes);
         localStorage.setItem(`skkn_note_${cardId}`, notes);
+
         const currentAllNotes = JSON.parse(localStorage.getItem('skkn_all_teacher_notes') || '{}');
         currentAllNotes[cardId] = notes;
+        currentAllNotes[`${evalKey}_${cardId}`] = notes;
         localStorage.setItem('skkn_all_teacher_notes', JSON.stringify(currentAllNotes));
       }
     } catch (_) {}
@@ -711,8 +727,8 @@ export default function App() {
             },
           }),
         });
-        const data = await resp.json();
-        if (!data.success) {
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.success) {
           return { success: false, error: data.error || 'Máy chủ không thể lưu ghi chú.' };
         }
         return { success: true };
@@ -1571,6 +1587,9 @@ export default function App() {
                     cards={currentAnalysis.redTeamCards}
                     suggestions={currentAnalysis.suggestions}
                     customProposals={currentAnalysis.customProposals}
+                    teacherNotesMap={currentAnalysis.teacherNotes}
+                    evaluationId={currentEvaluationId || undefined}
+                    userEmail={user?.email || undefined}
                     onSaveCustomProposal={handleSaveCustomProposal}
                     onSaveTeacherNotes={handleSaveTeacherNotes}
                     initialTier={selectedRevisionTier}

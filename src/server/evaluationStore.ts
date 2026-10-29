@@ -645,19 +645,21 @@ export async function getEvaluationDetail(evalId: string, userEmail: string): Pr
         ...item.customProposals,
       };
     }
-    if (item.teacherNotes) {
-      (item.analysisResult as any).teacherNotes = {
-        ...((item.analysisResult as any).teacherNotes || {}),
-        ...item.teacherNotes,
-      };
-      if (Array.isArray(item.analysisResult.redTeamCards)) {
-        item.analysisResult.redTeamCards.forEach(c => {
-          if ((c.userNotes === undefined || c.userNotes === null || c.userNotes === '') && item.teacherNotes?.[c.id]) {
-            c.userNotes = item.teacherNotes[c.id];
-          }
-        });
-      }
+    item.teacherNotes = item.teacherNotes || {};
+    if (Array.isArray(item.analysisResult.redTeamCards)) {
+      item.analysisResult.redTeamCards.forEach(c => {
+        if (c.userNotes && c.userNotes.trim() && !item.teacherNotes![c.id]) {
+          item.teacherNotes![c.id] = c.userNotes;
+        }
+        if ((!c.userNotes || !c.userNotes.trim()) && item.teacherNotes?.[c.id]) {
+          c.userNotes = item.teacherNotes[c.id];
+        }
+      });
     }
+    (item.analysisResult as any).teacherNotes = {
+      ...((item.analysisResult as any).teacherNotes || {}),
+      ...item.teacherNotes,
+    };
   }
 
   return { success: true, evaluation: item };
@@ -676,6 +678,7 @@ export async function saveEvaluationResultRecord(params: {
   draftText?: string;
   changeSet?: any[];
   customProposals?: Record<string, { tier?: string; text: string; updatedAt?: string }>;
+  teacherNotes?: Record<string, string>;
 }): Promise<{ success: boolean; evaluation?: EvaluationItem; error?: string }> {
   reloadEvaluationsStoreFromDisk();
   const cleanEmail = params.userEmail.toLowerCase().trim();
@@ -710,22 +713,39 @@ export async function saveEvaluationResultRecord(params: {
   };
   item.customProposals = mergedProposals;
 
-  // 2. Bảo toàn và đồng bộ hai chiều teacherNotes (không bao giờ bị ghi đè mất)
+  // 2. Bảo toàn và đồng bộ hai chiều teacherNotes (tuyệt đối không bao giờ bị ghi đè mất hoặc bị chuỗi rỗng xóa)
   const mergedNotes: Record<string, string> = {
     ...(item.teacherNotes || {}),
     ...((item.analysisResult as any)?.teacherNotes || {}),
-    ...((params as any).teacherNotes || {}),
-    ...((params.analysisResult as any)?.teacherNotes || {}),
   };
 
-  // Trích xuất notes từ params.analysisResult.redTeamCards nếu có
+  // 2.1. Đọc notes từ params.analysisResult.redTeamCards (chỉ lấy nếu có nội dung)
   if (Array.isArray(params.analysisResult?.redTeamCards)) {
     params.analysisResult.redTeamCards.forEach(c => {
-      if (c.userNotes !== undefined && c.userNotes !== null) {
+      if (typeof c.userNotes === 'string' && c.userNotes.trim()) {
         mergedNotes[c.id] = c.userNotes;
       }
     });
   }
+
+  // 2.2. Đọc notes từ params.analysisResult.teacherNotes (nếu có nội dung)
+  if ((params.analysisResult as any)?.teacherNotes && typeof (params.analysisResult as any).teacherNotes === 'object') {
+    Object.entries((params.analysisResult as any).teacherNotes).forEach(([cardId, noteText]) => {
+      if (typeof noteText === 'string' && noteText.trim()) {
+        mergedNotes[cardId] = noteText;
+      }
+    });
+  }
+
+  // 2.3. Ưu tiên cao nhất: params.teacherNotes được truyền trực tiếp từ hành động lưu của giáo viên
+  if (params.teacherNotes && typeof params.teacherNotes === 'object') {
+    Object.entries(params.teacherNotes).forEach(([cardId, noteText]) => {
+      if (typeof noteText === 'string') {
+        mergedNotes[cardId] = noteText;
+      }
+    });
+  }
+
   item.teacherNotes = mergedNotes;
 
   // 3. Đồng bộ redTeamCards (giữ nguyên userNotes và status của từng card đã lưu)
@@ -735,9 +755,23 @@ export async function saveEvaluationResultRecord(params: {
     synchronizedCards = synchronizedCards.map(newCard => {
       const existing = existingCardsMap.get(newCard.id);
       const noteFromMap = mergedNotes[newCard.id];
-      const effectiveNote = newCard.userNotes !== undefined
-        ? newCard.userNotes
-        : (noteFromMap !== undefined ? noteFromMap : (existing?.userNotes || ''));
+
+      // Thứ tự ưu tiên xác định ghi chú của card:
+      // Ưu tiên 1 (Tuyệt đối): params.teacherNotes nếu giáo viên chủ động lưu ghi chú cho card này
+      // Ưu tiên 2: Ghi chú mới từ newCard nếu có nội dung
+      // Ưu tiên 3: Ghi chú trong bảng mergedNotes của hồ sơ
+      // Ưu tiên 4: Ghi chú đã lưu trước đó trong existing card
+      let effectiveNote = '';
+      if (params.teacherNotes && params.teacherNotes[newCard.id] !== undefined) {
+        effectiveNote = params.teacherNotes[newCard.id];
+      } else if (typeof newCard.userNotes === 'string' && newCard.userNotes.trim()) {
+        effectiveNote = newCard.userNotes;
+      } else if (typeof noteFromMap === 'string' && noteFromMap.trim()) {
+        effectiveNote = noteFromMap;
+      } else if (typeof existing?.userNotes === 'string' && existing.userNotes.trim()) {
+        effectiveNote = existing.userNotes;
+      }
+
       return {
         ...(existing || {}),
         ...newCard,

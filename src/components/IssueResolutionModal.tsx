@@ -177,12 +177,8 @@ export const IssueResolutionModal: React.FC<IssueResolutionModalProps> = ({
       setSampleLifecycle('pending');
     }
 
-    // Vòng đời issue: Khi mở xử lý vấn đề đang ở trạng thái open ('Chưa xử lý'), tự động chuyển sang in_progress ('Đang xử lý')
-    if (isOpen && card && (card.status === 'Chưa xử lý' || card.status === 'open' || !card.status)) {
-      if (onUpdateStatus) {
-        onUpdateStatus(card.id, 'Đang xử lý');
-      }
-    }
+    // TUYỆT ĐỐI KHÔNG tự động thay đổi trạng thái sang "Đang xử lý" khi mở modal;
+    // Chỉ cập nhật khi người dùng chủ động chọn nút trạng thái.
   }, [card?.id, isOpen]);
 
   if (!isOpen || !card) return null;

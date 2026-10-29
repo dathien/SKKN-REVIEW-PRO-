@@ -15,14 +15,14 @@
       "originalFileSize": 48520,
       "wordCount": 4250,
       "createdAt": "2026-10-18T10:15:00.000Z",
-      "updatedAt": "2026-10-23T04:21:24.762Z",
+      "updatedAt": "2026-10-29T13:24:19.339Z",
       "originalText": "BÁO CÁO SÁNG KIẾN KINH NGHIỆM\nTên sáng kiến: Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\nTác giả: GV. Hồ Nguyễn Đa Thiện - Trường THPT Chuyên\n\nPhần I. ĐẶT VẤN ĐỀ\nTrong chương trình GDPT 2018 môn Tin học 11, mạch kiến thức Khoa học máy tính và Lập trình đóng vai trò then chốt nhưng học sinh thường gặp khó khăn trong việc tư duy thuật toán và hiện thực hóa bài toán thực tế. Học sinh thường học thuộc lòng cú pháp Python nhưng khi gặp bài toán thực tế thì bế tắc không biết phân tích bài toán.\n\nPhần II. NỘI DUNG VÀ BIỆN PHÁP THỰC HIỆN\nMục 3.2 & Mục 4.1. Tiến hành thực nghiệm tại lớp 11A1 và đối chứng tại lớp 11A2; sau một học kỳ áp dụng dự án Python, kết quả học tập lớp 11A1 cao hơn rõ rệt.\nMục 4.2. Thiết kế 3 dự án nhỏ: Quản lý thư viện, Mô phỏng chuyển động vật lý và Chatbot tra cứu thông tin.\nMục 4.3. Để hoàn thành các dự án lớn, học sinh tiếp tục hoàn thiện code trên máy tính cá nhân ở nhà và nộp link qua hệ thống trực tuyến.\n\nPhần III. HIỆU QUẢ CỦA SÁNG KIẾN\nMục 5, Trang 22. Sau thời gian áp dụng giải pháp, 100% học sinh trong lớp đều say mê học tập và không còn em nào cảm thấy sợ lập trình Python.\n\nPhần IV. KẾT LUẬN VÀ KIẾN NGHỊ\nSáng kiến mang lại hiệu quả thiết thực trong việc đổi mới phương pháp dạy học lập trình bậc THPT.",
       "draftText": "BÁO CÁO SÁNG KIẾN KINH NGHIỆM\nTên sáng kiến: Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\nTác giả: GV. Hồ Nguyễn Đa Thiện - Trường THPT Chuyên\n\nPhần I. ĐẶT VẤN ĐỀ\nTrong chương trình GDPT 2018 môn Tin học 11, mạch kiến thức Khoa học máy tính và Lập trình đóng vai trò then chốt nhưng học sinh thường gặp khó khăn trong việc tư duy thuật toán và hiện thực hóa bài toán thực tế. Học sinh thường học thuộc lòng cú pháp Python nhưng khi gặp bài toán thực tế thì bế tắc không biết phân tích bài toán.\n\nPhần II. NỘI DUNG VÀ BIỆN PHÁP THỰC HIỆN\nMục 3.2 & Mục 4.1. Tiến hành thực nghiệm tại lớp 11A1 và đối chứng tại lớp 11A2; sau một học kỳ áp dụng dự án Python, kết quả học tập lớp 11A1 cao hơn rõ rệt.\nMục 4.2. Thiết kế 3 dự án nhỏ: Quản lý thư viện, Mô phỏng chuyển động vật lý và Chatbot tra cứu thông tin.\nMục 4.3. Để hoàn thành các dự án lớn, học sinh tiếp tục hoàn thiện code trên máy tính cá nhân ở nhà và nộp link qua hệ thống trực tuyến.\n\nPhần III. HIỆU QUẢ CỦA SÁNG KIẾN\nMục 5, Trang 22. Sau thời gian áp dụng giải pháp, 100% học sinh trong lớp đều say mê học tập và không còn em nào cảm thấy sợ lập trình Python.\n\nPhần IV. KẾT LUẬN VÀ KIẾN NGHỊ\nSáng kiến mang lại hiệu quả thiết thực trong việc đổi mới phương pháp dạy học lập trình bậc THPT.",
       "changeSet": [],
       "versionsHistory": [
         {
           "version": 1,
-          "createdAt": "2026-10-23T04:21:24.762Z",
+          "createdAt": "2026-10-29T13:24:19.339Z",
           "score": 35,
           "notes": "Thẩm định lần đầu (Bản gốc v1) - Đạt 35.0/100 điểm Rubric",
           "resultSummary": "Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11"
@@ -193,7 +193,7 @@
             "issueDetected": "Thiếu bài kiểm tra năng lực đầu vào đối chứng (Pre-test) giữa hai nhóm học sinh",
             "impactLevel": "Cao",
             "affectedCriterion": "Tiêu chí 3: Tính khoa học & Logic sư phạm",
-            "status": "Đang xử lý",
+            "status": "Chưa xử lý",
             "councilChallenge": "Hội đồng nhận thấy hai lớp 11A1 và 11A2 có điểm đầu vào chênh lệch. Căn cứ nào để khẳng định kết quả tiến bộ là do phương pháp của tác giả chứ không phải do tố chất sẵn có?",
             "mitigationStrategy": "Bổ sung kết quả bài kiểm tra tiền thực nghiệm chứng minh độ tương đương p > 0.05.",
             "relatedQuote": "Tiến hành thực nghiệm tại lớp 11A1 và đối chứng tại lớp 11A2; sau một học kỳ áp dụng dự án Python, kết quả học tập lớp 11A1 cao hơn rõ rệt.",
@@ -408,6 +408,366 @@
     }
   },
   "auditLogs": [
+    {
+      "auditId": "audit_1793280259343_ovqlg",
+      "timestamp": "2026-10-29T13:24:19.343Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280254636_5tm91",
+      "timestamp": "2026-10-29T13:24:14.636Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280253338_iu5rd",
+      "timestamp": "2026-10-29T13:24:13.338Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280251950_iw6lj",
+      "timestamp": "2026-10-29T13:24:11.950Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280250617_ifggc",
+      "timestamp": "2026-10-29T13:24:10.617Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280249259_huoqy",
+      "timestamp": "2026-10-29T13:24:09.259Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280248063_sjy5w",
+      "timestamp": "2026-10-29T13:24:08.063Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280246817_b5o3q",
+      "timestamp": "2026-10-29T13:24:06.818Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280245456_421nd",
+      "timestamp": "2026-10-29T13:24:05.456Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280244188_cjuqk",
+      "timestamp": "2026-10-29T13:24:04.188Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280242824_rcna9",
+      "timestamp": "2026-10-29T13:24:02.824Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280223468_buu78",
+      "timestamp": "2026-10-29T13:23:43.468Z",
+      "action": "DELETE",
+      "userId": "usr_1791361588777_veinc",
+      "userEmail": "giaovien.test@gmail.com",
+      "evaluationId": "eval_1793280223429_ae6800",
+      "details": "Xóa hồ sơ: \"Ứng dụng sơ đồ tư duy kết hợp phần mềm tương tác môn Lịch sử 8 (Đã nâng cấp)\"",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280223449_374am",
+      "timestamp": "2026-10-29T13:23:43.449Z",
+      "action": "SAVE_RESULT",
+      "userId": "usr_1791361588777_veinc",
+      "userEmail": "giaovien.test@gmail.com",
+      "evaluationId": "eval_1793280223429_ae6800",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng sơ đồ tư duy kết hợp phần mềm tương tác môn Lịch sử 8 (Đã nâng cấp)\" (Điểm: 38)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280223432_r4wt8",
+      "timestamp": "2026-10-29T13:23:43.432Z",
+      "action": "CREATE",
+      "userId": "usr_1791361588777_veinc",
+      "userEmail": "giaovien.test@gmail.com",
+      "evaluationId": "eval_1793280223429_ae6800",
+      "details": "Tạo hồ sơ mới: \"Ứng dụng sơ đồ tư duy kết hợp phần mềm tương tác môn Lịch sử 8\" (v1)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280223421_f9dqt",
+      "timestamp": "2026-10-29T13:23:43.421Z",
+      "action": "DELETE",
+      "userId": "usr_1791332976299_ra51d",
+      "userEmail": "teacher1@gmail.com",
+      "evaluationId": "eval_1793280223388_41f45c",
+      "details": "Xóa hồ sơ: \"Sáng kiến kinh nghiệm Đã Đổi Tên Thành Công\"",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280223409_w1on1",
+      "timestamp": "2026-10-29T13:23:43.409Z",
+      "action": "RENAME",
+      "userId": "usr_1791332976299_ra51d",
+      "userEmail": "teacher1@gmail.com",
+      "evaluationId": "eval_1793280223388_41f45c",
+      "details": "Đổi tên hồ sơ từ \"Sáng kiến kinh nghiệm Kiểm thử Tự động\" thành \"Sáng kiến kinh nghiệm Đã Đổi Tên Thành Công\"",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280223393_f5tkh",
+      "timestamp": "2026-10-29T13:23:43.393Z",
+      "action": "CREATE",
+      "userId": "usr_1791332976299_ra51d",
+      "userEmail": "teacher1@gmail.com",
+      "evaluationId": "eval_1793280223388_41f45c",
+      "details": "Tạo hồ sơ mới: \"Sáng kiến kinh nghiệm Kiểm thử Tự động\" (v1)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280206843_pexw1",
+      "timestamp": "2026-10-29T13:23:26.843Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280167906_ixk9e",
+      "timestamp": "2026-10-29T13:22:47.906Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280166774_cwyfh",
+      "timestamp": "2026-10-29T13:22:46.774Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280165742_fi34t",
+      "timestamp": "2026-10-29T13:22:45.742Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280164494_2796i",
+      "timestamp": "2026-10-29T13:22:44.494Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280163192_beupk",
+      "timestamp": "2026-10-29T13:22:43.193Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280160066_60hci",
+      "timestamp": "2026-10-29T13:22:40.066Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280158776_3jcfj",
+      "timestamp": "2026-10-29T13:22:38.776Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280157461_f9t1u",
+      "timestamp": "2026-10-29T13:22:37.461Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280155671_ftp65",
+      "timestamp": "2026-10-29T13:22:35.671Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280154139_xpgd3",
+      "timestamp": "2026-10-29T13:22:34.139Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280109939_0ekp5",
+      "timestamp": "2026-10-29T13:21:49.939Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280103852_ddci8",
+      "timestamp": "2026-10-29T13:21:43.852Z",
+      "action": "SAVE_RESULT",
+      "userId": "admin_6461746869",
+      "userEmail": "dathien2412@gmail.com",
+      "evaluationId": "eval_tinhoc11_dathien2412",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng lập trình Python và dự án thực tế nhằm nâng cao năng lực giải quyết vấn đề môn Tin học 11\" (Điểm: 35)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280038276_t7dmi",
+      "timestamp": "2026-10-29T13:20:38.276Z",
+      "action": "DELETE",
+      "userId": "usr_1791361588777_veinc",
+      "userEmail": "giaovien.test@gmail.com",
+      "evaluationId": "eval_1793280038231_400f4f",
+      "details": "Xóa hồ sơ: \"Ứng dụng sơ đồ tư duy kết hợp phần mềm tương tác môn Lịch sử 8 (Đã nâng cấp)\"",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280038251_w709q",
+      "timestamp": "2026-10-29T13:20:38.251Z",
+      "action": "SAVE_RESULT",
+      "userId": "usr_1791361588777_veinc",
+      "userEmail": "giaovien.test@gmail.com",
+      "evaluationId": "eval_1793280038231_400f4f",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng sơ đồ tư duy kết hợp phần mềm tương tác môn Lịch sử 8 (Đã nâng cấp)\" (Điểm: 38)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280038234_d2jyr",
+      "timestamp": "2026-10-29T13:20:38.234Z",
+      "action": "CREATE",
+      "userId": "usr_1791361588777_veinc",
+      "userEmail": "giaovien.test@gmail.com",
+      "evaluationId": "eval_1793280038231_400f4f",
+      "details": "Tạo hồ sơ mới: \"Ứng dụng sơ đồ tư duy kết hợp phần mềm tương tác môn Lịch sử 8\" (v1)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280038223_e6fz1",
+      "timestamp": "2026-10-29T13:20:38.223Z",
+      "action": "DELETE",
+      "userId": "usr_1791332976299_ra51d",
+      "userEmail": "teacher1@gmail.com",
+      "evaluationId": "eval_1793280038189_0078c7",
+      "details": "Xóa hồ sơ: \"Sáng kiến kinh nghiệm Đã Đổi Tên Thành Công\"",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280038210_kf1ff",
+      "timestamp": "2026-10-29T13:20:38.210Z",
+      "action": "RENAME",
+      "userId": "usr_1791332976299_ra51d",
+      "userEmail": "teacher1@gmail.com",
+      "evaluationId": "eval_1793280038189_0078c7",
+      "details": "Đổi tên hồ sơ từ \"Sáng kiến kinh nghiệm Kiểm thử Tự động\" thành \"Sáng kiến kinh nghiệm Đã Đổi Tên Thành Công\"",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793280038194_ei1jl",
+      "timestamp": "2026-10-29T13:20:38.194Z",
+      "action": "CREATE",
+      "userId": "usr_1791332976299_ra51d",
+      "userEmail": "teacher1@gmail.com",
+      "evaluationId": "eval_1793280038189_0078c7",
+      "details": "Tạo hồ sơ mới: \"Sáng kiến kinh nghiệm Kiểm thử Tự động\" (v1)",
+      "status": "SUCCESS"
+    },
     {
       "auditId": "audit_1792744526635_1z3zy",
       "timestamp": "2026-10-23T08:35:26.636Z",
