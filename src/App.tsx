@@ -1849,6 +1849,8 @@ export default function App() {
                     missingContents={currentAnalysis.missingContents}
                     supportTemplates={currentAnalysis.supportTemplates}
                     changeSet={currentAnalysis.changeSet}
+                    customProposals={currentAnalysis.customProposals}
+                    onSaveCustomProposal={handleSaveCustomProposal}
                     onUpdateIssueStatus={handleUpdateCardStatus}
                     onApplyChange={handleApplyChange}
                     onRevertChange={handleRevertChange}

@@ -46,6 +46,12 @@ interface SuggestionsViewProps {
   missingContents?: MissingContentItem[];
   supportTemplates?: SupportTemplateItem[];
   changeSet?: ChangeSetItem[];
+  customProposals?: Record<string, { tier?: string; text: string; updatedAt?: string }>;
+  onSaveCustomProposal?: (
+    cardId: string,
+    tier: 'light' | 'academic' | 'deep',
+    text: string
+  ) => Promise<{ success: boolean; error?: string }>;
   onUpdateIssueStatus?: (id: string, status: FindingStatus) => void;
   onApplyChange?: (change: ChangeSetItem) => void;
   onRevertChange?: (changeId: string) => void;
@@ -68,6 +74,8 @@ export const SuggestionsView: React.FC<SuggestionsViewProps> = ({
   missingContents = [],
   supportTemplates = [],
   changeSet = [],
+  customProposals,
+  onSaveCustomProposal,
   onUpdateIssueStatus,
   onApplyChange,
   onRevertChange,
@@ -81,6 +89,8 @@ export const SuggestionsView: React.FC<SuggestionsViewProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<ViewTab>('rewrites');
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const editAreaRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const textareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
   const [selectedTier, setSelectedTier] = useState<Record<string, 'light' | 'academic' | 'deep'>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -101,9 +111,75 @@ export const SuggestionsView: React.FC<SuggestionsViewProps> = ({
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewTab, setPreviewTab] = useState<'changes' | 'fulldraft' | 'safety'>('changes');
 
+  // Quản lý bản đề xuất tùy chỉnh của GV (customProposals) bền vững theo hồ sơ & chống mất khi F5
+  const [localCustomProposals, setLocalCustomProposals] = useState<
+    Record<string, { tier?: string; text: string; updatedAt?: string }>
+  >(() => {
+    const initial = { ...(customProposals || {}) };
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const stored = JSON.parse(localStorage.getItem('skkn_all_custom_proposals') || '{}');
+        return { ...stored, ...initial };
+      } catch (_) {}
+    }
+    return initial;
+  });
+
+  // Đồng bộ localCustomProposals khi prop customProposals thay đổi
+  useEffect(() => {
+    if (customProposals && Object.keys(customProposals).length > 0) {
+      setLocalCustomProposals(prev => ({ ...prev, ...customProposals }));
+    }
+  }, [customProposals]);
+
   // Editing state for [CHỈNH LẠI] (PHẦN 6)
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const [customEditText, setCustomEditText] = useState<string>('');
+  const [isSavingCustomProposal, setIsSavingCustomProposal] = useState(false);
+
+  // Tự động cuộn mượt đến đúng khu vực chỉnh sửa khi giáo viên nhấn "Chỉnh lại"
+  useEffect(() => {
+    if (!editingCardId) return;
+
+    const targetId = editingCardId;
+    // Cho phép DOM render xong textarea và container
+    const timer = setTimeout(() => {
+      const editEl =
+        editAreaRefs.current[targetId] ||
+        document.getElementById(`edit-area-${targetId}`) ||
+        cardRefs.current[targetId];
+
+      if (editEl) {
+        // Tìm vùng cuộn container (thẻ <main> có overflow-y-auto)
+        const scrollContainer = editEl.closest('main') || document.querySelector('main');
+        if (scrollContainer && scrollContainer.scrollHeight > scrollContainer.clientHeight) {
+          const containerRect = scrollContainer.getBoundingClientRect();
+          const targetRect = editEl.getBoundingClientRect();
+          // Căn chỉnh vị trí cách mép trên container 75px (dưới header cố định 56px + margin thông thoáng)
+          const targetTop = targetRect.top - containerRect.top + scrollContainer.scrollTop - 75;
+          scrollContainer.scrollTo({
+            top: Math.max(0, targetTop),
+            behavior: 'smooth'
+          });
+        } else {
+          // Fallback cho toàn trang window
+          editEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // Tự động focus vào textarea mượt mà không làm gián đoạn hiệu ứng scroll
+        const ta = textareaRefs.current[targetId];
+        if (ta) {
+          try {
+            ta.focus({ preventScroll: true });
+          } catch (_) {
+            ta.focus();
+          }
+        }
+      }
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [editingCardId]);
 
   // Export word state
   const [isExportingWord, setIsExportingWord] = useState(false);
@@ -298,6 +374,19 @@ export const SuggestionsView: React.FC<SuggestionsViewProps> = ({
 
   // Bảo đảm 100% trả về ĐOẠN VĂN CỤ THỂ thay thế, không phải câu hướng dẫn
   const getTierContent = (s: SuggestionRewrite, tier: 'light' | 'academic' | 'deep'): string => {
+    // 1. Ưu tiên kiểm tra bản đề xuất tùy chỉnh của GV đã lưu cho vấn đề / gợi ý này
+    const matchingIssue = findMatchingIssue(s);
+    const customKeys = [
+      matchingIssue ? `${matchingIssue.id}_${tier}` : null,
+      `${s.id}_${tier}`,
+    ].filter(Boolean) as string[];
+
+    for (const k of customKeys) {
+      if (localCustomProposals[k]?.text) {
+        return localCustomProposals[k].text;
+      }
+    }
+
     let text = '';
     switch (tier) {
       case 'light': text = s.lightRevision; break;
@@ -331,6 +420,59 @@ export const SuggestionsView: React.FC<SuggestionsViewProps> = ({
       }
     }
     return raw;
+  };
+
+  // PHẦN 6: Lưu bản đề xuất tùy chỉnh của giáo viên (LƯU CHỈNH SỬA)
+  // Nút này CHỈ LƯU bản đề xuất tùy chỉnh, TUYỆT ĐỐI KHÔNG tự ý áp dụng ngay vào văn bản SKKN hay bản nháp.
+  const handleSaveCustomProposalAction = async (s: SuggestionRewrite, textToSave: string) => {
+    const currentTier = selectedTier[s.id] || 'academic';
+    const matchingIssue = findMatchingIssue(s);
+    const primaryId = matchingIssue?.id || s.id;
+    const proposalKey = `${primaryId}_${currentTier}`;
+    const now = new Date().toISOString();
+
+    const updatedEntry = { tier: currentTier, text: textToSave, updatedAt: now };
+
+    // 1. Cập nhật state cục bộ để giao diện hiển thị ngay tức thì
+    setLocalCustomProposals(prev => ({
+      ...prev,
+      [proposalKey]: updatedEntry,
+      [`${s.id}_${currentTier}`]: updatedEntry
+    }));
+
+    // 2. Lưu vào localStorage để chống F5
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(`skkn_proposal_${proposalKey}`, JSON.stringify(updatedEntry));
+        const all = JSON.parse(localStorage.getItem('skkn_all_custom_proposals') || '{}');
+        all[proposalKey] = updatedEntry;
+        all[`${s.id}_${currentTier}`] = updatedEntry;
+        localStorage.setItem('skkn_all_custom_proposals', JSON.stringify(all));
+      }
+    } catch (_) {}
+
+    // 3. Gửi callback lên App.tsx để lưu bền vững vào máy chủ nếu có
+    setIsSavingCustomProposal(true);
+    try {
+      if (onSaveCustomProposal) {
+        await onSaveCustomProposal(primaryId, currentTier, textToSave);
+      }
+      setToastNotification({
+        type: 'success',
+        message: 'Đã lưu bản chỉnh sửa đề xuất thành công',
+        submessage: 'Nội dung đề xuất đã được cập nhật. Nhấn "ÁP DỤNG THAY ĐỔI" bên dưới khi Thầy/Cô muốn đưa vào bản nháp.'
+      });
+    } catch (err) {
+      console.error('Lỗi lưu đề xuất tùy chỉnh:', err);
+      setToastNotification({
+        type: 'error',
+        message: 'Không thể kết nối máy chủ để lưu',
+        submessage: 'Nội dung đã được lưu tạm trên thiết bị này.'
+      });
+    } finally {
+      setIsSavingCustomProposal(false);
+      setEditingCardId(null);
+    }
   };
 
   // PHẦN 6 & 24: Áp dụng thay đổi vào change-set (Requirement B)
@@ -1036,7 +1178,12 @@ export const SuggestionsView: React.FC<SuggestionsViewProps> = ({
                               <button
                                 type="button"
                                 title="Giữ tối đa bản gốc của tác giả, sửa tối thiểu"
-                                onClick={() => setSelectedTier(prev => ({ ...prev, [s.id]: 'light' }))}
+                                onClick={() => {
+                                  setSelectedTier(prev => ({ ...prev, [s.id]: 'light' }));
+                                  if (isEditing) {
+                                    setCustomEditText(getTierContent(s, 'light'));
+                                  }
+                                }}
                                 className={`px-3 py-1 rounded cursor-pointer transition-all ${
                                   currentTier === 'light' ? 'bg-blue-600 text-white shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900'
                                 }`}
@@ -1046,7 +1193,12 @@ export const SuggestionsView: React.FC<SuggestionsViewProps> = ({
                               <button
                                 type="button"
                                 title="Chuẩn hóa cách viết học thuật, khách quan và chặt chẽ hơn"
-                                onClick={() => setSelectedTier(prev => ({ ...prev, [s.id]: 'academic' }))}
+                                onClick={() => {
+                                  setSelectedTier(prev => ({ ...prev, [s.id]: 'academic' }));
+                                  if (isEditing) {
+                                    setCustomEditText(getTierContent(s, 'academic'));
+                                  }
+                                }}
                                 className={`px-3 py-1 rounded cursor-pointer transition-all ${
                                   currentTier === 'academic' ? 'bg-blue-600 text-white shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900'
                                 }`}
@@ -1056,7 +1208,12 @@ export const SuggestionsView: React.FC<SuggestionsViewProps> = ({
                               <button
                                 type="button"
                                 title="Tái cấu trúc lập luận nhưng tuyệt đối không thêm dữ kiện"
-                                onClick={() => setSelectedTier(prev => ({ ...prev, [s.id]: 'deep' }))}
+                                onClick={() => {
+                                  setSelectedTier(prev => ({ ...prev, [s.id]: 'deep' }));
+                                  if (isEditing) {
+                                    setCustomEditText(getTierContent(s, 'deep'));
+                                  }
+                                }}
                                 className={`px-3 py-1 rounded cursor-pointer transition-all ${
                                   currentTier === 'deep' ? 'bg-blue-600 text-white shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900'
                                 }`}
@@ -1076,27 +1233,65 @@ export const SuggestionsView: React.FC<SuggestionsViewProps> = ({
 
                         {/* Display Proposed or Inline Editor */}
                         {isEditing ? (
-                          <div className="space-y-2.5">
+                          <div
+                            ref={(el) => {
+                              editAreaRefs.current[s.id] = el;
+                              if (matchingIssue) {
+                                editAreaRefs.current[matchingIssue.id] = el;
+                              }
+                            }}
+                            id={`edit-area-${s.id}`}
+                            className="space-y-3 p-4 sm:p-5 bg-blue-50/80 border-2 border-blue-400 rounded-2xl shadow-xs scroll-mt-24 transition-all"
+                          >
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 pb-1">
+                              <span className="text-[14px] font-[700] text-blue-900 uppercase tracking-wide flex items-center gap-1.5">
+                                <Edit3 className="w-4 h-4 text-blue-600 shrink-0" />
+                                <span>Chỉnh sửa nội dung đề xuất ({currentTier === 'light' ? 'Sửa nhẹ' : currentTier === 'academic' ? 'Sửa học thuật' : 'Sửa sâu'})</span>
+                              </span>
+                              <span className="text-[12.5px] text-slate-500 font-medium">
+                                * Bấm "LƯU CHỈNH SỬA" để lưu lại. Bấm "ÁP DỤNG THAY ĐỔI" khi muốn đưa vào bản nháp.
+                              </span>
+                            </div>
+
                             <textarea
+                              ref={(el) => {
+                                textareaRefs.current[s.id] = el;
+                                if (matchingIssue) {
+                                  textareaRefs.current[matchingIssue.id] = el;
+                                }
+                              }}
                               value={customEditText}
                               onChange={(e) => setCustomEditText(e.target.value)}
-                              rows={5}
-                              className="w-full p-4 bg-white border border-blue-300 rounded-xl text-[16px] leading-[1.7] text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 shadow-2xs"
+                              rows={6}
+                              className="w-full p-4 bg-white border border-blue-300 focus:border-blue-500 rounded-xl text-[15px] sm:text-[16px] leading-[1.7] text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 shadow-inner resize-y min-h-[140px] max-h-[380px] overflow-y-auto"
+                              placeholder="Nhập nội dung Thầy/Cô muốn chỉnh sửa cho đoạn đề xuất này..."
                             />
-                            <div className="flex items-center justify-end gap-2">
+
+                            <div className="flex items-center justify-end gap-2.5 pt-1">
                               <button
                                 type="button"
                                 onClick={() => setEditingCardId(null)}
-                                className="px-3.5 py-2 text-slate-600 hover:text-slate-900 text-[14px] font-[650] cursor-pointer"
+                                className="px-4 py-2 text-slate-600 hover:text-slate-800 hover:bg-slate-200/60 text-[14px] font-[650] rounded-xl transition-colors cursor-pointer"
                               >
                                 Hủy
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handleApplySuggestion(s, customEditText, true)}
-                                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-[700] text-[14px] rounded-xl cursor-pointer shadow-2xs"
+                                disabled={isSavingCustomProposal}
+                                onClick={() => handleSaveCustomProposalAction(s, customEditText)}
+                                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-[700] text-[14.5px] rounded-xl cursor-pointer shadow-2xs flex items-center gap-2 transition-all"
                               >
-                                Lưu & Áp dụng
+                                {isSavingCustomProposal ? (
+                                  <>
+                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                    <span>Đang lưu...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Check className="w-4 h-4" />
+                                    <span>LƯU CHỈNH SỬA</span>
+                                  </>
+                                )}
                               </button>
                             </div>
                           </div>
@@ -1314,8 +1509,13 @@ export const SuggestionsView: React.FC<SuggestionsViewProps> = ({
                         ✍️ PHIÊN BẢN ĐỀ NGHỊ:
                       </span>
                       {isEditing ? (
-                        <div className="space-y-2.5">
+                        <div
+                          ref={(el) => { editAreaRefs.current[item.id] = el; }}
+                          id={`edit-area-${item.id}`}
+                          className="space-y-2.5 scroll-mt-24"
+                        >
                           <textarea
+                            ref={(el) => { textareaRefs.current[item.id] = el; }}
                             value={customEditText}
                             onChange={(e) => setCustomEditText(e.target.value)}
                             rows={3}
