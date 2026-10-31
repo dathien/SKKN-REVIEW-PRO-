@@ -13,9 +13,10 @@
       "licenseKey": "SKKN-ADMIN-SYSTEM",
       "licenseExpiresAt": null,
       "createdAt": "2026-10-07T00:29:18.129Z",
-      "lastActiveAt": "2026-10-31T07:06:01.571Z",
+      "lastActiveAt": "2026-10-31T09:09:42.736Z",
       "isBlocked": false,
-      "picture": "https://lh3.googleusercontent.com/a/ACg8ocJ_uW-RC5IuVcgYYhb8i9A16OPkteLCs4CLI63kdGbWptuEgXbj=s96-c"
+      "picture": "https://lh3.googleusercontent.com/a/ACg8ocJ_uW-RC5IuVcgYYhb8i9A16OPkteLCs4CLI63kdGbWptuEgXbj=s96-c",
+      "proStatus": "ACTIVE"
     },
     "teacher1@gmail.com": {
       "id": "usr_1791332976299_ra51d",
@@ -30,8 +31,10 @@
       "licenseKey": "SKKN-PRO-2025-VIP",
       "licenseExpiresAt": null,
       "createdAt": "2026-10-07T00:29:36.299Z",
-      "lastActiveAt": "2026-10-31T07:06:01.441Z",
-      "isBlocked": false
+      "lastActiveAt": "2026-10-31T09:09:42.602Z",
+      "isBlocked": false,
+      "proEndDate": "2025-01-01",
+      "proStatus": "EXPIRED"
     },
     "giaovien.test@gmail.com": {
       "id": "usr_1791361588777_veinc",
@@ -47,8 +50,9 @@
       "licenseExpiresAt": null,
       "freeAccess": false,
       "createdAt": "2026-10-07T08:26:28.778Z",
-      "lastActiveAt": "2026-10-31T07:06:01.508Z",
-      "isBlocked": false
+      "lastActiveAt": "2026-10-31T09:09:42.667Z",
+      "isBlocked": false,
+      "proStatus": "ACTIVE"
     },
     "giaovien.moi.2026@gmail.com": {
       "id": "sub_new_test",
@@ -64,7 +68,8 @@
       "freeAccess": false,
       "createdAt": "2026-10-07T11:45:45.055Z",
       "lastActiveAt": "2026-10-07T11:45:45.055Z",
-      "isBlocked": false
+      "isBlocked": false,
+      "proStatus": "NONE"
     },
     "thiennd85@gmail.com": {
       "id": "usr_1791385650532_uds5b",
@@ -79,7 +84,8 @@
       "licenseExpiresAt": null,
       "createdAt": "2026-10-07T15:07:30.532Z",
       "lastActiveAt": "2026-10-07T15:07:30.532Z",
-      "isBlocked": false
+      "isBlocked": false,
+      "proStatus": "NONE"
     },
     "test_user@gmail.com": {
       "id": "usr_1791558290633_y9u7w",
@@ -95,8 +101,9 @@
       "licenseExpiresAt": null,
       "freeAccess": false,
       "createdAt": "2026-10-09T15:04:50.633Z",
-      "lastActiveAt": "2026-10-31T07:06:01.382Z",
-      "isBlocked": false
+      "lastActiveAt": "2026-10-31T09:09:42.538Z",
+      "isBlocked": false,
+      "proStatus": "ACTIVE"
     },
     "new_teacher@school.edu.vn": {
       "id": "usr_1791558317128_02tl8",
@@ -110,9 +117,10 @@
       },
       "licenseExpiresAt": null,
       "createdAt": "2026-10-09T15:05:17.128Z",
-      "lastActiveAt": "2026-10-31T07:06:01.551Z",
+      "lastActiveAt": "2026-10-31T09:09:42.716Z",
       "isBlocked": false,
-      "freeAccess": false
+      "freeAccess": false,
+      "proStatus": "ACTIVE"
     },
     "nguyenthithanhtam3410@gmail.com": {
       "id": "usr_thanhtam_3410",
@@ -129,7 +137,8 @@
       "freeAccess": false,
       "createdAt": "2026-10-09T12:00:00.000Z",
       "lastActiveAt": "2026-10-09T12:00:00.000Z",
-      "isBlocked": false
+      "isBlocked": false,
+      "proStatus": "ACTIVE"
     },
     "test.skkn.review@gmail.com": {
       "id": "2c0f9363-c3fd-4b08-aaa4-f40be4dff7df",
@@ -144,7 +153,540 @@
       "licenseExpiresAt": null,
       "createdAt": "2026-10-06T01:09:09.000Z",
       "lastActiveAt": "2026-10-12T03:51:27.722Z",
+      "isBlocked": false,
+      "proStatus": "NONE"
+    },
+    "teacher_test_1793437273744@edu.vn": {
+      "id": "usr_1793437277110_z7b3x",
+      "email": "teacher_test_1793437273744@edu.vn",
+      "name": "Thầy Giáo Test",
+      "role": "LICENSED",
+      "plan": "PRO",
+      "quota": {
+        "easy": -1,
+        "advanced": -1
+      },
+      "licenseExpiresAt": "2027-04-30T23:59:59.999Z",
+      "freeAccess": false,
+      "createdAt": "2026-10-31T09:01:17.110Z",
+      "lastActiveAt": "2026-10-31T09:01:19.739Z",
+      "isBlocked": false,
+      "proStartDate": "2026-03-01",
+      "proDurationMonths": 9,
+      "proEndDate": "2027-04-30",
+      "proStatus": "ACTIVE",
+      "proUpdatedAt": "2026-10-31T09:01:19.739Z",
+      "proNote": "Gia hạn thêm 6 tháng học kỳ 2",
+      "proHistory": [
+        {
+          "id": "pro_hist_1793437279739_f6y7",
+          "action": "EXTEND",
+          "actionLabel": "Gia hạn PRO thêm 6 tháng (đến 2027-04-30)",
+          "startDate": "2026-03-01",
+          "durationMonths": 6,
+          "endDate": "2027-04-30",
+          "previousEndDate": "2026-06-01",
+          "performedAt": "2026-10-31T09:01:19.739Z",
+          "note": "Gia hạn thêm 6 tháng học kỳ 2",
+          "status": "ACTIVE"
+        },
+        {
+          "id": "pro_hist_1793437277116_b1ql",
+          "action": "GRANT",
+          "actionLabel": "Cấp quyền PRO 3 tháng (đến 2026-06-01)",
+          "startDate": "2026-03-01",
+          "durationMonths": 3,
+          "endDate": "2026-06-01",
+          "previousEndDate": null,
+          "performedAt": "2026-10-31T09:01:17.116Z",
+          "note": "Cấp quyền đợt thi GVDG cấp Tỉnh",
+          "status": "ACTIVE"
+        }
+      ]
+    },
+    "teacher_test_1793437320504@edu.vn": {
+      "id": "usr_1793437323461_mtws7",
+      "email": "teacher_test_1793437320504@edu.vn",
+      "name": "Thầy Giáo Test",
+      "role": "LICENSED",
+      "plan": "PRO",
+      "quota": {
+        "easy": -1,
+        "advanced": -1
+      },
+      "licenseExpiresAt": "2026-06-01T23:59:59.999Z",
+      "freeAccess": false,
+      "createdAt": "2026-10-31T09:02:03.461Z",
+      "lastActiveAt": "2026-10-31T09:02:03.463Z",
+      "isBlocked": false,
+      "proStartDate": "2026-03-01",
+      "proDurationMonths": 3,
+      "proEndDate": "2026-06-01",
+      "proStatus": "EXPIRED",
+      "proUpdatedAt": "2026-10-31T09:02:03.463Z",
+      "proNote": "Cấp quyền đợt thi GVDG cấp Tỉnh",
+      "proHistory": [
+        {
+          "id": "pro_hist_1793437323464_okra",
+          "action": "GRANT",
+          "actionLabel": "Cấp quyền PRO 3 tháng (đến 2026-06-01)",
+          "startDate": "2026-03-01",
+          "durationMonths": 3,
+          "endDate": "2026-06-01",
+          "previousEndDate": null,
+          "performedAt": "2026-10-31T09:02:03.463Z",
+          "note": "Cấp quyền đợt thi GVDG cấp Tỉnh",
+          "status": "ACTIVE"
+        }
+      ]
+    },
+    "teacher_test_1793437362345@edu.vn": {
+      "id": "usr_1793437365602_1bpl4",
+      "email": "teacher_test_1793437362345@edu.vn",
+      "name": "Thầy Giáo Test",
+      "role": "LICENSED",
+      "plan": "PRO",
+      "quota": {
+        "easy": -1,
+        "advanced": -1
+      },
+      "licenseExpiresAt": "2026-12-01T23:59:59.999Z",
+      "freeAccess": false,
+      "createdAt": "2026-10-31T09:02:45.602Z",
+      "lastActiveAt": "2026-10-31T09:02:48.574Z",
+      "isBlocked": false,
+      "proStartDate": "2026-03-01",
+      "proDurationMonths": 9,
+      "proEndDate": "2026-12-01",
+      "proStatus": "ACTIVE",
+      "proUpdatedAt": "2026-10-31T09:02:48.574Z",
+      "proNote": "Gia hạn thêm 6 tháng học kỳ 2",
+      "proHistory": [
+        {
+          "id": "pro_hist_1793437368574_oh17",
+          "action": "EXTEND",
+          "actionLabel": "Gia hạn PRO thêm 6 tháng (đến 2026-12-01)",
+          "startDate": "2026-03-01",
+          "durationMonths": 6,
+          "endDate": "2026-12-01",
+          "previousEndDate": "2026-06-01",
+          "performedAt": "2026-10-31T09:02:48.574Z",
+          "note": "Gia hạn thêm 6 tháng học kỳ 2",
+          "status": "ACTIVE"
+        },
+        {
+          "id": "pro_hist_1793437365603_4jhy",
+          "action": "GRANT",
+          "actionLabel": "Cấp quyền PRO 3 tháng (đến 2026-06-01)",
+          "startDate": "2026-03-01",
+          "durationMonths": 3,
+          "endDate": "2026-06-01",
+          "previousEndDate": null,
+          "performedAt": "2026-10-31T09:02:45.603Z",
+          "note": "Cấp quyền đợt thi GVDG cấp Tỉnh",
+          "status": "ACTIVE"
+        }
+      ]
+    },
+    "teacher_test_1793437390536@edu.vn": {
+      "id": "usr_1793437394477_v7diu",
+      "email": "teacher_test_1793437390536@edu.vn",
+      "name": "Thầy Giáo Test",
+      "role": "LICENSED",
+      "plan": "PRO",
+      "quota": {
+        "easy": -1,
+        "advanced": -1
+      },
+      "licenseExpiresAt": "2027-01-15T23:59:59.999Z",
+      "freeAccess": false,
+      "createdAt": "2026-10-31T09:03:14.477Z",
+      "lastActiveAt": "2026-10-31T09:03:21.718Z",
+      "isBlocked": false,
+      "proStartDate": "2026-03-01",
+      "proDurationMonths": 10,
+      "proEndDate": "2027-01-15",
+      "proStatus": "ACTIVE",
+      "proUpdatedAt": "2026-10-31T09:03:21.718Z",
+      "proNote": "Điều chỉnh hạn chót thẩm định hội đồng",
+      "proHistory": [
+        {
+          "id": "pro_hist_1793437401718_7ykv",
+          "action": "ADJUST",
+          "actionLabel": "Điều chỉnh thời hạn PRO (đến 2027-01-15)",
+          "startDate": "2026-03-01",
+          "durationMonths": 10,
+          "endDate": "2027-01-15",
+          "previousEndDate": "2026-12-01",
+          "performedAt": "2026-10-31T09:03:21.718Z",
+          "note": "Điều chỉnh hạn chót thẩm định hội đồng",
+          "status": "ACTIVE"
+        },
+        {
+          "id": "pro_hist_1793437397918_jmzz",
+          "action": "EXTEND",
+          "actionLabel": "Gia hạn PRO thêm 6 tháng (đến 2026-12-01)",
+          "startDate": "2026-03-01",
+          "durationMonths": 6,
+          "endDate": "2026-12-01",
+          "previousEndDate": "2026-06-01",
+          "performedAt": "2026-10-31T09:03:17.918Z",
+          "note": "Gia hạn thêm 6 tháng học kỳ 2",
+          "status": "ACTIVE"
+        },
+        {
+          "id": "pro_hist_1793437394479_cyxp",
+          "action": "GRANT",
+          "actionLabel": "Cấp quyền PRO 3 tháng (đến 2026-06-01)",
+          "startDate": "2026-03-01",
+          "durationMonths": 3,
+          "endDate": "2026-06-01",
+          "previousEndDate": null,
+          "performedAt": "2026-10-31T09:03:14.479Z",
+          "note": "Cấp quyền đợt thi GVDG cấp Tỉnh",
+          "status": "ACTIVE"
+        }
+      ]
+    },
+    "teacher_test_1793437511940@edu.vn": {
+      "id": "usr_1793437515392_zb12r",
+      "email": "teacher_test_1793437511940@edu.vn",
+      "name": "Thầy Giáo Test",
+      "role": "TRIAL",
+      "plan": "TRIAL",
+      "quota": {
+        "easy": 3,
+        "advanced": 1
+      },
+      "licenseExpiresAt": "2026-10-31T09:05:21.944Z",
+      "freeAccess": false,
+      "createdAt": "2026-10-31T09:05:15.392Z",
+      "lastActiveAt": "2026-10-31T09:05:22.944Z",
+      "isBlocked": false,
+      "proStartDate": "2026-03-01",
+      "proDurationMonths": 10,
+      "proEndDate": "2026-10-31",
+      "proStatus": "NONE",
+      "proUpdatedAt": "2026-10-31T09:05:22.944Z",
+      "proNote": "Thu hồi quyền trước thời hạn",
+      "proHistory": [
+        {
+          "id": "pro_hist_1793437522944_rseb",
+          "action": "REVOKE",
+          "actionLabel": "Thu hồi quyền PRO trước hạn",
+          "startDate": "2026-03-01",
+          "durationMonths": 10,
+          "endDate": "2027-01-15",
+          "previousEndDate": "2027-01-15",
+          "performedAt": "2026-10-31T09:05:22.944Z",
+          "note": "Thu hồi quyền trước thời hạn",
+          "status": "REVOKED"
+        },
+        {
+          "id": "pro_hist_1793437520346_ehf1",
+          "action": "ADJUST",
+          "actionLabel": "Điều chỉnh thời hạn PRO (đến 2027-01-15)",
+          "startDate": "2026-03-01",
+          "durationMonths": 10,
+          "endDate": "2027-01-15",
+          "previousEndDate": "2026-12-01",
+          "performedAt": "2026-10-31T09:05:20.346Z",
+          "note": "Điều chỉnh hạn chót thẩm định hội đồng",
+          "status": "ACTIVE"
+        },
+        {
+          "id": "pro_hist_1793437518345_260b",
+          "action": "EXTEND",
+          "actionLabel": "Gia hạn PRO thêm 6 tháng (đến 2026-12-01)",
+          "startDate": "2026-03-01",
+          "durationMonths": 6,
+          "endDate": "2026-12-01",
+          "previousEndDate": "2026-06-01",
+          "performedAt": "2026-10-31T09:05:18.345Z",
+          "note": "Gia hạn thêm 6 tháng học kỳ 2",
+          "status": "ACTIVE"
+        },
+        {
+          "id": "pro_hist_1793437515393_pwrz",
+          "action": "GRANT",
+          "actionLabel": "Cấp quyền PRO 3 tháng (đến 2026-06-01)",
+          "startDate": "2026-03-01",
+          "durationMonths": 3,
+          "endDate": "2026-06-01",
+          "previousEndDate": null,
+          "performedAt": "2026-10-31T09:05:15.393Z",
+          "note": "Cấp quyền đợt thi GVDG cấp Tỉnh",
+          "status": "ACTIVE"
+        }
+      ]
+    },
+    "teacher_test_1793437566479@edu.vn": {
+      "id": "usr_1793437569867_cnd2c",
+      "email": "teacher_test_1793437566479@edu.vn",
+      "name": "Thầy Giáo Test",
+      "role": "TRIAL",
+      "plan": "TRIAL",
+      "quota": {
+        "easy": 3,
+        "advanced": 1
+      },
+      "licenseExpiresAt": "2026-10-31T09:06:15.762Z",
+      "freeAccess": false,
+      "createdAt": "2026-10-31T09:06:09.867Z",
+      "lastActiveAt": "2026-10-31T09:06:16.762Z",
+      "isBlocked": false,
+      "proStartDate": "2026-03-01",
+      "proDurationMonths": 10,
+      "proEndDate": "2027-01-15",
+      "proStatus": "REVOKED",
+      "proUpdatedAt": "2026-10-31T09:06:16.762Z",
+      "proNote": "Thu hồi quyền trước thời hạn",
+      "proHistory": [
+        {
+          "id": "pro_hist_1793437576762_fj4c",
+          "action": "REVOKE",
+          "actionLabel": "Thu hồi quyền PRO trước hạn",
+          "startDate": "2026-03-01",
+          "durationMonths": 10,
+          "endDate": "2027-01-15",
+          "previousEndDate": "2027-01-15",
+          "performedAt": "2026-10-31T09:06:16.762Z",
+          "note": "Thu hồi quyền trước thời hạn",
+          "status": "REVOKED"
+        },
+        {
+          "id": "pro_hist_1793437574538_jlpp",
+          "action": "ADJUST",
+          "actionLabel": "Điều chỉnh thời hạn PRO (đến 2027-01-15)",
+          "startDate": "2026-03-01",
+          "durationMonths": 10,
+          "endDate": "2027-01-15",
+          "previousEndDate": "2026-12-01",
+          "performedAt": "2026-10-31T09:06:14.538Z",
+          "note": "Điều chỉnh hạn chót thẩm định hội đồng",
+          "status": "ACTIVE"
+        },
+        {
+          "id": "pro_hist_1793437572579_7vxq",
+          "action": "EXTEND",
+          "actionLabel": "Gia hạn PRO thêm 6 tháng (đến 2026-12-01)",
+          "startDate": "2026-03-01",
+          "durationMonths": 6,
+          "endDate": "2026-12-01",
+          "previousEndDate": "2026-06-01",
+          "performedAt": "2026-10-31T09:06:12.579Z",
+          "note": "Gia hạn thêm 6 tháng học kỳ 2",
+          "status": "ACTIVE"
+        },
+        {
+          "id": "pro_hist_1793437569869_vthe",
+          "action": "GRANT",
+          "actionLabel": "Cấp quyền PRO 3 tháng (đến 2026-06-01)",
+          "startDate": "2026-03-01",
+          "durationMonths": 3,
+          "endDate": "2026-06-01",
+          "previousEndDate": null,
+          "performedAt": "2026-10-31T09:06:09.869Z",
+          "note": "Cấp quyền đợt thi GVDG cấp Tỉnh",
+          "status": "ACTIVE"
+        }
+      ]
+    },
+    "expired_teacher_1793437579407@edu.vn": {
+      "id": "usr_1793437582134_bsi0u",
+      "email": "expired_teacher_1793437579407@edu.vn",
+      "name": "Thầy Hết Hạn",
+      "role": "LICENSED",
+      "plan": "PRO",
+      "quota": {
+        "easy": -1,
+        "advanced": -1
+      },
+      "licenseExpiresAt": "2024-02-01T23:59:59.999Z",
+      "freeAccess": false,
+      "createdAt": "2026-10-31T09:06:22.134Z",
+      "lastActiveAt": "2026-10-31T09:06:22.135Z",
+      "isBlocked": false,
+      "proStartDate": "2024-01-01",
+      "proDurationMonths": 1,
+      "proEndDate": "2024-02-01",
+      "proStatus": "EXPIRED",
+      "proUpdatedAt": "2026-10-31T09:06:22.135Z",
+      "proNote": "Expired test",
+      "proHistory": [
+        {
+          "id": "pro_hist_1793437582135_w9rt",
+          "action": "GRANT",
+          "actionLabel": "Cấp quyền PRO 1 tháng (đến 2024-02-01)",
+          "startDate": "2024-01-01",
+          "durationMonths": 1,
+          "endDate": "2024-02-01",
+          "previousEndDate": null,
+          "performedAt": "2026-10-31T09:06:22.135Z",
+          "note": "Expired test",
+          "status": "ACTIVE"
+        }
+      ]
+    },
+    "legacy_pro_1793437584114@edu.vn": {
+      "id": "usr_1793437587510_cia2z",
+      "email": "legacy_pro_1793437584114@edu.vn",
+      "name": "Thầy Cô Legacy",
+      "role": "TRIAL",
+      "plan": "TRIAL",
+      "quota": {
+        "easy": 3,
+        "advanced": 0
+      },
+      "licenseExpiresAt": null,
+      "freeAccess": false,
+      "createdAt": "2026-10-31T09:06:27.510Z",
+      "lastActiveAt": "2026-10-31T09:06:27.510Z",
       "isBlocked": false
+    },
+    "teacher_test_1793437631629@edu.vn": {
+      "id": "usr_1793437635082_1mn9t",
+      "email": "teacher_test_1793437631629@edu.vn",
+      "name": "Thầy Giáo Test",
+      "role": "TRIAL",
+      "plan": "TRIAL",
+      "quota": {
+        "easy": 3,
+        "advanced": 1
+      },
+      "licenseExpiresAt": "2026-10-31T09:07:24.134Z",
+      "freeAccess": false,
+      "createdAt": "2026-10-31T09:07:15.082Z",
+      "lastActiveAt": "2026-10-31T09:07:25.134Z",
+      "isBlocked": false,
+      "proStartDate": "2026-03-01",
+      "proDurationMonths": 10,
+      "proEndDate": "2027-01-15",
+      "proStatus": "REVOKED",
+      "proUpdatedAt": "2026-10-31T09:07:25.134Z",
+      "proNote": "Thu hồi quyền trước thời hạn",
+      "proHistory": [
+        {
+          "id": "pro_hist_1793437645134_wpf0",
+          "action": "REVOKE",
+          "actionLabel": "Thu hồi quyền PRO trước hạn",
+          "startDate": "2026-03-01",
+          "durationMonths": 10,
+          "endDate": "2027-01-15",
+          "previousEndDate": "2027-01-15",
+          "performedAt": "2026-10-31T09:07:25.134Z",
+          "note": "Thu hồi quyền trước thời hạn",
+          "status": "REVOKED"
+        },
+        {
+          "id": "pro_hist_1793437642445_uyvu",
+          "action": "ADJUST",
+          "actionLabel": "Điều chỉnh thời hạn PRO (đến 2027-01-15)",
+          "startDate": "2026-03-01",
+          "durationMonths": 10,
+          "endDate": "2027-01-15",
+          "previousEndDate": "2026-12-01",
+          "performedAt": "2026-10-31T09:07:22.445Z",
+          "note": "Điều chỉnh hạn chót thẩm định hội đồng",
+          "status": "ACTIVE"
+        },
+        {
+          "id": "pro_hist_1793437637241_rh1s",
+          "action": "EXTEND",
+          "actionLabel": "Gia hạn PRO thêm 6 tháng (đến 2026-12-01)",
+          "startDate": "2026-03-01",
+          "durationMonths": 6,
+          "endDate": "2026-12-01",
+          "previousEndDate": "2026-06-01",
+          "performedAt": "2026-10-31T09:07:17.241Z",
+          "note": "Gia hạn thêm 6 tháng học kỳ 2",
+          "status": "ACTIVE"
+        },
+        {
+          "id": "pro_hist_1793437635083_x0bw",
+          "action": "GRANT",
+          "actionLabel": "Cấp quyền PRO 3 tháng (đến 2026-06-01)",
+          "startDate": "2026-03-01",
+          "durationMonths": 3,
+          "endDate": "2026-06-01",
+          "previousEndDate": null,
+          "performedAt": "2026-10-31T09:07:15.083Z",
+          "note": "Cấp quyền đợt thi GVDG cấp Tỉnh",
+          "status": "ACTIVE"
+        }
+      ]
+    },
+    "expired_teacher_1793437647171@edu.vn": {
+      "id": "usr_1793437652997_nwav9",
+      "email": "expired_teacher_1793437647171@edu.vn",
+      "name": "Thầy Hết Hạn",
+      "role": "LICENSED",
+      "plan": "PRO",
+      "quota": {
+        "easy": -1,
+        "advanced": -1
+      },
+      "licenseExpiresAt": "2024-02-01T23:59:59.999Z",
+      "freeAccess": false,
+      "createdAt": "2026-10-31T09:07:32.997Z",
+      "lastActiveAt": "2026-10-31T09:07:32.999Z",
+      "isBlocked": false,
+      "proStartDate": "2024-01-01",
+      "proDurationMonths": 1,
+      "proEndDate": "2024-02-01",
+      "proStatus": "EXPIRED",
+      "proUpdatedAt": "2026-10-31T09:07:32.999Z",
+      "proNote": "Expired test",
+      "proHistory": [
+        {
+          "id": "pro_hist_1793437652999_lsvb",
+          "action": "GRANT",
+          "actionLabel": "Cấp quyền PRO 1 tháng (đến 2024-02-01)",
+          "startDate": "2024-01-01",
+          "durationMonths": 1,
+          "endDate": "2024-02-01",
+          "previousEndDate": null,
+          "performedAt": "2026-10-31T09:07:32.999Z",
+          "note": "Expired test",
+          "status": "ACTIVE"
+        }
+      ]
+    },
+    "legacy_pro_1793437655099@edu.vn": {
+      "id": "usr_1793437658154_ahffl",
+      "email": "legacy_pro_1793437655099@edu.vn",
+      "name": "Thầy Cô Legacy",
+      "role": "LICENSED",
+      "plan": "PRO",
+      "quota": {
+        "easy": -1,
+        "advanced": -1
+      },
+      "licenseExpiresAt": null,
+      "freeAccess": false,
+      "createdAt": "2026-10-31T09:07:38.154Z",
+      "lastActiveAt": "2026-10-31T09:07:38.155Z",
+      "isBlocked": false,
+      "proStartDate": "2026-10-31",
+      "proDurationMonths": 0,
+      "proEndDate": null,
+      "proStatus": "PERMANENT",
+      "proUpdatedAt": "2026-10-31T09:07:38.155Z",
+      "proNote": "Legacy lifetime PRO",
+      "proHistory": [
+        {
+          "id": "pro_hist_1793437658155_i5uv",
+          "action": "GRANT",
+          "actionLabel": "Cấp quyền PRO Vĩnh viễn",
+          "startDate": "2026-10-31",
+          "durationMonths": 0,
+          "endDate": null,
+          "previousEndDate": null,
+          "performedAt": "2026-10-31T09:07:38.155Z",
+          "note": "Legacy lifetime PRO",
+          "status": "PERMANENT"
+        }
+      ]
     }
   },
   "guests": {
@@ -182,11 +724,11 @@
       "guestId": "guest_default",
       "quota": {
         "easy": 3,
-        "advanced": 1
+        "advanced": 0
       },
       "createdAt": "2026-10-07T08:25:54.173Z",
-      "lastActiveAt": "2026-10-07T08:25:54.173Z",
-      "analysisCount": 0
+      "lastActiveAt": "2026-10-31T09:05:29.819Z",
+      "analysisCount": 1
     },
     "guest_test_check": {
       "guestId": "guest_test_check",
@@ -292,7 +834,7 @@
     }
   },
   "stats": {
-    "totalAnalyses": 92
+    "totalAnalyses": 98
   },
   "settings": {
     "guestEasyLimit": 3,

@@ -4,6 +4,20 @@ import { createRequire as _topCreateRequire } from 'module'; const require = _to
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+function addCalendarMonths(startDateStr, months) {
+  if (!startDateStr || months <= 0) return startDateStr;
+  const parts = startDateStr.split("-").map(Number);
+  const year = parts[0];
+  const month = parts[1] - 1;
+  const day = parts[2];
+  const totalMonths = year * 12 + month + months;
+  const targetYear = Math.floor(totalMonths / 12);
+  const targetMonth = totalMonths % 12;
+  const maxDays = new Date(targetYear, targetMonth + 1, 0).getDate();
+  const targetDay = Math.min(day, maxDays);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${targetYear}-${pad(targetMonth + 1)}-${pad(targetDay)}`;
+}
 var DATA_DIR = path.resolve("data");
 var STORE_FILE = path.join(DATA_DIR, "auth_store.json");
 var store = {
@@ -258,6 +272,22 @@ function mapRawSheetUserToAccount(raw) {
   const isBlocked = statusStr === "BLOCKED" || raw.isBlocked === true || role === "BLOCKED";
   const licenseKey = raw.licenseKey || raw.LICENSE_KEY || raw.key || raw.KEY || void 0;
   const licenseExpiresAt = raw.licenseExpiresAt || raw.expiresAt || raw.EXPIRES_AT || null;
+  const proStartDate = raw.proStartDate || raw.PRO_START_DATE || raw.startDate || raw.START_DATE || null;
+  const proDurationMonths = raw.proDurationMonths !== void 0 ? Number(raw.proDurationMonths) : raw.PRO_DURATION_MONTHS !== void 0 ? Number(raw.PRO_DURATION_MONTHS) : null;
+  const proEndDate = raw.proEndDate || raw.PRO_END_DATE || (licenseExpiresAt ? String(licenseExpiresAt).split("T")[0] : null);
+  const proStatus = raw.proStatus || raw.PRO_STATUS || (plan === "PRO" || role === "LICENSED" ? licenseExpiresAt && new Date(licenseExpiresAt).getTime() < Date.now() ? "EXPIRED" : "ACTIVE" : "NONE");
+  const proUpdatedAt = raw.proUpdatedAt || raw.PRO_UPDATED_AT || null;
+  const proUpdatedBy = raw.proUpdatedBy || raw.PRO_UPDATED_BY || null;
+  const proNote = raw.proNote || raw.PRO_NOTE || raw.customerNote || raw.NOTE || void 0;
+  let proHistory = void 0;
+  if (Array.isArray(raw.proHistory)) {
+    proHistory = raw.proHistory;
+  } else if (typeof raw.PRO_HISTORY === "string" && raw.PRO_HISTORY.trim()) {
+    try {
+      proHistory = JSON.parse(raw.PRO_HISTORY);
+    } catch (_) {
+    }
+  }
   return {
     id: id || void 0,
     email: email || void 0,
@@ -267,6 +297,14 @@ function mapRawSheetUserToAccount(raw) {
     quota: { easy: easyQuota, advanced: advancedQuota },
     licenseKey: licenseKey ? String(licenseKey) : void 0,
     licenseExpiresAt: licenseExpiresAt ? String(licenseExpiresAt) : null,
+    proStartDate: proStartDate ? String(proStartDate) : null,
+    proDurationMonths: proDurationMonths !== null && !isNaN(proDurationMonths) ? proDurationMonths : null,
+    proEndDate: proEndDate ? String(proEndDate) : null,
+    proStatus,
+    proUpdatedAt: proUpdatedAt ? String(proUpdatedAt) : null,
+    proUpdatedBy: proUpdatedBy ? String(proUpdatedBy) : null,
+    proNote: proNote ? String(proNote) : void 0,
+    proHistory,
     isBlocked,
     freeAccess: Boolean(raw.freeAccess || role === "FREE_ACCESS"),
     freeAccessName: raw.freeAccessName || raw.campaignName,
@@ -572,6 +610,14 @@ async function getAllUsersAndGuests() {
                   quota,
                   licenseKey: mapped.licenseKey || (isRootAdmin ? "SKKN-ADMIN-SYSTEM" : void 0),
                   licenseExpiresAt: mapped.licenseExpiresAt || null,
+                  proStartDate: mapped.proStartDate || null,
+                  proDurationMonths: mapped.proDurationMonths || null,
+                  proEndDate: mapped.proEndDate || null,
+                  proStatus: mapped.proStatus || void 0,
+                  proUpdatedAt: mapped.proUpdatedAt || null,
+                  proUpdatedBy: mapped.proUpdatedBy || null,
+                  proNote: mapped.proNote || void 0,
+                  proHistory: mapped.proHistory || void 0,
                   createdAt: (/* @__PURE__ */ new Date()).toISOString(),
                   lastActiveAt: (/* @__PURE__ */ new Date()).toISOString(),
                   isBlocked: isRootAdmin ? false : Boolean(mapped.isBlocked)
@@ -585,6 +631,14 @@ async function getAllUsersAndGuests() {
                 if (mapped.name) existing.name = mapped.name;
                 if (mapped.licenseKey) existing.licenseKey = mapped.licenseKey;
                 if (mapped.licenseExpiresAt !== void 0) existing.licenseExpiresAt = mapped.licenseExpiresAt;
+                if (mapped.proStartDate) existing.proStartDate = mapped.proStartDate;
+                if (mapped.proDurationMonths !== void 0 && mapped.proDurationMonths !== null) existing.proDurationMonths = mapped.proDurationMonths;
+                if (mapped.proEndDate) existing.proEndDate = mapped.proEndDate;
+                if (mapped.proStatus) existing.proStatus = mapped.proStatus;
+                if (mapped.proUpdatedAt) existing.proUpdatedAt = mapped.proUpdatedAt;
+                if (mapped.proUpdatedBy) existing.proUpdatedBy = mapped.proUpdatedBy;
+                if (mapped.proNote) existing.proNote = mapped.proNote;
+                if (mapped.proHistory && mapped.proHistory.length > 0) existing.proHistory = mapped.proHistory;
                 existing.quota = quota;
               }
             }
@@ -686,7 +740,15 @@ async function adminUpdateUser(params) {
   }
   if (params.expiresAt !== void 0) {
     user.licenseExpiresAt = params.expiresAt;
+    if (params.expiresAt) {
+      user.proEndDate = params.expiresAt.split("T")[0];
+    }
   }
+  if (params.proStartDate !== void 0) user.proStartDate = params.proStartDate;
+  if (params.proDurationMonths !== void 0) user.proDurationMonths = params.proDurationMonths;
+  if (params.proEndDate !== void 0) user.proEndDate = params.proEndDate;
+  if (params.proStatus !== void 0) user.proStatus = params.proStatus;
+  if (params.proNote !== void 0) user.proNote = params.proNote;
   if (params.quota !== void 0) {
     user.quota = params.quota;
   }
@@ -738,6 +800,163 @@ async function adminUpdateUser(params) {
     };
   }
   return { success: true, user, sheetSynced: false, message: "\u0110\xE3 c\u1EADp nh\u1EADt th\xF4ng tin ng\u01B0\u1EDDi d\xF9ng th\xE0nh c\xF4ng." };
+}
+async function adminManageProLicense(params) {
+  const email = params.email.trim().toLowerCase();
+  let user = findUserByEmailOrId(email);
+  if (!user && process.env.LICENSE_API_URL) {
+    try {
+      await getAllUsersAndGuests();
+      user = findUserByEmailOrId(email);
+    } catch {
+    }
+  }
+  if (!user) {
+    return { success: false, error: "Kh\xF4ng t\xECm th\u1EA5y ng\u01B0\u1EDDi d\xF9ng tr\xEAn h\u1EC7 th\u1ED1ng." };
+  }
+  const isTargetRoot = ROOT_ADMIN_EMAILS.includes(user.email.toLowerCase());
+  if (isTargetRoot && params.action === "REVOKE") {
+    return {
+      success: false,
+      error: "Quy t\u1EAFc an to\xE0n Qu\u1EA3n tr\u1ECB: Kh\xF4ng th\u1EC3 thu h\u1ED3i quy\u1EC1n c\u1EE7a t\xE0i kho\u1EA3n Root Admin."
+    };
+  }
+  const nowIso = (/* @__PURE__ */ new Date()).toISOString();
+  const todayStr = nowIso.split("T")[0];
+  const previousEndDate = user.proEndDate || (user.licenseExpiresAt ? user.licenseExpiresAt.split("T")[0] : null);
+  let newStartDate = user.proStartDate || todayStr;
+  let newDuration = user.proDurationMonths || null;
+  let newEndDate = user.proEndDate || null;
+  let newStatus = "ACTIVE";
+  let actionLabel = "";
+  if (params.action === "GRANT") {
+    const months = params.durationMonths !== void 0 ? Number(params.durationMonths) : 1;
+    newStartDate = params.startDate ? params.startDate.split("T")[0] : todayStr;
+    if (months > 0) {
+      newDuration = months;
+      newEndDate = params.endDate ? params.endDate.split("T")[0] : addCalendarMonths(newStartDate, months);
+      const [y, m, d] = newEndDate.split("-").map(Number);
+      const endOfDay = new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999));
+      user.licenseExpiresAt = endOfDay.toISOString();
+      newStatus = "ACTIVE";
+      actionLabel = `C\u1EA5p quy\u1EC1n PRO ${months} th\xE1ng (\u0111\u1EBFn ${newEndDate})`;
+    } else {
+      newDuration = 0;
+      newEndDate = null;
+      user.licenseExpiresAt = null;
+      newStatus = "PERMANENT";
+      actionLabel = "C\u1EA5p quy\u1EC1n PRO V\u0129nh vi\u1EC5n";
+    }
+    user.role = isTargetRoot ? "ADMIN" : "LICENSED";
+    user.plan = "PRO";
+    user.quota = { easy: -1, advanced: -1 };
+    user.isBlocked = false;
+  } else if (params.action === "EXTEND") {
+    const months = Number(params.durationMonths) || 1;
+    if (months <= 0) {
+      return { success: false, error: "S\u1ED1 th\xE1ng gia h\u1EA1n ph\u1EA3i l\xE0 s\u1ED1 nguy\xEAn d\u01B0\u01A1ng l\u1EDBn h\u01A1n 0." };
+    }
+    let baseDate = todayStr;
+    const isCurrentActive = Boolean(
+      user.licenseExpiresAt && new Date(user.licenseExpiresAt).getTime() >= Date.now() || previousEndDate && new Date(previousEndDate).getTime() >= Date.now()
+    );
+    if ((params.extendFrom === "CURRENT_END" || params.extendFrom === "CURRENT_EXPIRY") && previousEndDate) {
+      baseDate = previousEndDate;
+    } else if (params.startDate) {
+      baseDate = params.startDate.split("T")[0];
+    }
+    newEndDate = params.endDate ? params.endDate.split("T")[0] : addCalendarMonths(baseDate, months);
+    const [y, m, d] = newEndDate.split("-").map(Number);
+    const endOfDay = new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999));
+    user.licenseExpiresAt = endOfDay.toISOString();
+    newDuration = (user.proDurationMonths || 0) + months;
+    newStatus = "ACTIVE";
+    actionLabel = `Gia h\u1EA1n PRO th\xEAm ${months} th\xE1ng (\u0111\u1EBFn ${newEndDate})`;
+    user.role = isTargetRoot ? "ADMIN" : "LICENSED";
+    user.plan = "PRO";
+    user.quota = { easy: -1, advanced: -1 };
+    user.isBlocked = false;
+  } else if (params.action === "ADJUST") {
+    if (params.startDate) {
+      newStartDate = params.startDate.split("T")[0];
+    }
+    if (params.durationMonths !== void 0) {
+      newDuration = Number(params.durationMonths);
+    }
+    if (params.endDate !== void 0) {
+      newEndDate = params.endDate ? params.endDate.split("T")[0] : null;
+    } else if (params.durationMonths !== void 0 && Number(params.durationMonths) > 0) {
+      newEndDate = addCalendarMonths(newStartDate, Number(params.durationMonths));
+    }
+    if (newEndDate) {
+      const [y, m, d] = newEndDate.split("-").map(Number);
+      const endOfDay = new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999));
+      user.licenseExpiresAt = endOfDay.toISOString();
+      newStatus = endOfDay.getTime() >= Date.now() ? "ACTIVE" : "EXPIRED";
+    } else {
+      user.licenseExpiresAt = null;
+      newStatus = "PERMANENT";
+    }
+    if (params.proStatus) {
+      newStatus = params.proStatus;
+    }
+    actionLabel = `\u0110i\u1EC1u ch\u1EC9nh th\u1EDDi h\u1EA1n PRO (${newEndDate ? `\u0111\u1EBFn ${newEndDate}` : "V\u0129nh vi\u1EC5n"})`;
+    user.role = isTargetRoot ? "ADMIN" : "LICENSED";
+    user.plan = "PRO";
+    user.quota = { easy: -1, advanced: -1 };
+  } else if (params.action === "REVOKE") {
+    newStatus = "REVOKED";
+    user.licenseExpiresAt = new Date(Date.now() - 1e3).toISOString();
+    newEndDate = user.proEndDate || (previousEndDate ? previousEndDate : todayStr);
+    user.role = isTargetRoot ? "ADMIN" : "TRIAL";
+    user.plan = isTargetRoot ? "PRO" : "TRIAL";
+    user.quota = {
+      easy: store.settings?.trialEasyLimit ?? 3,
+      advanced: store.settings?.trialAdvancedLimit ?? 1
+    };
+    actionLabel = "Thu h\u1ED3i quy\u1EC1n PRO tr\u01B0\u1EDBc h\u1EA1n";
+  }
+  user.proStartDate = newStartDate;
+  user.proDurationMonths = newDuration;
+  user.proEndDate = newEndDate;
+  user.proStatus = newStatus;
+  user.proUpdatedAt = nowIso;
+  user.proUpdatedBy = params.operatorEmail;
+  if (params.note !== void 0) {
+    user.proNote = params.note.trim();
+  }
+  const historyRecord = {
+    id: `pro_hist_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    action: params.action,
+    actionLabel,
+    startDate: newStartDate,
+    durationMonths: params.durationMonths !== void 0 ? Number(params.durationMonths) : newDuration,
+    endDate: newEndDate,
+    previousEndDate,
+    performedBy: params.operatorEmail,
+    performedAt: nowIso,
+    note: params.note ? params.note.trim() : user.proNote || "",
+    status: newStatus
+  };
+  user.proHistory = user.proHistory || [];
+  user.proHistory.unshift(historyRecord);
+  user.lastActiveAt = nowIso;
+  saveStore();
+  let sheetSynced = false;
+  if (process.env.LICENSE_API_URL) {
+    const sheetRes = await syncUserToGoogleSheet(user, {
+      operatorEmail: params.operatorEmail,
+      explicitQuota: true
+    });
+    sheetSynced = Boolean(sheetRes.success);
+  }
+  return {
+    success: true,
+    user,
+    historyRecord,
+    sheetSynced,
+    message: `${actionLabel} cho t\xE0i kho\u1EA3n ${user.email} th\xE0nh c\xF4ng.`
+  };
 }
 async function adminCreateUser(params) {
   const email = params.email.trim().toLowerCase();
@@ -833,6 +1052,13 @@ async function syncUserToGoogleSheet(user, options) {
       explicitQuota,
       licenseKey: user.licenseKey || "",
       licenseExpiresAt: user.licenseExpiresAt || "",
+      proStartDate: user.proStartDate || "",
+      proDurationMonths: user.proDurationMonths !== null && user.proDurationMonths !== void 0 ? user.proDurationMonths : "",
+      proEndDate: user.proEndDate || (user.licenseExpiresAt ? user.licenseExpiresAt.split("T")[0] : ""),
+      proStatus: user.proStatus || "",
+      proUpdatedAt: user.proUpdatedAt || "",
+      proUpdatedBy: user.proUpdatedBy || "",
+      proNote: user.proNote || "",
       isBlocked: Boolean(user.isBlocked),
       createdAt: user.createdAt,
       lastActiveAt: user.lastActiveAt,
@@ -1356,7 +1582,7 @@ async function handler(req, res) {
     }
     if (subpath === "update-user") {
       if (req.method !== "POST") return res.status(405).json({ error: "Method Not Allowed" });
-      const { email, name, newEmail, role, plan, quota, isBlocked, expiresAt } = body || {};
+      const { email, name, newEmail, role, plan, quota, isBlocked, expiresAt, proStartDate, proDurationMonths, proEndDate, proStatus, proNote } = body || {};
       const result = await adminUpdateUser({
         operatorEmail,
         email,
@@ -1366,7 +1592,12 @@ async function handler(req, res) {
         plan,
         quota,
         isBlocked,
-        expiresAt
+        expiresAt,
+        proStartDate,
+        proDurationMonths,
+        proEndDate,
+        proStatus,
+        proNote
       });
       if (!result.success) {
         return res.status(400).json({ error: result.error || "C\u1EADp nh\u1EADt ng\u01B0\u1EDDi d\xF9ng th\u1EA5t b\u1EA1i" });
@@ -1378,6 +1609,31 @@ async function handler(req, res) {
         warning: result.warning,
         message: result.message
       });
+    }
+    if (subpath === "manage-pro" || subpath === "pro-license") {
+      if (req.method !== "POST") return res.status(405).json({ error: "Method Not Allowed" });
+      const { email, action, startDate, durationMonths, endDate, extendFrom, note, proStatus } = body || {};
+      if (!email) {
+        return res.status(400).json({ error: "Email ng\u01B0\u1EDDi d\xF9ng l\xE0 b\u1EAFt bu\u1ED9c" });
+      }
+      if (!action) {
+        return res.status(400).json({ error: "H\xE0nh \u0111\u1ED9ng qu\u1EA3n l\xFD PRO l\xE0 b\u1EAFt bu\u1ED9c (GRANT, EXTEND, ADJUST, REVOKE)" });
+      }
+      const result = await adminManageProLicense({
+        operatorEmail,
+        email,
+        action,
+        startDate,
+        durationMonths: durationMonths !== void 0 ? Number(durationMonths) : void 0,
+        endDate,
+        extendFrom,
+        note,
+        proStatus
+      });
+      if (!result.success) {
+        return res.status(400).json({ error: result.error || "Thao t\xE1c PRO th\u1EA5t b\u1EA1i" });
+      }
+      return res.status(200).json(result);
     }
     if (subpath === "delete-user") {
       if (req.method !== "POST") return res.status(405).json({ error: "Method Not Allowed" });

@@ -3,6 +3,7 @@ import {
   adminDeleteLicense,
   adminDeleteUser,
   adminGenerateLicense,
+  adminManageProLicense,
   adminResetLicenseDevices,
   adminSyncGoogleSheets,
   adminToggleLicenseStatus,
@@ -144,7 +145,7 @@ export default async function handler(req: any, res: any) {
     // POST /api/admin/update-user
     if (subpath === 'update-user') {
       if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
-      const { email, name, newEmail, role, plan, quota, isBlocked, expiresAt } = body || {};
+      const { email, name, newEmail, role, plan, quota, isBlocked, expiresAt, proStartDate, proDurationMonths, proEndDate, proStatus, proNote } = body || {};
       const result = await adminUpdateUser({
         operatorEmail,
         email,
@@ -155,6 +156,11 @@ export default async function handler(req: any, res: any) {
         quota,
         isBlocked,
         expiresAt,
+        proStartDate,
+        proDurationMonths,
+        proEndDate,
+        proStatus,
+        proNote,
       });
       if (!result.success) {
         return res.status(400).json({ error: result.error || 'Cập nhật người dùng thất bại' });
@@ -166,6 +172,33 @@ export default async function handler(req: any, res: any) {
         warning: (result as any).warning,
         message: (result as any).message,
       });
+    }
+
+    // POST /api/admin/manage-pro hoặc /api/admin/pro-license
+    if (subpath === 'manage-pro' || subpath === 'pro-license') {
+      if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
+      const { email, action, startDate, durationMonths, endDate, extendFrom, note, proStatus } = body || {};
+      if (!email) {
+        return res.status(400).json({ error: 'Email người dùng là bắt buộc' });
+      }
+      if (!action) {
+        return res.status(400).json({ error: 'Hành động quản lý PRO là bắt buộc (GRANT, EXTEND, ADJUST, REVOKE)' });
+      }
+      const result = await adminManageProLicense({
+        operatorEmail,
+        email,
+        action,
+        startDate,
+        durationMonths: durationMonths !== undefined ? Number(durationMonths) : undefined,
+        endDate,
+        extendFrom,
+        note,
+        proStatus,
+      });
+      if (!result.success) {
+        return res.status(400).json({ error: result.error || 'Thao tác PRO thất bại' });
+      }
+      return res.status(200).json(result);
     }
 
     // POST /api/admin/delete-user

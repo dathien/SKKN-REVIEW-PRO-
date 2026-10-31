@@ -303,9 +303,21 @@ function consumeQuota(params) {
       }
       const isProPlan = user.role === "LICENSED" || user.role === "FREE_ACCESS" || Boolean(user.freeAccess) || user.plan === "PRO" || user.plan === "SCHOOL" || user.plan === "PREMIUM";
       if (isProPlan) {
-        if (user.licenseExpiresAt) {
-          const expiryTime = new Date(user.licenseExpiresAt).getTime();
+        if (user.proStatus === "EXPIRED") {
+          return {
+            allowed: false,
+            code: "NOT_ALLOWED",
+            message: "G\xF3i PRO c\u1EE7a Th\u1EA7y/C\xF4 \u0111\xE3 h\u1EBFt th\u1EDDi h\u1EA1n s\u1EED d\u1EE5ng. Vui l\xF2ng li\xEAn h\u1EC7 Qu\u1EA3n tr\u1ECB vi\xEAn \u0111\u1EC3 \u0111\u01B0\u1EE3c gia h\u1EA1n d\u1ECBch v\u1EE5.",
+            role: user.role,
+            quota: user.quota
+          };
+        }
+        const expDate = user.proEndDate || user.licenseExpiresAt;
+        if (expDate) {
+          const expiryTime = new Date(expDate).getTime();
           if (!isNaN(expiryTime) && expiryTime < Date.now()) {
+            user.proStatus = "EXPIRED";
+            saveStore();
             return {
               allowed: false,
               code: "NOT_ALLOWED",
@@ -320,7 +332,8 @@ function consumeQuota(params) {
         return {
           allowed: true,
           role: user.role,
-          quota: user.quota
+          quota: user.quota,
+          quotaType: "pro_unlimited"
         };
       }
       const currentQuota = user.quota[mode] ?? 0;

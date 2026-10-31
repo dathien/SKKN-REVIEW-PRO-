@@ -257,6 +257,22 @@ function mapRawSheetUserToAccount(raw) {
   const isBlocked = statusStr === "BLOCKED" || raw.isBlocked === true || role === "BLOCKED";
   const licenseKey = raw.licenseKey || raw.LICENSE_KEY || raw.key || raw.KEY || void 0;
   const licenseExpiresAt = raw.licenseExpiresAt || raw.expiresAt || raw.EXPIRES_AT || null;
+  const proStartDate = raw.proStartDate || raw.PRO_START_DATE || raw.startDate || raw.START_DATE || null;
+  const proDurationMonths = raw.proDurationMonths !== void 0 ? Number(raw.proDurationMonths) : raw.PRO_DURATION_MONTHS !== void 0 ? Number(raw.PRO_DURATION_MONTHS) : null;
+  const proEndDate = raw.proEndDate || raw.PRO_END_DATE || (licenseExpiresAt ? String(licenseExpiresAt).split("T")[0] : null);
+  const proStatus = raw.proStatus || raw.PRO_STATUS || (plan === "PRO" || role === "LICENSED" ? licenseExpiresAt && new Date(licenseExpiresAt).getTime() < Date.now() ? "EXPIRED" : "ACTIVE" : "NONE");
+  const proUpdatedAt = raw.proUpdatedAt || raw.PRO_UPDATED_AT || null;
+  const proUpdatedBy = raw.proUpdatedBy || raw.PRO_UPDATED_BY || null;
+  const proNote = raw.proNote || raw.PRO_NOTE || raw.customerNote || raw.NOTE || void 0;
+  let proHistory = void 0;
+  if (Array.isArray(raw.proHistory)) {
+    proHistory = raw.proHistory;
+  } else if (typeof raw.PRO_HISTORY === "string" && raw.PRO_HISTORY.trim()) {
+    try {
+      proHistory = JSON.parse(raw.PRO_HISTORY);
+    } catch (_) {
+    }
+  }
   return {
     id: id || void 0,
     email: email || void 0,
@@ -266,6 +282,14 @@ function mapRawSheetUserToAccount(raw) {
     quota: { easy: easyQuota, advanced: advancedQuota },
     licenseKey: licenseKey ? String(licenseKey) : void 0,
     licenseExpiresAt: licenseExpiresAt ? String(licenseExpiresAt) : null,
+    proStartDate: proStartDate ? String(proStartDate) : null,
+    proDurationMonths: proDurationMonths !== null && !isNaN(proDurationMonths) ? proDurationMonths : null,
+    proEndDate: proEndDate ? String(proEndDate) : null,
+    proStatus,
+    proUpdatedAt: proUpdatedAt ? String(proUpdatedAt) : null,
+    proUpdatedBy: proUpdatedBy ? String(proUpdatedBy) : null,
+    proNote: proNote ? String(proNote) : void 0,
+    proHistory,
     isBlocked,
     freeAccess: Boolean(raw.freeAccess || role === "FREE_ACCESS"),
     freeAccessName: raw.freeAccessName || raw.campaignName,

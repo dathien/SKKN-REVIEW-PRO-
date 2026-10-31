@@ -437,6 +437,22 @@ export interface UserQuota {
   advanced: number; // Số lượt Chuyên sâu còn lại
 }
 
+export type ProActionType = 'GRANT' | 'EXTEND' | 'ADJUST' | 'REVOKE';
+
+export interface ProLicenseHistoryRecord {
+  id: string;
+  action: ProActionType;
+  actionLabel: string;
+  startDate?: string | null;
+  durationMonths?: number | null;
+  endDate?: string | null;
+  previousEndDate?: string | null;
+  performedBy: string; // email của Quản trị viên thực hiện
+  performedAt: string; // ISO timestamp
+  note?: string;
+  status: 'ACTIVE' | 'EXPIRED' | 'REVOKED' | 'PERMANENT';
+}
+
 export interface UserAccount {
   id: string;
   email: string;
@@ -447,6 +463,15 @@ export interface UserAccount {
   quota: UserQuota;
   licenseKey?: string;
   licenseExpiresAt?: string | null;
+  // Các trường quản lý thời hạn PRO nâng cao
+  proStartDate?: string | null;
+  proDurationMonths?: number | null;
+  proEndDate?: string | null;
+  proStatus?: 'ACTIVE' | 'EXPIRED' | 'REVOKED' | 'PERMANENT' | 'NONE';
+  proUpdatedAt?: string | null;
+  proUpdatedBy?: string | null;
+  proNote?: string;
+  proHistory?: ProLicenseHistoryRecord[];
   freeAccess?: boolean;
   freeAccessName?: string;
   freeAccessExpiresAt?: string | null;

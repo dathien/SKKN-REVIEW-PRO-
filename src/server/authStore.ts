@@ -1,7 +1,41 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { UserAccount, GuestSession, LicenseItem, LicenseStatus, SystemStats, UserRole, LicensePlan, SystemSettings } from '../types/index';
+import {
+  UserAccount,
+  GuestSession,
+  LicenseItem,
+  LicenseStatus,
+  SystemStats,
+  UserRole,
+  LicensePlan,
+  SystemSettings,
+  ProLicenseHistoryRecord,
+  ProActionType,
+} from '../types/index';
+
+/**
+ * Thuật toán tính ngày hết hạn theo tháng lịch chuẩn xác
+ * Xử lý chính xác ngày cuối tháng (28/29/30/31) và năm nhuận
+ */
+export function addCalendarMonths(startDateStr: string, months: number): string {
+  if (!startDateStr || months <= 0) return startDateStr;
+  const parts = startDateStr.split('-').map(Number);
+  const year = parts[0];
+  const month = parts[1] - 1; // 0-indexed
+  const day = parts[2];
+
+  const totalMonths = year * 12 + month + months;
+  const targetYear = Math.floor(totalMonths / 12);
+  const targetMonth = totalMonths % 12;
+
+  // Số ngày tối đa của tháng đích (xử lý ngày 28/29/30/31 và năm nhuận)
+  const maxDays = new Date(targetYear, targetMonth + 1, 0).getDate();
+  const targetDay = Math.min(day, maxDays);
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${targetYear}-${pad(targetMonth + 1)}-${pad(targetDay)}`;
+}
 
 const DATA_DIR = path.resolve('data');
 const STORE_FILE = path.join(DATA_DIR, 'auth_store.json');
@@ -249,6 +283,14 @@ export interface MappedUserData {
   quota?: { easy: number; advanced: number };
   licenseKey?: string;
   licenseExpiresAt?: string | null;
+  proStartDate?: string | null;
+  proDurationMonths?: number | null;
+  proEndDate?: string | null;
+  proStatus?: 'ACTIVE' | 'EXPIRED' | 'REVOKED' | 'PERMANENT' | 'NONE';
+  proUpdatedAt?: string | null;
+  proUpdatedBy?: string | null;
+  proNote?: string;
+  proHistory?: ProLicenseHistoryRecord[];
   isBlocked?: boolean;
   freeAccess?: boolean;
   freeAccessName?: string;
@@ -358,6 +400,27 @@ export function mapRawSheetUserToAccount(raw: any): MappedUserData | null {
   const licenseKey = raw.licenseKey || raw.LICENSE_KEY || raw.key || raw.KEY || undefined;
   const licenseExpiresAt = raw.licenseExpiresAt || raw.expiresAt || raw.EXPIRES_AT || null;
 
+  const proStartDate = raw.proStartDate || raw.PRO_START_DATE || raw.startDate || raw.START_DATE || null;
+  const proDurationMonths = raw.proDurationMonths !== undefined ? Number(raw.proDurationMonths) :
+    (raw.PRO_DURATION_MONTHS !== undefined ? Number(raw.PRO_DURATION_MONTHS) : null);
+  const proEndDate = raw.proEndDate || raw.PRO_END_DATE || (licenseExpiresAt ? String(licenseExpiresAt).split('T')[0] : null);
+  const proStatus = raw.proStatus || raw.PRO_STATUS ||
+    (plan === 'PRO' || role === 'LICENSED'
+      ? (licenseExpiresAt && new Date(licenseExpiresAt).getTime() < Date.now() ? 'EXPIRED' : 'ACTIVE')
+      : 'NONE');
+  const proUpdatedAt = raw.proUpdatedAt || raw.PRO_UPDATED_AT || null;
+  const proUpdatedBy = raw.proUpdatedBy || raw.PRO_UPDATED_BY || null;
+  const proNote = raw.proNote || raw.PRO_NOTE || raw.customerNote || raw.NOTE || undefined;
+
+  let proHistory: ProLicenseHistoryRecord[] | undefined = undefined;
+  if (Array.isArray(raw.proHistory)) {
+    proHistory = raw.proHistory;
+  } else if (typeof raw.PRO_HISTORY === 'string' && raw.PRO_HISTORY.trim()) {
+    try {
+      proHistory = JSON.parse(raw.PRO_HISTORY);
+    } catch (_) {}
+  }
+
   return {
     id: id || undefined,
     email: email || undefined,
@@ -367,6 +430,14 @@ export function mapRawSheetUserToAccount(raw: any): MappedUserData | null {
     quota: { easy: easyQuota, advanced: advancedQuota },
     licenseKey: licenseKey ? String(licenseKey) : undefined,
     licenseExpiresAt: licenseExpiresAt ? String(licenseExpiresAt) : null,
+    proStartDate: proStartDate ? String(proStartDate) : null,
+    proDurationMonths: proDurationMonths !== null && !isNaN(proDurationMonths) ? proDurationMonths : null,
+    proEndDate: proEndDate ? String(proEndDate) : null,
+    proStatus: proStatus as any,
+    proUpdatedAt: proUpdatedAt ? String(proUpdatedAt) : null,
+    proUpdatedBy: proUpdatedBy ? String(proUpdatedBy) : null,
+    proNote: proNote ? String(proNote) : undefined,
+    proHistory,
     isBlocked,
     freeAccess: Boolean(raw.freeAccess || role === 'FREE_ACCESS'),
     freeAccessName: raw.freeAccessName || raw.campaignName,
@@ -626,6 +697,7 @@ export interface QuotaCheckResult {
   message?: string;
   role: UserRole;
   quota: { easy: number; advanced: number };
+  quotaType?: 'pro_unlimited' | 'trial' | 'guest';
 }
 
 export function consumeQuota(params: {
@@ -671,9 +743,22 @@ export function consumeQuota(params: {
         user.plan === 'PREMIUM';
 
       if (isProPlan) {
-        if (user.licenseExpiresAt) {
-          const expiryTime = new Date(user.licenseExpiresAt).getTime();
+        if (user.proStatus === 'EXPIRED') {
+          return {
+            allowed: false,
+            code: 'NOT_ALLOWED',
+            message: 'Gói PRO của Thầy/Cô đã hết thời hạn sử dụng. Vui lòng liên hệ Quản trị viên để được gia hạn dịch vụ.',
+            role: user.role,
+            quota: user.quota,
+          };
+        }
+
+        const expDate = user.proEndDate || user.licenseExpiresAt;
+        if (expDate) {
+          const expiryTime = new Date(expDate).getTime();
           if (!isNaN(expiryTime) && expiryTime < Date.now()) {
+            user.proStatus = 'EXPIRED';
+            saveStore();
             return {
               allowed: false,
               code: 'NOT_ALLOWED',
@@ -691,6 +776,7 @@ export function consumeQuota(params: {
           allowed: true,
           role: user.role,
           quota: user.quota,
+          quotaType: 'pro_unlimited',
         };
       }
 
@@ -1127,6 +1213,14 @@ export async function getAllUsersAndGuests() {
                   quota,
                   licenseKey: mapped.licenseKey || (isRootAdmin ? 'SKKN-ADMIN-SYSTEM' : undefined),
                   licenseExpiresAt: mapped.licenseExpiresAt || null,
+                  proStartDate: mapped.proStartDate || null,
+                  proDurationMonths: mapped.proDurationMonths || null,
+                  proEndDate: mapped.proEndDate || null,
+                  proStatus: mapped.proStatus || undefined,
+                  proUpdatedAt: mapped.proUpdatedAt || null,
+                  proUpdatedBy: mapped.proUpdatedBy || null,
+                  proNote: mapped.proNote || undefined,
+                  proHistory: mapped.proHistory || undefined,
                   createdAt: new Date().toISOString(),
                   lastActiveAt: new Date().toISOString(),
                   isBlocked: isRootAdmin ? false : Boolean(mapped.isBlocked),
@@ -1141,6 +1235,14 @@ export async function getAllUsersAndGuests() {
                 if (mapped.name) existing.name = mapped.name;
                 if (mapped.licenseKey) existing.licenseKey = mapped.licenseKey;
                 if (mapped.licenseExpiresAt !== undefined) existing.licenseExpiresAt = mapped.licenseExpiresAt;
+                if (mapped.proStartDate) existing.proStartDate = mapped.proStartDate;
+                if (mapped.proDurationMonths !== undefined && mapped.proDurationMonths !== null) existing.proDurationMonths = mapped.proDurationMonths;
+                if (mapped.proEndDate) existing.proEndDate = mapped.proEndDate;
+                if (mapped.proStatus) existing.proStatus = mapped.proStatus;
+                if (mapped.proUpdatedAt) existing.proUpdatedAt = mapped.proUpdatedAt;
+                if (mapped.proUpdatedBy) existing.proUpdatedBy = mapped.proUpdatedBy;
+                if (mapped.proNote) existing.proNote = mapped.proNote;
+                if (mapped.proHistory && mapped.proHistory.length > 0) existing.proHistory = mapped.proHistory;
                 existing.quota = quota;
               }
             }
@@ -1170,6 +1272,11 @@ export async function adminUpdateUser(params: {
   quota?: { easy: number; advanced: number };
   isBlocked?: boolean;
   expiresAt?: string | null;
+  proStartDate?: string | null;
+  proDurationMonths?: number | null;
+  proEndDate?: string | null;
+  proStatus?: 'ACTIVE' | 'EXPIRED' | 'REVOKED' | 'PERMANENT' | 'NONE';
+  proNote?: string;
 }): Promise<{ success: boolean; user?: UserAccount; error?: string; sheetSynced?: boolean; warning?: string; message?: string }> {
   let user = findUserByEmailOrId(params.email);
   if (!user && process.env.LICENSE_API_URL) {
@@ -1273,7 +1380,17 @@ export async function adminUpdateUser(params: {
   // 4. Gia hạn / cập nhật ngày hết hạn bản quyền
   if (params.expiresAt !== undefined) {
     user.licenseExpiresAt = params.expiresAt;
+    if (params.expiresAt) {
+      user.proEndDate = params.expiresAt.split('T')[0];
+    }
   }
+
+  // Cập nhật các trường quản lý thời hạn PRO
+  if (params.proStartDate !== undefined) user.proStartDate = params.proStartDate;
+  if (params.proDurationMonths !== undefined) user.proDurationMonths = params.proDurationMonths;
+  if (params.proEndDate !== undefined) user.proEndDate = params.proEndDate;
+  if (params.proStatus !== undefined) user.proStatus = params.proStatus;
+  if (params.proNote !== undefined) user.proNote = params.proNote;
 
   // 5. Cập nhật lượt Trial
   if (params.quota !== undefined) {
@@ -1338,6 +1455,205 @@ export async function adminUpdateUser(params: {
   }
 
   return { success: true, user, sheetSynced: false, message: 'Đã cập nhật thông tin người dùng thành công.' };
+}
+
+/**
+ * QUẢN LÝ THỜI HẠN TÀI KHOẢN PRO
+ * Cấp quyền PRO theo thời hạn, gia hạn, điều chỉnh ngày bắt đầu/kết thúc và thu hồi
+ * Tự động tính toán theo tháng lịch chuẩn, năm nhuận, ngày cuối tháng và lưu lịch sử truy vết
+ */
+export async function adminManageProLicense(params: {
+  operatorEmail: string;
+  email: string;
+  action: 'GRANT' | 'EXTEND' | 'ADJUST' | 'REVOKE';
+  startDate?: string;
+  durationMonths?: number;
+  endDate?: string | null;
+  extendFrom?: 'CURRENT_END' | 'CURRENT_EXPIRY' | 'START_DATE';
+  note?: string;
+  proStatus?: 'ACTIVE' | 'EXPIRED' | 'REVOKED' | 'PERMANENT';
+}): Promise<{
+  success: boolean;
+  user?: UserAccount;
+  historyRecord?: ProLicenseHistoryRecord;
+  error?: string;
+  sheetSynced?: boolean;
+  message?: string;
+}> {
+  const email = params.email.trim().toLowerCase();
+  let user = findUserByEmailOrId(email);
+  if (!user && process.env.LICENSE_API_URL) {
+    try {
+      await getAllUsersAndGuests();
+      user = findUserByEmailOrId(email);
+    } catch {}
+  }
+  if (!user) {
+    return { success: false, error: 'Không tìm thấy người dùng trên hệ thống.' };
+  }
+
+  const isTargetRoot = ROOT_ADMIN_EMAILS.includes(user.email.toLowerCase());
+  if (isTargetRoot && params.action === 'REVOKE') {
+    return {
+      success: false,
+      error: 'Quy tắc an toàn Quản trị: Không thể thu hồi quyền của tài khoản Root Admin.',
+    };
+  }
+
+  const nowIso = new Date().toISOString();
+  const todayStr = nowIso.split('T')[0];
+  const previousEndDate = user.proEndDate || (user.licenseExpiresAt ? user.licenseExpiresAt.split('T')[0] : null);
+
+  let newStartDate = user.proStartDate || todayStr;
+  let newDuration = user.proDurationMonths || null;
+  let newEndDate: string | null = user.proEndDate || null;
+  let newStatus: 'ACTIVE' | 'EXPIRED' | 'REVOKED' | 'PERMANENT' = 'ACTIVE';
+  let actionLabel = '';
+
+  if (params.action === 'GRANT') {
+    const months = params.durationMonths !== undefined ? Number(params.durationMonths) : 1;
+    newStartDate = params.startDate ? params.startDate.split('T')[0] : todayStr;
+    if (months > 0) {
+      newDuration = months;
+      newEndDate = params.endDate ? params.endDate.split('T')[0] : addCalendarMonths(newStartDate, months);
+      // Construct end of day ISO string
+      const [y, m, d] = newEndDate.split('-').map(Number);
+      const endOfDay = new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999));
+      user.licenseExpiresAt = endOfDay.toISOString();
+      newStatus = 'ACTIVE';
+      actionLabel = `Cấp quyền PRO ${months} tháng (đến ${newEndDate})`;
+    } else {
+      newDuration = 0;
+      newEndDate = null;
+      user.licenseExpiresAt = null;
+      newStatus = 'PERMANENT';
+      actionLabel = 'Cấp quyền PRO Vĩnh viễn';
+    }
+
+    user.role = isTargetRoot ? 'ADMIN' : 'LICENSED';
+    user.plan = 'PRO';
+    user.quota = { easy: -1, advanced: -1 };
+    user.isBlocked = false;
+  } else if (params.action === 'EXTEND') {
+    const months = Number(params.durationMonths) || 1;
+    if (months <= 0) {
+      return { success: false, error: 'Số tháng gia hạn phải là số nguyên dương lớn hơn 0.' };
+    }
+
+    let baseDate = todayStr;
+    const isCurrentActive = Boolean(
+      (user.licenseExpiresAt && new Date(user.licenseExpiresAt).getTime() >= Date.now()) ||
+      (previousEndDate && new Date(previousEndDate).getTime() >= Date.now())
+    );
+
+    if ((params.extendFrom === 'CURRENT_END' || params.extendFrom === 'CURRENT_EXPIRY') && previousEndDate) {
+      baseDate = previousEndDate;
+    } else if (params.startDate) {
+      baseDate = params.startDate.split('T')[0];
+    }
+
+    newEndDate = params.endDate ? params.endDate.split('T')[0] : addCalendarMonths(baseDate, months);
+    const [y, m, d] = newEndDate.split('-').map(Number);
+    const endOfDay = new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999));
+    user.licenseExpiresAt = endOfDay.toISOString();
+    newDuration = (user.proDurationMonths || 0) + months;
+    newStatus = 'ACTIVE';
+    actionLabel = `Gia hạn PRO thêm ${months} tháng (đến ${newEndDate})`;
+
+    user.role = isTargetRoot ? 'ADMIN' : 'LICENSED';
+    user.plan = 'PRO';
+    user.quota = { easy: -1, advanced: -1 };
+    user.isBlocked = false;
+  } else if (params.action === 'ADJUST') {
+    if (params.startDate) {
+      newStartDate = params.startDate.split('T')[0];
+    }
+    if (params.durationMonths !== undefined) {
+      newDuration = Number(params.durationMonths);
+    }
+    if (params.endDate !== undefined) {
+      newEndDate = params.endDate ? params.endDate.split('T')[0] : null;
+    } else if (params.durationMonths !== undefined && Number(params.durationMonths) > 0) {
+      newEndDate = addCalendarMonths(newStartDate, Number(params.durationMonths));
+    }
+
+    if (newEndDate) {
+      const [y, m, d] = newEndDate.split('-').map(Number);
+      const endOfDay = new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999));
+      user.licenseExpiresAt = endOfDay.toISOString();
+      newStatus = endOfDay.getTime() >= Date.now() ? 'ACTIVE' : 'EXPIRED';
+    } else {
+      user.licenseExpiresAt = null;
+      newStatus = 'PERMANENT';
+    }
+
+    if (params.proStatus) {
+      newStatus = params.proStatus;
+    }
+
+    actionLabel = `Điều chỉnh thời hạn PRO (${newEndDate ? `đến ${newEndDate}` : 'Vĩnh viễn'})`;
+    user.role = isTargetRoot ? 'ADMIN' : 'LICENSED';
+    user.plan = 'PRO';
+    user.quota = { easy: -1, advanced: -1 };
+  } else if (params.action === 'REVOKE') {
+    newStatus = 'REVOKED';
+    user.licenseExpiresAt = new Date(Date.now() - 1000).toISOString();
+    newEndDate = user.proEndDate || (previousEndDate ? previousEndDate : todayStr);
+    user.role = isTargetRoot ? 'ADMIN' : 'TRIAL';
+    user.plan = isTargetRoot ? 'PRO' : 'TRIAL';
+    user.quota = {
+      easy: store.settings?.trialEasyLimit ?? 3,
+      advanced: store.settings?.trialAdvancedLimit ?? 1,
+    };
+    actionLabel = 'Thu hồi quyền PRO trước hạn';
+  }
+
+  user.proStartDate = newStartDate;
+  user.proDurationMonths = newDuration;
+  user.proEndDate = newEndDate;
+  user.proStatus = newStatus;
+  user.proUpdatedAt = nowIso;
+  user.proUpdatedBy = params.operatorEmail;
+  if (params.note !== undefined) {
+    user.proNote = params.note.trim();
+  }
+
+  const historyRecord: ProLicenseHistoryRecord = {
+    id: `pro_hist_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    action: params.action,
+    actionLabel,
+    startDate: newStartDate,
+    durationMonths: params.durationMonths !== undefined ? Number(params.durationMonths) : newDuration,
+    endDate: newEndDate,
+    previousEndDate,
+    performedBy: params.operatorEmail,
+    performedAt: nowIso,
+    note: params.note ? params.note.trim() : (user.proNote || ''),
+    status: newStatus,
+  };
+
+  user.proHistory = user.proHistory || [];
+  user.proHistory.unshift(historyRecord);
+  user.lastActiveAt = nowIso;
+
+  saveStore();
+
+  let sheetSynced = false;
+  if (process.env.LICENSE_API_URL) {
+    const sheetRes = await syncUserToGoogleSheet(user, {
+      operatorEmail: params.operatorEmail,
+      explicitQuota: true,
+    });
+    sheetSynced = Boolean(sheetRes.success);
+  }
+
+  return {
+    success: true,
+    user,
+    historyRecord,
+    sheetSynced,
+    message: `${actionLabel} cho tài khoản ${user.email} thành công.`,
+  };
 }
 
 export async function adminCreateUser(params: {
@@ -1459,6 +1775,13 @@ export async function syncUserToGoogleSheet(
       explicitQuota,
       licenseKey: user.licenseKey || '',
       licenseExpiresAt: user.licenseExpiresAt || '',
+      proStartDate: user.proStartDate || '',
+      proDurationMonths: user.proDurationMonths !== null && user.proDurationMonths !== undefined ? user.proDurationMonths : '',
+      proEndDate: user.proEndDate || (user.licenseExpiresAt ? user.licenseExpiresAt.split('T')[0] : ''),
+      proStatus: user.proStatus || '',
+      proUpdatedAt: user.proUpdatedAt || '',
+      proUpdatedBy: user.proUpdatedBy || '',
+      proNote: user.proNote || '',
       isBlocked: Boolean(user.isBlocked),
       createdAt: user.createdAt,
       lastActiveAt: user.lastActiveAt,

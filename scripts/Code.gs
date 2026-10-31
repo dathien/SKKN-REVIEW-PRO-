@@ -877,9 +877,10 @@ function getOrCreateSheet(ss, name) {
     if (name === 'USERS') {
       sheet.appendRow([
         'ID', 'EMAIL', 'NAME', 'ROLE', 'PLAN', 'QUOTA_EASY', 'QUOTA_ADVANCED',
-        'LICENSE_KEY', 'EXPIRES_AT', 'STATUS', 'CREATED_AT', 'LAST_ACTIVE_AT'
+        'LICENSE_KEY', 'EXPIRES_AT', 'STATUS', 'CREATED_AT', 'LAST_ACTIVE_AT',
+        'PRO_START_DATE', 'PRO_DURATION_MONTHS', 'PRO_END_DATE', 'PRO_STATUS', 'PRO_UPDATED_AT', 'PRO_UPDATED_BY', 'PRO_NOTE'
       ]);
-      sheet.getRange(1, 1, 1, 12).setFontWeight('bold').setBackground('#f1f5f9');
+      sheet.getRange(1, 1, 1, 19).setFontWeight('bold').setBackground('#f1f5f9');
     } else if (name === 'LICENSES') {
       sheet.appendRow([
         'KEY', 'PLAN', 'MAX_DEVICES', 'STATUS', 'EXPIRES_AT', 'ASSIGNED_EMAIL',
@@ -1039,6 +1040,14 @@ function parseUserRowWithHeaders(row, colMap) {
   var createdAt = getVal(['CREATED_AT', 'CREATE_TIME']);
   var lastActiveAt = getVal(['LAST_ACTIVE_AT', 'LAST_USED_AT', 'ACTIVATED_AT']);
 
+  var proStartDate = getVal(['PRO_START_DATE', 'START_DATE', 'NGAY_BAT_DAU']);
+  var proDurationMonths = getVal(['PRO_DURATION_MONTHS', 'DURATION_MONTHS', 'SO_THANG']);
+  var proEndDate = getVal(['PRO_END_DATE', 'END_DATE', 'NGAY_KET_THUC']);
+  var proStatus = getVal(['PRO_STATUS', 'TRANG_THAI_PRO']);
+  var proUpdatedAt = getVal(['PRO_UPDATED_AT', 'CAP_NHAT_LUC']);
+  var proUpdatedBy = getVal(['PRO_UPDATED_BY', 'NGUOI_CAP_NHAT']);
+  var proNote = getVal(['PRO_NOTE', 'GHI_CHU_PRO', 'NOTE']);
+
   return {
     id: id || ('usr_' + email.split('@')[0]),
     email: email,
@@ -1052,6 +1061,13 @@ function parseUserRowWithHeaders(row, colMap) {
     isUnlimited: isUnlimited || easyQuota === -1,
     licenseKey: licenseKey ? String(licenseKey) : undefined,
     licenseExpiresAt: expiresAt ? String(expiresAt) : null,
+    proStartDate: proStartDate ? String(proStartDate) : null,
+    proDurationMonths: proDurationMonths !== undefined && proDurationMonths !== '' ? Number(proDurationMonths) : null,
+    proEndDate: proEndDate ? String(proEndDate) : (expiresAt ? String(expiresAt).split('T')[0] : null),
+    proStatus: proStatus ? String(proStatus) : (isUnlimited ? (expiresAt && new Date(expiresAt).getTime() < new Date().getTime() ? 'EXPIRED' : 'ACTIVE') : 'NONE'),
+    proUpdatedAt: proUpdatedAt ? String(proUpdatedAt) : null,
+    proUpdatedBy: proUpdatedBy ? String(proUpdatedBy) : null,
+    proNote: proNote ? String(proNote) : undefined,
     isBlocked: isBlocked,
     createdAt: createdAt ? String(createdAt) : new Date().toISOString(),
     lastActiveAt: lastActiveAt ? String(lastActiveAt) : new Date().toISOString()
@@ -1224,6 +1240,14 @@ function upsertUserInSheet(sheet, user) {
     if (colMap['EXPIRES_AT'] !== undefined) rowValues13[colMap['EXPIRES_AT']] = expiresAt;
     if (colMap['LAST_USED_AT'] !== undefined) rowValues13[colMap['LAST_USED_AT']] = lastActiveAt;
 
+    if (colMap['PRO_START_DATE'] !== undefined) rowValues13[colMap['PRO_START_DATE']] = user.proStartDate || (parsedExisting ? parsedExisting.proStartDate : '');
+    if (colMap['PRO_DURATION_MONTHS'] !== undefined) rowValues13[colMap['PRO_DURATION_MONTHS']] = user.proDurationMonths !== undefined ? user.proDurationMonths : (parsedExisting ? parsedExisting.proDurationMonths : '');
+    if (colMap['PRO_END_DATE'] !== undefined) rowValues13[colMap['PRO_END_DATE']] = user.proEndDate || (parsedExisting ? parsedExisting.proEndDate : '');
+    if (colMap['PRO_STATUS'] !== undefined) rowValues13[colMap['PRO_STATUS']] = user.proStatus || (parsedExisting ? parsedExisting.proStatus : '');
+    if (colMap['PRO_UPDATED_AT'] !== undefined) rowValues13[colMap['PRO_UPDATED_AT']] = user.proUpdatedAt || new Date().toISOString();
+    if (colMap['PRO_UPDATED_BY'] !== undefined) rowValues13[colMap['PRO_UPDATED_BY']] = user.proUpdatedBy || user.operatorEmail || 'admin';
+    if (colMap['PRO_NOTE'] !== undefined) rowValues13[colMap['PRO_NOTE']] = user.proNote !== undefined ? user.proNote : (parsedExisting ? parsedExisting.proNote : '');
+
     if (targetRow > 0) {
       sheet.getRange(targetRow, 1, 1, rowValues13.length).setValues([rowValues13]);
     } else {
@@ -1267,6 +1291,14 @@ function upsertUserInSheet(sheet, user) {
     setField(['CREATED_AT'], createdAt);
     setField(['LAST_ACTIVE_AT', 'LAST_USED_AT'], lastActiveAt);
 
+    setField(['PRO_START_DATE', 'START_DATE'], user.proStartDate !== undefined ? (user.proStartDate || '') : (parsedExisting ? (parsedExisting.proStartDate || '') : ''));
+    setField(['PRO_DURATION_MONTHS', 'DURATION_MONTHS'], user.proDurationMonths !== undefined ? (user.proDurationMonths || '') : (parsedExisting ? (parsedExisting.proDurationMonths || '') : ''));
+    setField(['PRO_END_DATE', 'END_DATE'], user.proEndDate !== undefined ? (user.proEndDate || '') : (parsedExisting ? (parsedExisting.proEndDate || '') : ''));
+    setField(['PRO_STATUS', 'TRANG_THAI_PRO'], user.proStatus !== undefined ? user.proStatus : (parsedExisting ? (parsedExisting.proStatus || '') : ''));
+    setField(['PRO_UPDATED_AT'], user.proUpdatedAt || new Date().toISOString());
+    setField(['PRO_UPDATED_BY'], user.proUpdatedBy || user.operatorEmail || 'admin');
+    setField(['PRO_NOTE', 'GHI_CHU_PRO'], user.proNote !== undefined ? user.proNote : (parsedExisting ? (parsedExisting.proNote || '') : ''));
+
     if (targetRow > 0) {
       sheet.getRange(targetRow, 1, 1, rowValues.length).setValues([rowValues]);
     } else {
@@ -1294,6 +1326,10 @@ function upsertUserInSheet(sheet, user) {
     isUnlimited: isUnlimited,
     licenseKey: licenseKey,
     licenseExpiresAt: expiresAt || null,
+    proStartDate: user.proStartDate || (parsedExisting ? parsedExisting.proStartDate : null),
+    proDurationMonths: user.proDurationMonths !== undefined ? user.proDurationMonths : (parsedExisting ? parsedExisting.proDurationMonths : null),
+    proEndDate: user.proEndDate || (parsedExisting ? parsedExisting.proEndDate : null),
+    proStatus: user.proStatus || (parsedExisting ? parsedExisting.proStatus : 'ACTIVE'),
     isBlocked: status === 'BLOCKED',
     createdAt: createdAt,
     lastActiveAt: lastActiveAt
