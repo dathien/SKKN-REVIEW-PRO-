@@ -1250,35 +1250,32 @@ export default function App() {
     }
   };
 
-  // Generate more council questions
+  // Generate questions grounded in the actual uploaded SKKN, not its title alone.
   const handleGenerateMoreCouncilQuestions = async () => {
+    if (isLoadingMoreCouncil) return;
     setIsLoadingMoreCouncil(true);
     try {
+      const skknText = draftSkknText || originalSkknText || '';
+      if (skknText.trim().length < 250) {
+        window.alert('Không tìm thấy nội dung file SKKN đang mở. Vui lòng tải lại hồ sơ gốc trước khi tạo câu hỏi.');
+        return;
+      }
       const resp = await fetch('/api/ask-council', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          skknTitle: analysis.metadata.title,
-          weaknesses: analysis.redTeamCards.map(c => c.issueDetected),
-          criteriaIssues: analysis.rubricCriteria.filter(c => c.proposedScore < c.maxScore).map(c => c.deductionReason)
+          skknTitle: analysis.metadata.title, skknText,
+          issues: analysis.redTeamCards.map(c => ({issueDetected:c.issueDetected,location:c.location,relatedQuote:c.relatedQuote})),
+          existingQuestions: analysis.councilQuestions
         })
       });
-
-      if (!resp.ok) {
-        throw new Error('Lỗi tạo câu hỏi hội đồng');
-      }
-
-      const newQuestions: CouncilQuestion[] = await resp.json();
-      setAnalysis(prev => ({
-        ...prev,
-        councilQuestions: [...prev.councilQuestions, ...newQuestions]
-      }));
+      const payload = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(payload.error || `API trả lỗi ${resp.status}`);
+      if (!Array.isArray(payload)) throw new Error('Dữ liệu câu hỏi không hợp lệ.');
+      setAnalysis(prev => ({...prev, councilQuestions: [...prev.councilQuestions, ...payload]}));
     } catch (err: any) {
-      console.error(err);
-      alert('Không thể tạo thêm câu hỏi: ' + err.message);
-    } finally {
-      setIsLoadingMoreCouncil(false);
-    }
+      console.error('[COUNCIL]', err);
+      window.alert(err.message || 'Không thể tạo câu hỏi có căn cứ từ SKKN.');
+    } finally { setIsLoadingMoreCouncil(false); }
   };
 
   // Rescore after revisions
