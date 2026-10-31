@@ -1922,7 +1922,7 @@ export default function App() {
         {/* Footer Toàn Ứng Dụng */}
         <footer className="w-full border-t border-slate-200/80 bg-white/60 backdrop-blur-xs py-3 sm:py-3.5 px-4 text-center shrink-0">
           <p className="text-[12.5px] sm:text-[13px] text-slate-600 leading-normal text-center">
-            Copyright @ 2026- Được phát triển bởi <strong className="font-bold text-slate-800">GV.HỒ NGUYỄN ĐA THIỆN</strong>
+            Copyright @ 2026- Được phát triển bởi <strong className="font-bold text-slate-800">THẦY HỒ NGUYỄN ĐA THIỆN</strong>
           </p>
         </footer>
       </main>
