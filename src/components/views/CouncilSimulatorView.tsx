@@ -62,7 +62,7 @@ export const CouncilSimulatorView: React.FC<CouncilSimulatorViewProps> = ({
               HỘI ĐỒNG SẼ HỎI GÌ? (COUNCIL SIMULATOR)
             </h1>
             <p className="text-[14.5px] text-amber-100/90 leading-relaxed">
-              Dự báo chính xác các câu hỏi chất vấn khó tính nhất từ hội đồng thẩm định dựa trên các điểm yếu thực tế về số liệu, tính mới và minh chứng trong SKKN.
+              Gợi ý câu hỏi phản biện dựa trên nội dung file SKKN đang mở và các điểm cần làm rõ. Câu hỏi mới từ AI phải có trích dẫn được kiểm chứng.
             </p>
           </div>
 
@@ -260,6 +260,13 @@ export const CouncilSimulatorView: React.FC<CouncilSimulatorViewProps> = ({
                   "{q.question}"
                 </h4>
               </div>
+
+              {q.sourceQuote && (
+                <div className="p-3.5 bg-indigo-50 border border-indigo-200 rounded-xl text-[13.5px]">
+                  <div className="font-bold text-indigo-900 mb-1">Xem căn cứ trong file SKKN — {q.relatedLocation}</div>
+                  <blockquote className="text-slate-700 leading-relaxed border-l-2 border-indigo-400 pl-3">“{q.sourceQuote}”</blockquote>
+                </div>
+              )}
 
               {/* Rationale and Strategy */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[14px]">
