@@ -409,6 +409,126 @@
   },
   "auditLogs": [
     {
+      "auditId": "audit_1793417587507_3rzst",
+      "timestamp": "2026-10-31T03:33:07.507Z",
+      "action": "DELETE",
+      "userId": "usr_1791361588777_veinc",
+      "userEmail": "giaovien.test@gmail.com",
+      "evaluationId": "eval_1793417587445_67c0c0",
+      "details": "Xóa hồ sơ: \"Ứng dụng sơ đồ tư duy kết hợp phần mềm tương tác môn Lịch sử 8 (Đã nâng cấp)\"",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793417587476_v5vg9",
+      "timestamp": "2026-10-31T03:33:07.476Z",
+      "action": "SAVE_RESULT",
+      "userId": "usr_1791361588777_veinc",
+      "userEmail": "giaovien.test@gmail.com",
+      "evaluationId": "eval_1793417587445_67c0c0",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng sơ đồ tư duy kết hợp phần mềm tương tác môn Lịch sử 8 (Đã nâng cấp)\" (Điểm: 38)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793417587448_x8tue",
+      "timestamp": "2026-10-31T03:33:07.448Z",
+      "action": "CREATE",
+      "userId": "usr_1791361588777_veinc",
+      "userEmail": "giaovien.test@gmail.com",
+      "evaluationId": "eval_1793417587445_67c0c0",
+      "details": "Tạo hồ sơ mới: \"Ứng dụng sơ đồ tư duy kết hợp phần mềm tương tác môn Lịch sử 8\" (v1)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793417587433_ulcz1",
+      "timestamp": "2026-10-31T03:33:07.433Z",
+      "action": "DELETE",
+      "userId": "usr_1791332976299_ra51d",
+      "userEmail": "teacher1@gmail.com",
+      "evaluationId": "eval_1793417587389_de387c",
+      "details": "Xóa hồ sơ: \"Sáng kiến kinh nghiệm Đã Đổi Tên Thành Công\"",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793417587414_wtkbt",
+      "timestamp": "2026-10-31T03:33:07.414Z",
+      "action": "RENAME",
+      "userId": "usr_1791332976299_ra51d",
+      "userEmail": "teacher1@gmail.com",
+      "evaluationId": "eval_1793417587389_de387c",
+      "details": "Đổi tên hồ sơ từ \"Sáng kiến kinh nghiệm Kiểm thử Tự động\" thành \"Sáng kiến kinh nghiệm Đã Đổi Tên Thành Công\"",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793417587395_jr0fz",
+      "timestamp": "2026-10-31T03:33:07.395Z",
+      "action": "CREATE",
+      "userId": "usr_1791332976299_ra51d",
+      "userEmail": "teacher1@gmail.com",
+      "evaluationId": "eval_1793417587389_de387c",
+      "details": "Tạo hồ sơ mới: \"Sáng kiến kinh nghiệm Kiểm thử Tự động\" (v1)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793417527425_4cy7i",
+      "timestamp": "2026-10-31T03:32:07.425Z",
+      "action": "DELETE",
+      "userId": "usr_1791361588777_veinc",
+      "userEmail": "giaovien.test@gmail.com",
+      "evaluationId": "eval_1793417527382_fe8c3f",
+      "details": "Xóa hồ sơ: \"Ứng dụng sơ đồ tư duy kết hợp phần mềm tương tác môn Lịch sử 8 (Đã nâng cấp)\"",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793417527401_78z7w",
+      "timestamp": "2026-10-31T03:32:07.401Z",
+      "action": "SAVE_RESULT",
+      "userId": "usr_1791361588777_veinc",
+      "userEmail": "giaovien.test@gmail.com",
+      "evaluationId": "eval_1793417527382_fe8c3f",
+      "details": "Lưu kết quả đánh giá cho \"Ứng dụng sơ đồ tư duy kết hợp phần mềm tương tác môn Lịch sử 8 (Đã nâng cấp)\" (Điểm: 38)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793417527384_9i3va",
+      "timestamp": "2026-10-31T03:32:07.384Z",
+      "action": "CREATE",
+      "userId": "usr_1791361588777_veinc",
+      "userEmail": "giaovien.test@gmail.com",
+      "evaluationId": "eval_1793417527382_fe8c3f",
+      "details": "Tạo hồ sơ mới: \"Ứng dụng sơ đồ tư duy kết hợp phần mềm tương tác môn Lịch sử 8\" (v1)",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793417527373_cwnbh",
+      "timestamp": "2026-10-31T03:32:07.373Z",
+      "action": "DELETE",
+      "userId": "usr_1791332976299_ra51d",
+      "userEmail": "teacher1@gmail.com",
+      "evaluationId": "eval_1793417527338_1df119",
+      "details": "Xóa hồ sơ: \"Sáng kiến kinh nghiệm Đã Đổi Tên Thành Công\"",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793417527358_6uzx2",
+      "timestamp": "2026-10-31T03:32:07.358Z",
+      "action": "RENAME",
+      "userId": "usr_1791332976299_ra51d",
+      "userEmail": "teacher1@gmail.com",
+      "evaluationId": "eval_1793417527338_1df119",
+      "details": "Đổi tên hồ sơ từ \"Sáng kiến kinh nghiệm Kiểm thử Tự động\" thành \"Sáng kiến kinh nghiệm Đã Đổi Tên Thành Công\"",
+      "status": "SUCCESS"
+    },
+    {
+      "auditId": "audit_1793417527342_3p8y2",
+      "timestamp": "2026-10-31T03:32:07.342Z",
+      "action": "CREATE",
+      "userId": "usr_1791332976299_ra51d",
+      "userEmail": "teacher1@gmail.com",
+      "evaluationId": "eval_1793417527338_1df119",
+      "details": "Tạo hồ sơ mới: \"Sáng kiến kinh nghiệm Kiểm thử Tự động\" (v1)",
+      "status": "SUCCESS"
+    },
+    {
       "auditId": "audit_1793355127085_gtabu",
       "timestamp": "2026-10-30T10:12:07.085Z",
       "action": "DELETE",

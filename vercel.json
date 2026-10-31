@@ -46,6 +46,30 @@
       "destination": "/api/admin?__subpath=:path*"
     },
     {
+      "source": "/ho-so",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/tong-quan",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/can-xu-ly",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/goi-y-chinh-sua",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/cham-lai",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/bao-cao",
+      "destination": "/index.html"
+    },
+    {
       "source": "/quan-tri",
       "destination": "/index.html"
     },

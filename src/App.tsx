@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Sidebar, ActiveTab, AppMode } from './components/Sidebar';
 import { Header } from './components/Header';
 import { FileUploadModal } from './components/FileUploadModal';
@@ -12,7 +12,7 @@ import { CorePrinciplesModal } from './components/CorePrinciplesModal';
 import { DocumentProfileDrawer } from './components/DocumentProfileDrawer';
 import { ProfileSelectorModal } from './components/ProfileSelectorModal';
 import { UploadWorkspace } from './components/UploadWorkspace';
-import { CheckCircle2, FileText, ShieldAlert, Shield } from 'lucide-react';
+import { CheckCircle2, FileText, ShieldAlert, Shield, FolderOpen } from 'lucide-react';
 import { FriendlyErrorInfo, classifyError, sleep, getRetryDelay } from './utils/aiErrorHandler';
 import { extractGeminiOutput, parseAnalysisResponse, normalizeAnalysisResult } from './utils/analysisPipeline';
 
@@ -55,63 +55,22 @@ import {
   ChangeSetItem
 } from './types';
 import { normalizeTeacherNotes, resolveCardTeacherNote } from './utils/evaluationNotes';
+import {
+  CLEAN_ROUTES,
+  getTabFromPath,
+  getPathFromTab,
+  migrateLegacyUrl,
+} from './utils/navigation';
 
 export default function App() {
   const { user, guestId, role, hasQuotaForMode, openQuotaModal, updateUserQuota, isAdmin, openAdminModal, isLoading: isAuthLoading, isLoggedIn, openAuthModal } = useAuth();
 
-  // URL & Route Initial State (Khôi phục ngữ cảnh khi F5, mở deep link & mặc định TỔNG QUAN khi mở đường dẫn gốc)
+  // Khởi tạo trạng thái định tuyến: Hỗ trợ Clean URL và tự động di chuyển URL cũ có query string (?tab=...&evalId=...)
   const initialUrlState = useMemo(() => {
-    if (typeof window === 'undefined') {
-      return { tab: 'dashboard' as ActiveTab, evalId: null, issueId: null, tier: 'academic' as const };
-    }
-    const params = new URLSearchParams(window.location.search);
-
-    // Dọn dẹp triệt để skkn_active_tab trong localStorage để tránh rò rỉ chuyển hướng sang các phiên/tab mới
-    try {
-      localStorage.removeItem('skkn_active_tab');
-    } catch (_) {}
-
-    const evalIdParam = params.get('evalId');
-    const tabParam = params.get('tab') as ActiveTab | null;
-    const issueIdParam = params.get('issueId');
-    const tierParam = params.get('tier') as 'light' | 'academic' | 'deep' | null;
-
-    const validTabs: ActiveTab[] = [
-      'my_evaluations',
-      'dashboard',
-      'rubric',
-      'red_team',
-      'novelty',
-      'evidence',
-      'data_logic',
-      'ai_markers',
-      'similarity_citations',
-      'suggestions',
-      'council',
-      'rescore',
-      'report'
-    ];
-
-    // Quy tắc điều hướng:
-    // 1. Khi mở đường dẫn gốc (không có tab trên URL): mặc định luôn là 'dashboard' (TỔNG QUAN)
-    // 2. Khi F5 hoặc deep link có ?tab=...: lấy đúng tab hợp lệ tương ứng
-    const tab: ActiveTab = (tabParam && validTabs.includes(tabParam)) ? tabParam : 'dashboard';
-    const evalId = evalIdParam && evalIdParam.trim() ? evalIdParam.trim() : null;
-    const issueId = issueIdParam && issueIdParam.trim() ? issueIdParam.trim() : null;
-    const tier = (tierParam === 'light' || tierParam === 'academic' || tierParam === 'deep') ? tierParam : 'academic';
-
-    // Nếu mở đường dẫn gốc (không có evalId trên URL), dọn dẹp các key tạm để không bị nạp hồ sơ cũ ngoài ý muốn
-    if (!evalId) {
-      try {
-        localStorage.removeItem('skkn_current_eval_id');
-        localStorage.removeItem('skkn_viewing_rebuttal_card_id');
-      } catch (_) {}
-    }
-
-    return { evalId, tab, issueId, tier };
+    return migrateLegacyUrl();
   }, []);
 
-  const [activeTab, setActiveTab] = useState<ActiveTab>(initialUrlState.tab || 'dashboard');
+  const [activeTab, setActiveTab] = useState<ActiveTab>(initialUrlState.migratedTab || 'dashboard');
   const [selectedSampleIndex, setSelectedSampleIndex] = useState<number>(0);
   const [analysis, setAnalysis] = useState<SKKNAnalysisResult>(sampleInitiative1);
   const [customAnalysis, setCustomAnalysis] = useState<SKKNAnalysisResult | null>(null);
@@ -125,18 +84,52 @@ export default function App() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [appMode, setAppMode] = useState<AppMode>('easy');
   const [rescoreError, setRescoreError] = useState<{ message: string; retryable?: boolean } | null>(null);
-  // Theo dõi tuyến đường trình duyệt để chuyển đổi trang độc lập /quan-tri
+
+  // Theo dõi tuyến đường trình duyệt để chuyển đổi trang độc lập /quan-tri và các Clean URLs
   const [currentPath, setCurrentPath] = useState<string>(() => {
     if (typeof window !== 'undefined') {
-      return window.location.pathname;
+      return (window.location.pathname || '/').replace(/\/+$/, '') || '/';
     }
     return '/';
   });
 
+  // Điều hướng Clean URL không reload toàn trang, hỗ trợ pushState & replaceState
+  const navigateToTab = useCallback((targetTab: ActiveTab, replace = false) => {
+    setIsUploadWorkspace(false);
+    setIsViewingProfileDetail(false);
+    setViewingRebuttalCardId(null);
+    setActiveTab(targetTab);
+
+    if (typeof window !== 'undefined') {
+      const targetPath = getPathFromTab(targetTab);
+      if (window.location.pathname !== targetPath || window.location.search) {
+        if (replace) {
+          window.history.replaceState({}, '', targetPath);
+        } else {
+          window.history.pushState({}, '', targetPath);
+        }
+        setCurrentPath(targetPath);
+      }
+    }
+  }, []);
+
+  // Xử lý sự kiện Back/Forward của trình duyệt (popstate)
   useEffect(() => {
     const handlePopState = () => {
-      setCurrentPath(window.location.pathname);
+      if (typeof window === 'undefined') return;
+      const newPath = (window.location.pathname || '/').replace(/\/+$/, '') || '/';
+      setCurrentPath(newPath);
+
+      if (newPath === '/quan-tri') {
+        return;
+      }
+
+      const nextTab = getTabFromPath(newPath);
+      setActiveTab(nextTab);
+      setViewingRebuttalCardId(null);
+      setIsViewingProfileDetail(false);
     };
+
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
@@ -176,7 +169,8 @@ export default function App() {
   const [uploadInitialMethod, setUploadInitialMethod] = useState<'file' | 'paste'>('file');
 
   // Quản lý lưu trữ hồ sơ cá nhân & Bản gốc v1 bất biến vs Bản nháp (Requirement B & C)
-  const [currentEvaluationId, setCurrentEvaluationId] = useState<string | null>(initialUrlState.evalId || null);
+  // ID hồ sơ được quản lý trong trạng thái ứng dụng và session storage, TUYỆT ĐỐI không đưa vào URL
+  const [currentEvaluationId, setCurrentEvaluationId] = useState<string | null>(initialUrlState.migratedEvalId || null);
   const [originalSkknText, setOriginalSkknText] = useState<string>('');
   const [draftSkknText, setDraftSkknText] = useState<string>('');
   const [originalDocxBuffer, setOriginalDocxBuffer] = useState<ArrayBuffer | null>(null);
@@ -195,73 +189,68 @@ export default function App() {
   } | null>(null);
 
   // Academic Rebuttal dedicated page state (Section II)
-  const [viewingRebuttalCardId, setViewingRebuttalCardId] = useState<string | null>(initialUrlState.issueId || null);
+  const [viewingRebuttalCardId, setViewingRebuttalCardId] = useState<string | null>(initialUrlState.migratedIssueId || null);
   const [rebuttalReturnTab, setRebuttalReturnTab] = useState<ActiveTab>('dashboard');
-  const [selectedRevisionTier, setSelectedRevisionTier] = useState<'light' | 'academic' | 'deep'>(initialUrlState.tier || 'academic');
+  const [selectedRevisionTier, setSelectedRevisionTier] = useState<'light' | 'academic' | 'deep'>(initialUrlState.migratedTier || 'academic');
   const [targetSuggestionCardId, setTargetSuggestionCardId] = useState<string | null>(null);
 
   const handleOpenAcademicRebuttal = (card: RedTeamCard, returnTab: ActiveTab = activeTab) => {
     setViewingRebuttalCardId(card.id);
     setRebuttalReturnTab(returnTab);
+    try {
+      sessionStorage.setItem('skkn_active_rebuttal_id', card.id);
+    } catch (_) {}
   };
 
   const handleGoToSuggestionForCard = (card: RedTeamCard) => {
     setViewingRebuttalCardId(null);
     setIsViewingProfileDetail(false);
-    setActiveTab('suggestions');
+    navigateToTab('suggestions');
     setTargetSuggestionCardId(card.id);
   };
 
-  // Sync URL search params on state change
+  // 1. Lưu giữ ID hồ sơ đang chọn trong session/local storage (không đưa vào URL query string)
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-
-    // 1. Đồng bộ evalId vào URL
-    if (currentEvaluationId) {
-      params.set('evalId', currentEvaluationId);
-      try {
-        localStorage.setItem('skkn_current_eval_id', currentEvaluationId);
-      } catch (_) {}
-    } else {
-      params.delete('evalId');
-      try {
-        localStorage.removeItem('skkn_current_eval_id');
-      } catch (_) {}
-    }
-
-    // 2. Đồng bộ tab vào URL:
-    // Nếu ở TỔNG QUAN (dashboard) khi chưa chọn hồ sơ và không xem vấn đề phản biện: giữ URL sạch ('/')
-    // Nếu ở các tab khác (ví dụ: 'my_evaluations', 'suggestions', 'rescore'...) hoặc đang có hồ sơ: ghi rõ tab vào URL để F5 khôi phục chính xác
-    if (activeTab === 'dashboard' && !currentEvaluationId && !viewingRebuttalCardId) {
-      params.delete('tab');
-    } else if (activeTab) {
-      params.set('tab', activeTab);
-    }
-
-    // 3. Đồng bộ issueId và tier cho Phản biện học thuật
-    if (viewingRebuttalCardId) {
-      params.set('issueId', viewingRebuttalCardId);
-      if (selectedRevisionTier) {
-        params.set('tier', selectedRevisionTier);
+    try {
+      if (currentEvaluationId) {
+        sessionStorage.setItem('skkn_active_eval_id', currentEvaluationId);
+        localStorage.setItem('skkn_active_eval_id', currentEvaluationId);
+      } else {
+        sessionStorage.removeItem('skkn_active_eval_id');
+        localStorage.removeItem('skkn_active_eval_id');
       }
-    } else {
-      params.delete('issueId');
-      params.delete('tier');
+    } catch (_) {}
+  }, [currentEvaluationId]);
+
+  // 2. Đồng bộ Clean URL pathname khi activeTab thay đổi, đảm bảo URL luôn sạch sẽ và loại bỏ mọi query string
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (isQuanTriPath) return;
+
+    const currentClean = (window.location.pathname || '/').replace(/\/+$/, '') || '/';
+    // Nếu đang ở trang chủ '/' và tab là 'dashboard', giữ nguyên '/'
+    if (currentClean === '/' && activeTab === 'dashboard') {
+      if (window.location.search) {
+        window.history.replaceState({}, '', '/');
+      }
+      return;
     }
 
-    const newQuery = params.toString();
-    const newUrl = newQuery ? `${window.location.pathname}?${newQuery}` : window.location.pathname;
-    window.history.replaceState({}, '', newUrl);
-  }, [currentEvaluationId, activeTab, viewingRebuttalCardId, selectedRevisionTier]);
+    const expectedPath = getPathFromTab(activeTab);
+    if (currentClean !== expectedPath || window.location.search) {
+      window.history.replaceState({}, '', expectedPath);
+      setCurrentPath(expectedPath);
+    }
+  }, [activeTab, isQuanTriPath]);
 
   // Trạng thái đang khôi phục hồ sơ sau F5
-  const [isRestoringEvaluation, setIsRestoringEvaluation] = useState<boolean>(Boolean(initialUrlState.evalId));
+  const [isRestoringEvaluation, setIsRestoringEvaluation] = useState<boolean>(Boolean(initialUrlState.migratedEvalId));
   const hasRestoredInitialEvalRef = useRef(false);
 
   useEffect(() => {
     const restoreInitialEvaluation = async () => {
-      const targetEvalId = currentEvaluationId || initialUrlState.evalId;
+      const targetEvalId = currentEvaluationId || initialUrlState.migratedEvalId;
       if (!targetEvalId || hasRestoredInitialEvalRef.current) {
         setIsRestoringEvaluation(false);
         return;
@@ -384,19 +373,23 @@ export default function App() {
           setSaveStatus('saved');
 
           // Restore exact activeTab & issueId
-          if (initialUrlState.tab) {
-            setActiveTab(initialUrlState.tab);
+          if (initialUrlState.migratedTab) {
+            setActiveTab(initialUrlState.migratedTab);
           }
-          if (initialUrlState.issueId) {
-            const hasIssue = fullAnalysis.redTeamCards?.some((c: any) => c.id === initialUrlState.issueId);
+          if (initialUrlState.migratedIssueId) {
+            const hasIssue = fullAnalysis.redTeamCards?.some((c: any) => c.id === initialUrlState.migratedIssueId);
             if (hasIssue) {
-              setViewingRebuttalCardId(initialUrlState.issueId);
+              setViewingRebuttalCardId(initialUrlState.migratedIssueId);
             }
           }
-        } else if (data.error && (resp.status === 403 || data.error.includes('Bảo mật') || data.error.includes('quyền'))) {
-          console.warn('Không có quyền truy cập hồ sơ này:', data.error);
+        } else if (data.error && (resp.status === 403 || data.error.includes('Bảo mật') || data.error.includes('quyền') || resp.status === 404)) {
+          console.warn('Không có quyền truy cập hoặc không tìm thấy hồ sơ này:', data.error);
           setCurrentEvaluationId(null);
-          localStorage.removeItem('skkn_current_eval_id');
+          try {
+            sessionStorage.removeItem('skkn_active_eval_id');
+            localStorage.removeItem('skkn_active_eval_id');
+            localStorage.removeItem('skkn_current_eval_id');
+          } catch (_) {}
         }
       } catch (err) {
         console.error('Lỗi khi khôi phục ngữ cảnh sau F5:', err);
@@ -1462,10 +1455,7 @@ export default function App() {
       <Sidebar
         activeTab={activeTab}
         setActiveTab={(tab) => {
-          setIsUploadWorkspace(false);
-          setIsViewingProfileDetail(false);
-          setViewingRebuttalCardId(null);
-          setActiveTab(tab);
+          navigateToTab(tab);
         }}
         analysis={currentAnalysis}
         hasEvaluated={hasActiveEvaluation || isDemoMode}
@@ -1485,15 +1475,20 @@ export default function App() {
           isSample={isDemoMode}
           onOpenMobileMenu={() => setIsMobileOpen(true)}
           isUploadWorkspace={isUploadWorkspace || (!hasActiveEvaluation && !isDemoMode)}
-          onOpenMyEvaluations={() => setActiveTab('my_evaluations')}
+          onOpenMyEvaluations={() => navigateToTab('my_evaluations')}
           onStartNewSKKN={() => {
             setCurrentEvaluationId(null);
+            try {
+              sessionStorage.removeItem('skkn_active_eval_id');
+              localStorage.removeItem('skkn_active_eval_id');
+              localStorage.removeItem('skkn_current_eval_id');
+            } catch (_) {}
             setViewingRebuttalCardId(null);
             setIsViewingProfileDetail(false);
             setSaveStatus('idle');
             setSaveErrorMessage(null);
             setIsUploadWorkspace(true);
-            setActiveTab('dashboard');
+            navigateToTab('dashboard');
           }}
           onExitDemo={() => {
             setIsDemoMode(false);
@@ -1511,9 +1506,10 @@ export default function App() {
               <MyEvaluationsView
                 onSelectEvaluation={async (item: EvaluationItem) => {
                   setCurrentEvaluationId(item.id);
-                  if (typeof localStorage !== 'undefined') {
-                    localStorage.setItem('skkn_current_eval_id', item.id);
-                  }
+                  try {
+                    sessionStorage.setItem('skkn_active_eval_id', item.id);
+                    localStorage.setItem('skkn_active_eval_id', item.id);
+                  } catch (_) {}
                   setSaveStatus('saved');
                   if (item.analysisResult) {
                     setCustomAnalysis(item.analysisResult);
@@ -1523,7 +1519,7 @@ export default function App() {
                     setWorkflowStatus('COMPLETED');
                     setIsDemoMode(false);
                     setIsUploadWorkspace(false);
-                    setActiveTab('dashboard');
+                    navigateToTab('dashboard');
                   } else {
                     try {
                       const sessionToken = (user as any)?.sessionToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_session_token') : '') || '';
@@ -1546,7 +1542,7 @@ export default function App() {
                         setWorkflowStatus('COMPLETED');
                         setIsDemoMode(false);
                         setIsUploadWorkspace(false);
-                        setActiveTab('dashboard');
+                        navigateToTab('dashboard');
                       }
                     } catch (err) {
                       console.error('Lỗi khi tải chi tiết hồ sơ:', err);
@@ -1555,9 +1551,10 @@ export default function App() {
                 }}
                 onContinueEdit={async (item: EvaluationItem) => {
                   setCurrentEvaluationId(item.id);
-                  if (typeof localStorage !== 'undefined') {
-                    localStorage.setItem('skkn_current_eval_id', item.id);
-                  }
+                  try {
+                    sessionStorage.setItem('skkn_active_eval_id', item.id);
+                    localStorage.setItem('skkn_active_eval_id', item.id);
+                  } catch (_) {}
                   setSaveStatus('saved');
                   if (item.analysisResult) {
                     setCustomAnalysis(item.analysisResult);
@@ -1567,7 +1564,7 @@ export default function App() {
                     setWorkflowStatus('COMPLETED');
                     setIsDemoMode(false);
                     setIsUploadWorkspace(false);
-                    setActiveTab('suggestions');
+                    navigateToTab('suggestions');
                   } else {
                     try {
                       const sessionToken = (user as any)?.sessionToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_session_token') : '') || '';
@@ -1590,7 +1587,7 @@ export default function App() {
                         setWorkflowStatus('COMPLETED');
                         setIsDemoMode(false);
                         setIsUploadWorkspace(false);
-                        setActiveTab('suggestions');
+                        navigateToTab('suggestions');
                       }
                     } catch (err) {
                       console.error('Lỗi khi mở chỉnh sửa hồ sơ:', err);
@@ -1599,9 +1596,10 @@ export default function App() {
                 }}
                 onRescore={async (item: EvaluationItem) => {
                   setCurrentEvaluationId(item.id);
-                  if (typeof localStorage !== 'undefined') {
-                    localStorage.setItem('skkn_current_eval_id', item.id);
-                  }
+                  try {
+                    sessionStorage.setItem('skkn_active_eval_id', item.id);
+                    localStorage.setItem('skkn_active_eval_id', item.id);
+                  } catch (_) {}
                   setSaveStatus('saved');
                   if (item.analysisResult) {
                     setCustomAnalysis(item.analysisResult);
@@ -1611,7 +1609,7 @@ export default function App() {
                     setWorkflowStatus('COMPLETED');
                     setIsDemoMode(false);
                     setIsUploadWorkspace(false);
-                    setActiveTab('rescore');
+                    navigateToTab('rescore');
                   } else {
                     try {
                       const sessionToken = (user as any)?.sessionToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_session_token') : '') || '';
@@ -1634,7 +1632,7 @@ export default function App() {
                         setWorkflowStatus('COMPLETED');
                         setIsDemoMode(false);
                         setIsUploadWorkspace(false);
-                        setActiveTab('rescore');
+                        navigateToTab('rescore');
                       }
                     } catch (err) {
                       console.error('Lỗi khi mở chấm lại hồ sơ:', err);
@@ -1643,10 +1641,15 @@ export default function App() {
                 }}
                 onStartNewSKKN={() => {
                   setCurrentEvaluationId(null);
+                  try {
+                    sessionStorage.removeItem('skkn_active_eval_id');
+                    localStorage.removeItem('skkn_active_eval_id');
+                    localStorage.removeItem('skkn_current_eval_id');
+                  } catch (_) {}
                   setSaveStatus('idle');
                   setSaveErrorMessage(null);
                   setIsUploadWorkspace(true);
-                  setActiveTab('dashboard');
+                  navigateToTab('dashboard');
                 }}
               />
             ) : viewingRebuttalCardId ? (
@@ -1669,7 +1672,10 @@ export default function App() {
                     onUpdateStatus={handleUpdateCardStatus}
                     onBack={() => {
                       setViewingRebuttalCardId(null);
-                      setActiveTab(rebuttalReturnTab);
+                      try {
+                        sessionStorage.removeItem('skkn_active_rebuttal_id');
+                      } catch (_) {}
+                      navigateToTab(rebuttalReturnTab);
                     }}
                     onGoToSuggestion={handleGoToSuggestionForCard}
                     onApplyChange={handleApplyChange}
@@ -1688,7 +1694,7 @@ export default function App() {
                   onNavigateTab={(tab) => {
                     setIsViewingProfileDetail(false);
                     setViewingRebuttalCardId(null);
-                    setActiveTab(tab);
+                    navigateToTab(tab);
                   }}
                   onGoToIssue={(card) => {
                     setIsViewingProfileDetail(false);
@@ -1701,7 +1707,7 @@ export default function App() {
                   onNavigateTab={(tab) => {
                     setIsViewingProfileDetail(false);
                     setViewingRebuttalCardId(null);
-                    setActiveTab(tab);
+                    navigateToTab(tab);
                   }}
                   onOpenProfileDrawer={() => setIsProfileDrawerOpen(true)}
                   onViewProfileDetail={handleViewProfileDetail}
@@ -1748,7 +1754,7 @@ export default function App() {
                   onOpenMyEvaluations={() => {
                     setViewingRebuttalCardId(null);
                     setIsViewingProfileDetail(false);
-                    setActiveTab('my_evaluations');
+                    navigateToTab('my_evaluations');
                   }}
                   onOpenAuth={() => openAuthModal('login')}
                 />
@@ -1760,19 +1766,30 @@ export default function App() {
                 </div>
                 <div className="space-y-1">
                   <h3 className="text-base font-bold text-slate-900">
-                    Chưa có hồ sơ được phân tích
+                    Chưa có hồ sơ được chọn để hiển thị
                   </h3>
-                  <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                    Thầy/Cô hãy tải hoặc dán SKKN của mình để nhận kết quả phân tích đầy đủ, hoặc xem hồ sơ mẫu để trải nghiệm hệ thống.
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+                    Trang này yêu cầu một hồ sơ SKKN đang hoạt động. Thầy/Cô hãy chọn một hồ sơ từ kho cá nhân hoặc tải lên SKKN mới.
                   </p>
                 </div>
-                <div className="flex items-center justify-center gap-3 pt-2">
+                <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                   <button
                     type="button"
-                    onClick={() => setActiveTab('dashboard')}
-                    className="py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-colors cursor-pointer"
+                    onClick={() => navigateToTab('my_evaluations')}
+                    className="py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
                   >
-                    Tải SKKN của tôi
+                    <FolderOpen className="w-4 h-4" />
+                    <span>Chọn từ "Hồ sơ của tôi"</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsUploadWorkspace(true);
+                      navigateToTab('dashboard');
+                    }}
+                    className="py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+                  >
+                    Tải SKKN mới
                   </button>
                   <button
                     type="button"
@@ -1780,9 +1797,9 @@ export default function App() {
                       setIsDemoMode(true);
                       setSelectedSampleIndex(0);
                     }}
-                    className="py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+                    className="py-2.5 px-4 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 font-bold text-xs transition-colors cursor-pointer"
                   >
-                    Xem kết quả mẫu →
+                    Xem hồ sơ mẫu →
                   </button>
                 </div>
               </div>
@@ -1858,7 +1875,7 @@ export default function App() {
                     isGenerating={isGeneratingSuggestion}
                     onNavigateTab={(tab) => {
                       setViewingRebuttalCardId(null);
-                      setActiveTab(tab);
+                      navigateToTab(tab);
                     }}
                     originalDocxBuffer={originalDocxBuffer}
                     skknTitle={currentAnalysis.metadata.title}
@@ -1880,7 +1897,7 @@ export default function App() {
                     analysis={currentAnalysis}
                     onRescore={handleRescore}
                     isRescoring={isRescoring}
-                    onNavigateTab={(tab) => setActiveTab(tab)}
+                    onNavigateTab={(tab) => navigateToTab(tab)}
                     rescoreError={rescoreError}
                   />
                 )}

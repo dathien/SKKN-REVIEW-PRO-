@@ -5,13 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build:api": "node scripts/bundle-api.mjs && node scripts/verify-api.mjs && node scripts/test-routes.mjs",
+    "build:api": "node scripts/bundle-api.mjs && node scripts/verify-api.mjs",
     "build": "vite build && npm run build:api",
     "start": "tsx server.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "node scripts/verify-api.mjs && node scripts/test-routes.mjs && node scripts/verify-preview.mjs"
+    "test": "node scripts/verify-api.mjs && node scripts/test-routes.mjs && node scripts/verify-preview.mjs && node scripts/verify-suggestions-editor.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

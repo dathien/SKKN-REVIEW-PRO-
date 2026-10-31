@@ -23,20 +23,8 @@ import {
 import { SKKNAnalysisResult } from '../types';
 import { useAuth } from '../context/AuthContext';
 
-export type ActiveTab = 
-  | 'my_evaluations'
-  | 'dashboard'
-  | 'rubric'
-  | 'red_team'
-  | 'novelty'
-  | 'evidence'
-  | 'data_logic'
-  | 'ai_markers'
-  | 'similarity_citations'
-  | 'suggestions'
-  | 'council'
-  | 'rescore'
-  | 'report';
+import type { ActiveTab } from '../utils/navigation';
+export type { ActiveTab };
 
 export type AppMode = 'easy' | 'advanced';
 
@@ -271,7 +259,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           : 'hidden lg:flex static'
       }`}>
         {/* App Branding */}
-        <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 shrink-0">
+        <div
+          onClick={() => {
+            setActiveTab('dashboard');
+            if (onCloseMobile) onCloseMobile();
+          }}
+          className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 shrink-0 cursor-pointer hover:bg-slate-900/90 transition-colors"
+          title="Trang chủ SKKN REVIEW PRO"
+        >
           <div className="flex items-center gap-2.5">
             <div className="w-8.5 h-8.5 rounded-lg bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 flex items-center justify-center font-black text-white shadow-md text-[13px] shrink-0 tracking-wider">
               PRO

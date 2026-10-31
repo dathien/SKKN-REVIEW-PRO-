@@ -86,7 +86,14 @@ export const Header: React.FC<HeaderProps> = ({
         {isAdmin && (
           <button
             type="button"
-            onClick={openAdminModal}
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                window.history.pushState({}, '', '/quan-tri');
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              } else {
+                openAdminModal();
+              }
+            }}
             className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-bold text-purple-800 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg transition-all cursor-pointer shadow-2xs"
             title="Mở Trung tâm Quản trị Admin"
           >

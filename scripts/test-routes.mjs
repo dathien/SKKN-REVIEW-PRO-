@@ -1242,6 +1242,7 @@ console.log('\n--- 14. Testing Personal Evaluations Dossier & UI Regression ---'
   // 2. Regression Test: App.tsx and DocumentProfileDrawer connect onOpenMyEvaluations
   const appSource = fs.readFileSync(path.resolve('src/App.tsx'), 'utf-8');
   assert('Regression Test: App.tsx passes onOpenMyEvaluations to Header',
+    appSource.includes("onOpenMyEvaluations={() => navigateToTab('my_evaluations')}") ||
     appSource.includes("onOpenMyEvaluations={() => setActiveTab('my_evaluations')}"));
   assert('Regression Test: App.tsx mounts MyEvaluationsView when activeTab is my_evaluations',
     appSource.includes("<MyEvaluationsView") && appSource.includes("activeTab === 'my_evaluations'"));
