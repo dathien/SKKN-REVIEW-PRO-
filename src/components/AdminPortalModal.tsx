@@ -4263,15 +4263,13 @@ export const AdminPortalModal: React.FC = () => {
               SKKN REVIEW PRO
             </div>
             <div className="text-[11.5px] sm:text-xs text-slate-500 mt-0.5">
-              Copyright @ 2026- Được phát triển bởi <strong className="font-bold text-slate-700">GV.HỒ NGUYỄN ĐA THIỆN</strong>
+              Copyright @ 2026- Được phát triển bởi <strong className="font-bold text-slate-700">THẦY HỒ NGUYỄN ĐA THIỆN</strong>
             </div>
           </div>
 
           {/* Khu vực Bên Phải */}
           <div className="text-left sm:text-right">
-            <div className="text-[13px] sm:text-[13.5px] font-medium text-slate-700">
-              Cổng Quản trị Hệ thống Giáo dục
-            </div>
+            
             <div className="text-[11.5px] sm:text-xs text-slate-500 mt-0.5">
               Phiên bản 2.7
             </div>
