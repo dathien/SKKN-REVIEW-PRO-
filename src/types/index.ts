@@ -276,6 +276,7 @@ export interface CouncilQuestion {
   question: string;
   whyCouncilAsks: string;
   relatedLocation: string;
+  sourceQuote?: string; // Trích dẫn nguyên văn đã được kiểm chứng trong file SKKN
   requiredEvidenceToBring: string;
   suggestedAnswerStrategy: string; // Hướng trả lời (không tạo số liệu ảo)
 }
