@@ -1515,7 +1515,409 @@ export const AdminPortalModal: React.FC = () => {
           {/* ========================================== */}
           {/* TAB 2: NGƯỜI DÙNG (Mục X & XI) */}
           {/* ========================================== */}
-          {activeTab === 'users' && (
+        {/* TRANG CHỈNH SỬA PRO (không dùng popup) */}
+        {activeTab === 'users' && grantModalUser && (
+          <div className="w-full pb-8">
+            <div className="bg-white rounded-2xl border border-slate-200 w-full max-w-5xl mx-auto overflow-hidden shadow-sm">
+              {/* Header Modal */}
+              <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                    {grantAction === 'EXTEND' ? <CalendarPlus className="w-4 h-4" /> : grantAction === 'ADJUST' ? <Sliders className="w-4 h-4" /> : <Award className="w-4 h-4" />}
+                  </div>
+                  <div>
+                    <h4 className="text-[15px] font-bold text-slate-900 leading-tight">
+                      {grantModalTitle}
+                    </h4>
+                    <span className="text-[11.5px] text-slate-500">
+                      Quản lý thời hạn và phân quyền thành viên PRO
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setGrantModalUser(null)}
+                  className="text-slate-600 hover:text-slate-900 px-3 py-2 rounded-lg cursor-pointer flex items-center gap-2 text-sm font-semibold"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Quay lại người dùng
+                </button>
+              </div>
+
+              {grantStep === 'FORM' ? (
+                /* BƯỚC 1: THIẾT LẬP THỜI HẠN PRO */
+                <div className="p-5 sm:p-8 space-y-5">
+                  {/* Thông tin tài khoản & Thời hạn hiện tại */}
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-[12.5px] space-y-1">
+                    <div className="flex justify-between items-start">
+                      <span className="text-slate-500">Tài khoản:</span>
+                      <strong className="text-slate-900 text-right truncate max-w-[260px]">
+                        {grantModalUser.name || grantModalUser.email}
+                      </strong>
+                    </div>
+                    <div className="flex justify-between items-center text-slate-500">
+                      <span>Email:</span>
+                      <span className="text-slate-700 font-mono text-[11.5px] truncate max-w-[260px]">
+                        {grantModalUser.email}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center pt-1 border-t border-slate-200/60 text-[12px]">
+                      <span className="text-slate-500">Thời hạn hiện tại:</span>
+                      <span className={`font-semibold ${isTargetCurrentExpired ? 'text-rose-600' : isTargetCurrentActive ? 'text-emerald-700' : 'text-slate-700'}`}>
+                        {targetExpiryLabel}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Lựa chọn loại quyền PRO: Vĩnh viễn hay Theo tháng */}
+                  <div className="space-y-2">
+                    <label className="block text-[12.5px] font-bold text-slate-700">
+                      Chế độ thời hạn PRO:
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className={`flex items-start gap-2 p-3 rounded-xl border cursor-pointer transition-all ${
+                        grantType === 'MONTHLY'
+                          ? 'border-emerald-600 bg-emerald-50/50 ring-1 ring-emerald-500 text-emerald-950'
+                          : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                      }`}>
+                        <input
+                          type="radio"
+                          name="grantTypeOption"
+                          checked={grantType === 'MONTHLY'}
+                          onChange={() => {
+                            setGrantType('MONTHLY');
+                            const base = computeEffectiveBaseDate(grantAction, grantExtendMode, grantStartDate);
+                            setGrantEndDate(addCalendarMonths(base, grantMonths || 3));
+                          }}
+                          className="w-4 h-4 text-emerald-600 mt-0.5"
+                        />
+                        <div>
+                          <span className="text-[13px] font-bold block">PRO Theo thời hạn</span>
+                          <span className="text-[11px] text-slate-500 block mt-0.5">Tính theo tháng lịch chuẩn</span>
+                        </div>
+                      </label>
+
+                      <label className={`flex items-start gap-2 p-3 rounded-xl border cursor-pointer transition-all ${
+                        grantType === 'LIFETIME'
+                          ? 'border-purple-600 bg-purple-50/50 ring-1 ring-purple-500 text-purple-950'
+                          : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                      }`}>
+                        <input
+                          type="radio"
+                          name="grantTypeOption"
+                          checked={grantType === 'LIFETIME'}
+                          onChange={() => {
+                            setGrantType('LIFETIME');
+                            setGrantEndDate('');
+                          }}
+                          className="w-4 h-4 text-purple-600 mt-0.5"
+                        />
+                        <div>
+                          <span className="text-[13px] font-bold block">PRO Vĩnh viễn</span>
+                          <span className="text-[11px] text-slate-500 block mt-0.5">Không giới hạn trọn đời</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  {grantType === 'MONTHLY' && (
+                    <div className="space-y-3.5 pt-1 border-t border-slate-100">
+                      {/* Chọn số tháng (3, 6, 12 tháng & Input tùy chỉnh nguyên dương) */}
+                      <div>
+                        <label className="block text-[12.5px] font-bold text-slate-700 mb-1.5">
+                          Số tháng sử dụng:
+                        </label>
+                        {/* Nút chọn nhanh: 3 tháng, 6 tháng, 12 tháng */}
+                        <div className="flex items-center gap-2 flex-wrap mb-2">
+                          {[
+                            { m: 3, label: '3 tháng' },
+                            { m: 6, label: '6 tháng' },
+                            { m: 12, label: '12 tháng (1 năm)' },
+                            { m: 24, label: '24 tháng' }
+                          ].map(item => (
+                            <button
+                              key={item.m}
+                              type="button"
+                              onClick={() => handleMonthsChange(item.m)}
+                              className={`px-3 py-1.5 text-[12px] font-bold rounded-lg transition-colors cursor-pointer ${
+                                grantMonths === item.m
+                                  ? 'bg-emerald-600 text-white shadow-xs'
+                                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                              }`}
+                            >
+                              {item.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Input tùy chỉnh số tháng nguyên dương */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-[12px] text-slate-500 shrink-0">Tùy chỉnh số tháng:</span>
+                          <input
+                            type="number"
+                            min="1"
+                            max="120"
+                            value={grantMonths}
+                            onChange={(e) => handleMonthsChange(Math.max(1, parseInt(e.target.value) || 1))}
+                            className="w-24 px-2.5 py-1.5 text-center text-[13.5px] font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 text-slate-900"
+                          />
+                          <span className="text-[12px] text-slate-600 font-semibold">tháng</span>
+                        </div>
+                      </div>
+
+                      {/* Phương thức Gia hạn (khi tài khoản còn hạn) */}
+                      {grantAction === 'EXTEND' && isTargetCurrentActive ? (
+                        <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-200/80 space-y-2">
+                          <label className="block text-[12px] font-bold text-blue-950">
+                            Mốc tính gia hạn:
+                          </label>
+                          <div className="space-y-1.5 text-[12px]">
+                            <label className="flex items-start gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="extendMode"
+                                checked={grantExtendMode === 'EXTEND_FROM_CURRENT'}
+                                onChange={() => handleExtendModeChange('EXTEND_FROM_CURRENT')}
+                                className="w-3.5 h-3.5 text-blue-600 mt-0.5"
+                              />
+                              <div>
+                                <span className="font-bold text-slate-800 block">
+                                  Nối tiếp từ ngày hết hạn hiện tại ({formatCalendarDate(targetCurrentExpiry)})
+                                </span>
+                                <span className="text-slate-500 text-[11px] block">
+                                  Cộng thêm {grantMonths} tháng vào sau ngày hết hạn cũ
+                                </span>
+                              </div>
+                            </label>
+
+                            <label className="flex items-start gap-2 cursor-pointer pt-1 border-t border-blue-100">
+                              <input
+                                type="radio"
+                                name="extendMode"
+                                checked={grantExtendMode === 'RESET_FROM_START'}
+                                onChange={() => handleExtendModeChange('RESET_FROM_START')}
+                                className="w-3.5 h-3.5 text-blue-600 mt-0.5"
+                              />
+                              <div>
+                                <span className="font-bold text-slate-800 block">
+                                  Tính từ ngày bắt đầu mới được chọn
+                                </span>
+                                <span className="text-slate-500 text-[11px] block">
+                                  Thiết lập lại mốc tính mới từ ngày bên dưới
+                                </span>
+                              </div>
+                            </label>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {/* Ngày bắt đầu & Ngày hết hạn (cho phép nhập và chỉnh sửa trực tiếp) */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[12.5px] font-bold text-slate-700 mb-1">
+                            Ngày bắt đầu:
+                          </label>
+                          <input
+                            type="date"
+                            value={grantStartDate}
+                            onChange={(e) => handleStartDateChange(e.target.value)}
+                            className="w-full px-3 py-1.5 text-[13px] rounded-lg border border-slate-300 font-semibold text-slate-900 focus:outline-none focus:border-emerald-600"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[12.5px] font-bold text-slate-700 mb-1">
+                            Ngày hết hạn (tự tính / chỉnh trực tiếp):
+                          </label>
+                          <input
+                            type="date"
+                            value={grantEndDate}
+                            onChange={(e) => handleEndDateDirectChange(e.target.value)}
+                            className="w-full px-3 py-1.5 text-[13px] rounded-lg border border-emerald-500/80 bg-emerald-50/20 font-bold text-emerald-900 focus:outline-none focus:border-emerald-600"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Trạng thái quyền */}
+                      <div>
+                        <label className="block text-[12.5px] font-bold text-slate-700 mb-1">
+                          Trạng thái quyền:
+                        </label>
+                        <select
+                          value={grantStatus}
+                          onChange={(e) => setGrantStatus(e.target.value as any)}
+                          className="w-full px-3 py-1.5 text-[13px] rounded-lg border border-slate-300 font-semibold text-slate-900 focus:outline-none focus:border-emerald-600 bg-white"
+                        >
+                          <option value="ACTIVE">ACTIVE — Đang hoạt động / Còn hạn</option>
+                          <option value="EXPIRED">EXPIRED — Đã hết hạn (tạm dừng quyền PRO)</option>
+                          <option value="REVOKED">REVOKED — Đã thu hồi quyền</option>
+                          <option value="PERMANENT">PERMANENT — Vĩnh viễn không thời hạn</option>
+                        </select>
+                      </div>
+
+                      {/* Ghi chú cấp quyền */}
+                      <div>
+                        <label className="block text-[12.5px] font-bold text-slate-700 mb-1">
+                          Ghi chú cấp quyền / gia hạn:
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={grantNote}
+                          onChange={(e) => setGrantNote(e.target.value)}
+                          placeholder="Ví dụ: Cấp quyền đợt thi GVDG cấp Tỉnh; Gia hạn theo quyết định số 123..."
+                          className="w-full px-3 py-2 text-[12.5px] rounded-lg border border-slate-300 focus:outline-none focus:border-emerald-600 text-slate-900"
+                        />
+                      </div>
+
+                      {/* Bảng xem trước kết quả thời hạn */}
+                      <div className="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200 space-y-1.5 text-[12px]">
+                        <div className="flex justify-between items-center text-slate-600">
+                          <span>Mốc bắt đầu tính:</span>
+                          <span className="font-semibold text-slate-800">{formatCalendarDate(grantStartDate)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-slate-600">
+                          <span>Số tháng cấp:</span>
+                          <span className="font-bold text-emerald-800">{grantMonths} tháng (lịch chính xác)</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-1.5 border-t border-emerald-200/80">
+                          <span className="font-bold text-emerald-950">Ngày hết hạn dự kiến:</span>
+                          <span className="font-extrabold text-[13.5px] text-emerald-700">
+                            {formatCalendarDate(grantEndDate)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {grantType === 'LIFETIME' && (
+                    <div className="space-y-3 pt-1 border-t border-slate-100">
+                      <div className="p-3.5 bg-purple-50/70 rounded-xl border border-purple-200 text-[12.5px] space-y-1 text-purple-900">
+                        <div className="font-bold flex items-center gap-1.5 text-purple-950">
+                          <Check className="w-4 h-4 text-purple-700" />
+                          <span>Quyền PRO Vĩnh viễn (Không thời hạn)</span>
+                        </div>
+                        <p className="text-[12px] text-purple-800/90 leading-relaxed">
+                          Tài khoản được sử dụng không giới hạn lượt và không bao giờ hết hạn. Các tài khoản PRO vĩnh viễn hiện có được bảo toàn tuyệt đối.
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-[12.5px] font-bold text-slate-700 mb-1">
+                          Ghi chú cấp quyền vĩnh viễn:
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={grantNote}
+                          onChange={(e) => setGrantNote(e.target.value)}
+                          placeholder="Ví dụ: Cấp vĩnh viễn cho Giảng viên cốt cán..."
+                          className="w-full px-3 py-2 text-[12.5px] rounded-lg border border-slate-300 focus:outline-none focus:border-purple-600 text-slate-900"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setGrantModalUser(null)}
+                      className="flex-1 py-2 text-slate-600 bg-slate-100 hover:bg-slate-200 font-bold text-[13px] rounded-xl transition-colors cursor-pointer"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGrantStep('CONFIRM')}
+                      className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[13px] rounded-xl shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      <span>Tiếp tục xác nhận</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* BƯỚC 2: XÁC NHẬN TRƯỚC KHI GHI DỮ LIỆU */
+                <div className="p-5 sm:p-8 space-y-4">
+                  <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 space-y-3">
+                    <div className="flex items-center gap-2 text-amber-950 font-bold text-[14px]">
+                      <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+                      <span>Xác nhận thông tin thời hạn PRO</span>
+                    </div>
+                    <p className="text-[12.5px] text-amber-900 leading-relaxed">
+                      Thầy/Cô vui lòng kiểm tra kỹ thông tin thời hạn và trạng thái trước khi lưu xuống hệ thống và Google Sheets:
+                    </p>
+
+                    <div className="bg-white p-3.5 rounded-lg border border-amber-200/80 text-[12px] space-y-2">
+                      <div className="flex justify-between items-start">
+                        <span className="text-slate-500">Tài khoản:</span>
+                        <span className="font-bold text-slate-900 text-right truncate max-w-[220px]">
+                          {grantModalUser.name || grantModalUser.email}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-500">Email:</span>
+                        <span className="font-mono text-[11.5px] text-slate-700">{grantModalUser.email}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-500">Thao tác:</span>
+                        <span className="font-bold text-emerald-800">
+                          {grantAction === 'EXTEND' ? 'Gia hạn thêm' : grantAction === 'ADJUST' ? 'Điều chỉnh thời hạn' : 'Cấp quyền mới'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center pt-1 border-t border-slate-100">
+                        <span className="text-slate-500">Ngày bắt đầu:</span>
+                        <span className="font-semibold text-slate-700">{formatCalendarDate(grantStartDate)}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-500">Thời hạn áp dụng:</span>
+                        <span className="font-extrabold text-[13px] text-emerald-700">
+                          {grantType === 'LIFETIME'
+                            ? 'PRO Vĩnh viễn (Không thời hạn)'
+                            : `${formatCalendarDate(grantEndDate)} (${grantMonths} tháng)`}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-500">Trạng thái:</span>
+                        <span className="font-bold text-slate-800">{grantStatus}</span>
+                      </div>
+                      {grantNote.trim() && (
+                        <div className="pt-1 border-t border-slate-100 text-slate-600">
+                          <span className="text-slate-500 block">Ghi chú:</span>
+                          <span className="italic block mt-0.5 text-slate-800">{grantNote.trim()}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setGrantStep('FORM')}
+                      disabled={isSubmittingGrant}
+                      className="flex-1 py-2 text-slate-700 bg-slate-100 hover:bg-slate-200 font-bold text-[13px] rounded-xl transition-colors cursor-pointer"
+                    >
+                      Quay lại sửa
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveGrant}
+                      disabled={isSubmittingGrant}
+                      className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[13px] rounded-xl shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      {isSubmittingGrant ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Check className="w-4 h-4" />
+                      )}
+                      <span>XÁC NHẬN & LƯU</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+
+          {activeTab === 'users' && !grantModalUser && (
             <div className="space-y-4">
               {/* Thanh tìm kiếm & Làm mới */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
@@ -2708,406 +3110,6 @@ export const AdminPortalModal: React.FC = () => {
             </div>
           </div>
         )}
-        {/* Modal Con 2: CẤP QUYỀN / GIA HẠN / ĐIỀU CHỈNH THỜI HẠN PRO */}
-        {grantModalUser && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-xs select-none">
-            <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-              {/* Header Modal */}
-              <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
-                    {grantAction === 'EXTEND' ? <CalendarPlus className="w-4 h-4" /> : grantAction === 'ADJUST' ? <Sliders className="w-4 h-4" /> : <Award className="w-4 h-4" />}
-                  </div>
-                  <div>
-                    <h4 className="text-[15px] font-bold text-slate-900 leading-tight">
-                      {grantModalTitle}
-                    </h4>
-                    <span className="text-[11.5px] text-slate-500">
-                      Quản lý thời hạn và phân quyền thành viên PRO
-                    </span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setGrantModalUser(null)}
-                  className="text-slate-400 hover:text-slate-700 p-1 rounded-lg cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {grantStep === 'FORM' ? (
-                /* BƯỚC 1: THIẾT LẬP THỜI HẠN PRO */
-                <div className="p-5 space-y-4 max-h-[82vh] overflow-y-auto">
-                  {/* Thông tin tài khoản & Thời hạn hiện tại */}
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-[12.5px] space-y-1">
-                    <div className="flex justify-between items-start">
-                      <span className="text-slate-500">Tài khoản:</span>
-                      <strong className="text-slate-900 text-right truncate max-w-[260px]">
-                        {grantModalUser.name || grantModalUser.email}
-                      </strong>
-                    </div>
-                    <div className="flex justify-between items-center text-slate-500">
-                      <span>Email:</span>
-                      <span className="text-slate-700 font-mono text-[11.5px] truncate max-w-[260px]">
-                        {grantModalUser.email}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center pt-1 border-t border-slate-200/60 text-[12px]">
-                      <span className="text-slate-500">Thời hạn hiện tại:</span>
-                      <span className={`font-semibold ${isTargetCurrentExpired ? 'text-rose-600' : isTargetCurrentActive ? 'text-emerald-700' : 'text-slate-700'}`}>
-                        {targetExpiryLabel}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Lựa chọn loại quyền PRO: Vĩnh viễn hay Theo tháng */}
-                  <div className="space-y-2">
-                    <label className="block text-[12.5px] font-bold text-slate-700">
-                      Chế độ thời hạn PRO:
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <label className={`flex items-start gap-2 p-3 rounded-xl border cursor-pointer transition-all ${
-                        grantType === 'MONTHLY'
-                          ? 'border-emerald-600 bg-emerald-50/50 ring-1 ring-emerald-500 text-emerald-950'
-                          : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
-                      }`}>
-                        <input
-                          type="radio"
-                          name="grantTypeOption"
-                          checked={grantType === 'MONTHLY'}
-                          onChange={() => {
-                            setGrantType('MONTHLY');
-                            const base = computeEffectiveBaseDate(grantAction, grantExtendMode, grantStartDate);
-                            setGrantEndDate(addCalendarMonths(base, grantMonths || 3));
-                          }}
-                          className="w-4 h-4 text-emerald-600 mt-0.5"
-                        />
-                        <div>
-                          <span className="text-[13px] font-bold block">PRO Theo thời hạn</span>
-                          <span className="text-[11px] text-slate-500 block mt-0.5">Tính theo tháng lịch chuẩn</span>
-                        </div>
-                      </label>
-
-                      <label className={`flex items-start gap-2 p-3 rounded-xl border cursor-pointer transition-all ${
-                        grantType === 'LIFETIME'
-                          ? 'border-purple-600 bg-purple-50/50 ring-1 ring-purple-500 text-purple-950'
-                          : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
-                      }`}>
-                        <input
-                          type="radio"
-                          name="grantTypeOption"
-                          checked={grantType === 'LIFETIME'}
-                          onChange={() => {
-                            setGrantType('LIFETIME');
-                            setGrantEndDate('');
-                          }}
-                          className="w-4 h-4 text-purple-600 mt-0.5"
-                        />
-                        <div>
-                          <span className="text-[13px] font-bold block">PRO Vĩnh viễn</span>
-                          <span className="text-[11px] text-slate-500 block mt-0.5">Không giới hạn trọn đời</span>
-                        </div>
-                      </label>
-                    </div>
-                  </div>
-
-                  {grantType === 'MONTHLY' && (
-                    <div className="space-y-3.5 pt-1 border-t border-slate-100">
-                      {/* Chọn số tháng (3, 6, 12 tháng & Input tùy chỉnh nguyên dương) */}
-                      <div>
-                        <label className="block text-[12.5px] font-bold text-slate-700 mb-1.5">
-                          Số tháng sử dụng:
-                        </label>
-                        {/* Nút chọn nhanh: 3 tháng, 6 tháng, 12 tháng */}
-                        <div className="flex items-center gap-2 flex-wrap mb-2">
-                          {[
-                            { m: 3, label: '3 tháng' },
-                            { m: 6, label: '6 tháng' },
-                            { m: 12, label: '12 tháng (1 năm)' },
-                            { m: 24, label: '24 tháng' }
-                          ].map(item => (
-                            <button
-                              key={item.m}
-                              type="button"
-                              onClick={() => handleMonthsChange(item.m)}
-                              className={`px-3 py-1.5 text-[12px] font-bold rounded-lg transition-colors cursor-pointer ${
-                                grantMonths === item.m
-                                  ? 'bg-emerald-600 text-white shadow-xs'
-                                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
-                              }`}
-                            >
-                              {item.label}
-                            </button>
-                          ))}
-                        </div>
-
-                        {/* Input tùy chỉnh số tháng nguyên dương */}
-                        <div className="flex items-center gap-2">
-                          <span className="text-[12px] text-slate-500 shrink-0">Tùy chỉnh số tháng:</span>
-                          <input
-                            type="number"
-                            min="1"
-                            max="120"
-                            value={grantMonths}
-                            onChange={(e) => handleMonthsChange(Math.max(1, parseInt(e.target.value) || 1))}
-                            className="w-24 px-2.5 py-1.5 text-center text-[13.5px] font-bold rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 text-slate-900"
-                          />
-                          <span className="text-[12px] text-slate-600 font-semibold">tháng</span>
-                        </div>
-                      </div>
-
-                      {/* Phương thức Gia hạn (khi tài khoản còn hạn) */}
-                      {grantAction === 'EXTEND' && isTargetCurrentActive ? (
-                        <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-200/80 space-y-2">
-                          <label className="block text-[12px] font-bold text-blue-950">
-                            Mốc tính gia hạn:
-                          </label>
-                          <div className="space-y-1.5 text-[12px]">
-                            <label className="flex items-start gap-2 cursor-pointer">
-                              <input
-                                type="radio"
-                                name="extendMode"
-                                checked={grantExtendMode === 'EXTEND_FROM_CURRENT'}
-                                onChange={() => handleExtendModeChange('EXTEND_FROM_CURRENT')}
-                                className="w-3.5 h-3.5 text-blue-600 mt-0.5"
-                              />
-                              <div>
-                                <span className="font-bold text-slate-800 block">
-                                  Nối tiếp từ ngày hết hạn hiện tại ({formatCalendarDate(targetCurrentExpiry)})
-                                </span>
-                                <span className="text-slate-500 text-[11px] block">
-                                  Cộng thêm {grantMonths} tháng vào sau ngày hết hạn cũ
-                                </span>
-                              </div>
-                            </label>
-
-                            <label className="flex items-start gap-2 cursor-pointer pt-1 border-t border-blue-100">
-                              <input
-                                type="radio"
-                                name="extendMode"
-                                checked={grantExtendMode === 'RESET_FROM_START'}
-                                onChange={() => handleExtendModeChange('RESET_FROM_START')}
-                                className="w-3.5 h-3.5 text-blue-600 mt-0.5"
-                              />
-                              <div>
-                                <span className="font-bold text-slate-800 block">
-                                  Tính từ ngày bắt đầu mới được chọn
-                                </span>
-                                <span className="text-slate-500 text-[11px] block">
-                                  Thiết lập lại mốc tính mới từ ngày bên dưới
-                                </span>
-                              </div>
-                            </label>
-                          </div>
-                        </div>
-                      ) : null}
-
-                      {/* Ngày bắt đầu & Ngày hết hạn (cho phép nhập và chỉnh sửa trực tiếp) */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-[12.5px] font-bold text-slate-700 mb-1">
-                            Ngày bắt đầu:
-                          </label>
-                          <input
-                            type="date"
-                            value={grantStartDate}
-                            onChange={(e) => handleStartDateChange(e.target.value)}
-                            className="w-full px-3 py-1.5 text-[13px] rounded-lg border border-slate-300 font-semibold text-slate-900 focus:outline-none focus:border-emerald-600"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-[12.5px] font-bold text-slate-700 mb-1">
-                            Ngày hết hạn (tự tính / chỉnh trực tiếp):
-                          </label>
-                          <input
-                            type="date"
-                            value={grantEndDate}
-                            onChange={(e) => handleEndDateDirectChange(e.target.value)}
-                            className="w-full px-3 py-1.5 text-[13px] rounded-lg border border-emerald-500/80 bg-emerald-50/20 font-bold text-emerald-900 focus:outline-none focus:border-emerald-600"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Trạng thái quyền */}
-                      <div>
-                        <label className="block text-[12.5px] font-bold text-slate-700 mb-1">
-                          Trạng thái quyền:
-                        </label>
-                        <select
-                          value={grantStatus}
-                          onChange={(e) => setGrantStatus(e.target.value as any)}
-                          className="w-full px-3 py-1.5 text-[13px] rounded-lg border border-slate-300 font-semibold text-slate-900 focus:outline-none focus:border-emerald-600 bg-white"
-                        >
-                          <option value="ACTIVE">ACTIVE — Đang hoạt động / Còn hạn</option>
-                          <option value="EXPIRED">EXPIRED — Đã hết hạn (tạm dừng quyền PRO)</option>
-                          <option value="REVOKED">REVOKED — Đã thu hồi quyền</option>
-                          <option value="PERMANENT">PERMANENT — Vĩnh viễn không thời hạn</option>
-                        </select>
-                      </div>
-
-                      {/* Ghi chú cấp quyền */}
-                      <div>
-                        <label className="block text-[12.5px] font-bold text-slate-700 mb-1">
-                          Ghi chú cấp quyền / gia hạn:
-                        </label>
-                        <textarea
-                          rows={2}
-                          value={grantNote}
-                          onChange={(e) => setGrantNote(e.target.value)}
-                          placeholder="Ví dụ: Cấp quyền đợt thi GVDG cấp Tỉnh; Gia hạn theo quyết định số 123..."
-                          className="w-full px-3 py-2 text-[12.5px] rounded-lg border border-slate-300 focus:outline-none focus:border-emerald-600 text-slate-900"
-                        />
-                      </div>
-
-                      {/* Bảng xem trước kết quả thời hạn */}
-                      <div className="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200 space-y-1.5 text-[12px]">
-                        <div className="flex justify-between items-center text-slate-600">
-                          <span>Mốc bắt đầu tính:</span>
-                          <span className="font-semibold text-slate-800">{formatCalendarDate(grantStartDate)}</span>
-                        </div>
-                        <div className="flex justify-between items-center text-slate-600">
-                          <span>Số tháng cấp:</span>
-                          <span className="font-bold text-emerald-800">{grantMonths} tháng (lịch chính xác)</span>
-                        </div>
-                        <div className="flex justify-between items-center pt-1.5 border-t border-emerald-200/80">
-                          <span className="font-bold text-emerald-950">Ngày hết hạn dự kiến:</span>
-                          <span className="font-extrabold text-[13.5px] text-emerald-700">
-                            {formatCalendarDate(grantEndDate)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {grantType === 'LIFETIME' && (
-                    <div className="space-y-3 pt-1 border-t border-slate-100">
-                      <div className="p-3.5 bg-purple-50/70 rounded-xl border border-purple-200 text-[12.5px] space-y-1 text-purple-900">
-                        <div className="font-bold flex items-center gap-1.5 text-purple-950">
-                          <Check className="w-4 h-4 text-purple-700" />
-                          <span>Quyền PRO Vĩnh viễn (Không thời hạn)</span>
-                        </div>
-                        <p className="text-[12px] text-purple-800/90 leading-relaxed">
-                          Tài khoản được sử dụng không giới hạn lượt và không bao giờ hết hạn. Các tài khoản PRO vĩnh viễn hiện có được bảo toàn tuyệt đối.
-                        </p>
-                      </div>
-
-                      <div>
-                        <label className="block text-[12.5px] font-bold text-slate-700 mb-1">
-                          Ghi chú cấp quyền vĩnh viễn:
-                        </label>
-                        <textarea
-                          rows={2}
-                          value={grantNote}
-                          onChange={(e) => setGrantNote(e.target.value)}
-                          placeholder="Ví dụ: Cấp vĩnh viễn cho Giảng viên cốt cán..."
-                          className="w-full px-3 py-2 text-[12.5px] rounded-lg border border-slate-300 focus:outline-none focus:border-purple-600 text-slate-900"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-2 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setGrantModalUser(null)}
-                      className="flex-1 py-2 text-slate-600 bg-slate-100 hover:bg-slate-200 font-bold text-[13px] rounded-xl transition-colors cursor-pointer"
-                    >
-                      Hủy
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setGrantStep('CONFIRM')}
-                      className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[13px] rounded-xl shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-                    >
-                      <span>Tiếp tục xác nhận</span>
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                /* BƯỚC 2: XÁC NHẬN TRƯỚC KHI GHI DỮ LIỆU */
-                <div className="p-5 space-y-4">
-                  <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 space-y-3">
-                    <div className="flex items-center gap-2 text-amber-950 font-bold text-[14px]">
-                      <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
-                      <span>Xác nhận thông tin thời hạn PRO</span>
-                    </div>
-                    <p className="text-[12.5px] text-amber-900 leading-relaxed">
-                      Thầy/Cô vui lòng kiểm tra kỹ thông tin thời hạn và trạng thái trước khi lưu xuống hệ thống và Google Sheets:
-                    </p>
-
-                    <div className="bg-white p-3.5 rounded-lg border border-amber-200/80 text-[12px] space-y-2">
-                      <div className="flex justify-between items-start">
-                        <span className="text-slate-500">Tài khoản:</span>
-                        <span className="font-bold text-slate-900 text-right truncate max-w-[220px]">
-                          {grantModalUser.name || grantModalUser.email}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-500">Email:</span>
-                        <span className="font-mono text-[11.5px] text-slate-700">{grantModalUser.email}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-500">Thao tác:</span>
-                        <span className="font-bold text-emerald-800">
-                          {grantAction === 'EXTEND' ? 'Gia hạn thêm' : grantAction === 'ADJUST' ? 'Điều chỉnh thời hạn' : 'Cấp quyền mới'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center pt-1 border-t border-slate-100">
-                        <span className="text-slate-500">Ngày bắt đầu:</span>
-                        <span className="font-semibold text-slate-700">{formatCalendarDate(grantStartDate)}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-500">Thời hạn áp dụng:</span>
-                        <span className="font-extrabold text-[13px] text-emerald-700">
-                          {grantType === 'LIFETIME'
-                            ? 'PRO Vĩnh viễn (Không thời hạn)'
-                            : `${formatCalendarDate(grantEndDate)} (${grantMonths} tháng)`}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-500">Trạng thái:</span>
-                        <span className="font-bold text-slate-800">{grantStatus}</span>
-                      </div>
-                      {grantNote.trim() && (
-                        <div className="pt-1 border-t border-slate-100 text-slate-600">
-                          <span className="text-slate-500 block">Ghi chú:</span>
-                          <span className="italic block mt-0.5 text-slate-800">{grantNote.trim()}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => setGrantStep('FORM')}
-                      disabled={isSubmittingGrant}
-                      className="flex-1 py-2 text-slate-700 bg-slate-100 hover:bg-slate-200 font-bold text-[13px] rounded-xl transition-colors cursor-pointer"
-                    >
-                      Quay lại sửa
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSaveGrant}
-                      disabled={isSubmittingGrant}
-                      className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[13px] rounded-xl shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-                    >
-                      {isSubmittingGrant ? (
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Check className="w-4 h-4" />
-                      )}
-                      <span>XÁC NHẬN & LƯU</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* Modal Con 3: Xác nhận Thu hồi quyền PRO trước hạn (Không xóa dữ liệu hồ sơ) */}
         {confirmRevokeUser && (
           <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs select-none">
