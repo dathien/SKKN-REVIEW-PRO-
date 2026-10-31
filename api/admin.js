@@ -573,6 +573,9 @@ async function checkSheetCompatibility() {
 }
 async function getAllUsersAndGuests() {
   reloadStoreFromDisk();
+  if (!process.env.LICENSE_API_URL) {
+    throw new Error("Chưa cấu hình LICENSE_API_URL: không thể xác thực danh sách USERS từ Google Sheets.");
+  }
   if (process.env.LICENSE_API_URL) {
     try {
       const resp = await fetch(process.env.LICENSE_API_URL, {
@@ -589,6 +592,17 @@ async function getAllUsersAndGuests() {
       if (resp.ok) {
         const data = await resp.json().catch(() => null);
         const list = Array.isArray(data?.users) ? data.users : Array.isArray(data) ? data : [];
+        if (!Array.isArray(data?.users) && !Array.isArray(data)) {
+          throw new Error("API Google Sheets không trả về danh sách USERS hợp lệ.");
+        }
+        const allowedEmails = new Set([
+          "dathien2412@gmail.com",
+          "nguyenthithanhtam3410@gmail.com",
+        ]);
+        const authoritativeEmails = new Set(
+          list.map((u) => mapRawSheetUserToAccount(u)?.email?.trim().toLowerCase())
+            .filter((email) => Boolean(email) && allowedEmails.has(email))
+        );
         list.forEach((u) => {
           if (u) {
             const mapped = mapRawSheetUserToAccount(u);
@@ -645,8 +659,16 @@ async function getAllUsersAndGuests() {
           }
         });
         saveStore();
+        return {
+          users: Object.values(store.users).filter((u) => authoritativeEmails.has(u.email.trim().toLowerCase())),
+          guests: Object.values(store.guests),
+          licenses: Object.values(store.licenses),
+        };
+      } else {
+        throw new Error(`Google Sheets USERS không phản hồi thành công (HTTP ${resp.status}).`);
       }
-    } catch (_) {
+    } catch (error) {
+      throw error;
     }
   }
   return {
