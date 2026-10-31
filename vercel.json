@@ -54,6 +54,14 @@
       "destination": "/api/rescore-skkn"
     },
     {
+      "source": "/api/ask-council",
+      "destination": "/api/ask-council"
+    },
+    {
+      "source": "/api/ask-council/:path*",
+      "destination": "/api/ask-council"
+    },
+    {
       "source": "/api/parse-docx",
       "destination": "/api/parse-docx"
     },
