@@ -17,12 +17,14 @@ interface CouncilSimulatorViewProps {
   questions: CouncilQuestion[];
   onGenerateMoreQuestions: () => Promise<void>;
   isLoadingMore?: boolean;
+  generateError?: string | null;
 }
 
 export const CouncilSimulatorView: React.FC<CouncilSimulatorViewProps> = ({
   questions,
   onGenerateMoreQuestions,
-  isLoadingMore
+  isLoadingMore,
+  generateError
 }) => {
   const [filterDiff, setFilterDiff] = useState<string>('All');
   const [activeTab, setActiveTab] = useState<'all' | 'practice'>('all');
@@ -81,6 +83,11 @@ export const CouncilSimulatorView: React.FC<CouncilSimulatorViewProps> = ({
         </div>
       </div>
 
+      {generateError && (
+        <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-[14px] text-amber-950 leading-relaxed">
+          <strong>Chưa tạo được câu hỏi mới:</strong> {generateError}
+        </div>
+      )}
       {/* Switcher: List vs Practice Mode */}
       <div className="flex items-center justify-between border-b border-slate-200 pb-3 flex-wrap gap-3">
         <div className="inline-flex p-1 bg-slate-100 rounded-xl gap-1 text-[13.5px] font-bold">
