@@ -45903,6 +45903,98 @@ function cleanAndParseJson(text) {
     throw new Error("Kh\xF4ng th\u1EC3 ph\xE2n t\xEDch d\u1EEF li\u1EC7u JSON t\u1EEB m\xF4 h\xECnh th\u1EA9m \u0111\u1ECBnh.");
   }
 }
+function evaluateRescoreByRubricRules(oldCriteria, oldIssues, contentToEvaluate, oldTotalScore) {
+  const contentLower = contentToEvaluate.toLowerCase();
+  const issueComparisons = [];
+  const fixedIssues = [];
+  const remainingIssues = [];
+  const newEvidenceAdded = [];
+  const newFiguresAdded = [];
+  for (const issue of oldIssues) {
+    const title = issue.issueDetected || issue.issue || "V\u1EA5n \u0111\u1EC1 ph\u1EA3n bi\u1EC7n";
+    const location = issue.location || "";
+    const quote = issue.relatedQuote || "";
+    const titleWords = title.toLowerCase().split(/\s+/).filter((w) => w.length > 3);
+    const locationWords = location.toLowerCase().split(/[\s,.-]+/).filter((w) => w.length > 2);
+    const keywords = Array.from(/* @__PURE__ */ new Set([...titleWords, ...locationWords]));
+    const matchCount = keywords.filter((kw) => contentLower.includes(kw)).length;
+    const isExplicitlyResolved = issue.status === "\u0110\xE3 x\u1EED l\xFD" || issue.status === "resolved";
+    const hasFixAction = contentLower.includes("\u0111\xE3 s\u1EEDa") || contentLower.includes("\u0111\xEDnh ch\xEDnh") || contentLower.includes("b\u1ED5 sung") || contentLower.includes("thay th\u1EBF") || contentLower.includes("kh\u1EAFc ph\u1EE5c") || contentLower.includes("lo\u1EA1i b\u1ECF") || contentLower.includes("th\u1ED1ng nh\u1EA5t");
+    let status = "CH\u01AFA KH\u1EAEC PH\u1EE4C";
+    let explanation = "";
+    if (matchCount >= 2 && hasFixAction) {
+      status = "\u0110\xC3 KH\u1EAEC PH\u1EE4C";
+      explanation = "\u0110\u1ED1i so\xE1t quy t\u1EAFc Rubric: T\xE1c gi\u1EA3 c\xF3 n\u1ED9i dung gi\u1EA3i tr\xECnh, \u0111\xEDnh ch\xEDnh s\u1ED1 li\u1EC7u ho\u1EB7c b\u1ED5 sung c\u0103n c\u1EE9 ph\xF9 h\u1EE3p v\u1EDBi y\xEAu c\u1EA7u c\u1EE7a v\u1EA5n \u0111\u1EC1.";
+      fixedIssues.push(title);
+      const numbersInText = contentToEvaluate.match(/\b\d+([.,]\d+)?\b/g);
+      if (numbersInText && numbersInText.length > 0) {
+        newFiguresAdded.push(`S\u1ED1 li\u1EC7u \u0111\xEDnh ch\xEDnh t\u1EA1i ${location || title}`);
+      }
+    } else if (matchCount >= 1 || isExplicitlyResolved) {
+      status = "C\u1EA2I THI\u1EC6N M\u1ED8T PH\u1EA6N";
+      explanation = "\u0110\u1ED1i so\xE1t quy t\u1EAFc Rubric: C\xF3 ghi nh\u1EADn n\u1ED7 l\u1EF1c x\u1EED l\xFD ho\u1EB7c \u0111i\u1EC1u ch\u1EC9nh b\u01B0\u1EDBc \u0111\u1EA7u, nh\u01B0ng c\u1EA7n th\xEAm s\u1ED1 li\u1EC7u th\u1EF1c nghi\u1EC7m/bi\xEAn b\u1EA3n x\xE1c nh\u1EADn \u0111\u1EC3 ho\xE0n thi\u1EC7n.";
+      remainingIssues.push(title);
+    } else {
+      status = "CH\u01AFA KH\u1EAEC PH\u1EE4C";
+      explanation = "\u0110\u1ED1i so\xE1t quy t\u1EAFc Rubric: Ch\u01B0a ph\xE1t hi\u1EC7n c\u0103n c\u1EE9 \u0111i\u1EC1u ch\u1EC9nh c\u1EE5 th\u1EC3 trong b\u1EA3n s\u1EEDa \u0111\u1ED1i v\u1EDBi v\u1EA5n \u0111\u1EC1 n\xE0y.";
+      remainingIssues.push(title);
+    }
+    issueComparisons.push({
+      issueTitle: title,
+      originalQuote: quote || "N\u1ED9i dung b\u1EA3n g\u1ED1c c\u1EA7n \u0111\u1ED1i so\xE1t",
+      revisedQuote: `Tr\xEDch t\u1EEB v\u0103n b\u1EA3n s\u1EEDa: "${contentToEvaluate.slice(0, 140)}..."`,
+      status,
+      explanation
+    });
+  }
+  if (contentLower.includes("ph\u1EE5 l\u1EE5c") || contentLower.includes("\u1EA3nh ch\u1EE5p") || contentLower.includes("phi\u1EBFu") || contentLower.includes("bi\xEAn b\u1EA3n") || contentLower.includes("ch\u1EEF k\xFD")) {
+    newEvidenceAdded.push("Minh ch\u1EE9ng/t\xE0i li\u1EC7u ki\u1EC3m ch\u1EE9ng \u0111\u01B0\u1EE3c d\u1EABn ch\u1EE9ng trong v\u0103n b\u1EA3n s\u1EEDa");
+  }
+  const updatedCriteria = [];
+  let calculatedNewTotal = 0;
+  for (const criterion of oldCriteria) {
+    const critName = criterion.criterionName || criterion.name || "Ti\xEAu ch\xED";
+    const prevScore = typeof criterion.proposedScore === "number" ? criterion.proposedScore : criterion.score || 0;
+    const maxScore = typeof criterion.maxScore === "number" ? criterion.maxScore : 20;
+    const relatedFixed = fixedIssues.filter((fi) => fi.toLowerCase().includes(critName.toLowerCase()));
+    let scoreChange = 0;
+    if (relatedFixed.length > 0) {
+      scoreChange = Math.min(2.5 * relatedFixed.length, maxScore - prevScore);
+    } else if (fixedIssues.length > 0 && prevScore < maxScore) {
+      scoreChange = Math.min(1, maxScore - prevScore);
+    }
+    const newScore = Math.min(maxScore, Math.max(0, prevScore + scoreChange));
+    calculatedNewTotal += newScore;
+    updatedCriteria.push({
+      criterionName: critName,
+      previousScore: prevScore,
+      newScore: Number(newScore.toFixed(1)),
+      changeDifference: Number((newScore - prevScore).toFixed(1)),
+      whatChanged: scoreChange > 0 ? `\u0110\xE3 r\xE0 so\xE1t v\xE0 b\u1ED5 sung c\u0103n c\u1EE9 gi\u1EA3i tr\xECnh li\xEAn quan \u0111\u1EBFn ${relatedFixed.length || 1} v\u1EA5n \u0111\u1EC1.` : "Gi\u1EEF nguy\xEAn theo quy t\u1EAFc Rubric do ch\u01B0a ph\xE1t hi\u1EC7n thay \u0111\u1ED5i b\u1EA3n ch\u1EA5t nghi\xEAn c\u1EE9u.",
+      evidenceFoundAt: "\u0110\u1ED1i so\xE1t t\u1EEB v\u0103n b\u1EA3n ch\u1EC9nh s\u1EEDa n\u1ED9p l\u1EA1i c\u1EE7a t\xE1c gi\u1EA3",
+      impactReason: scoreChange > 0 ? "\u0110\xE1p \u1EE9ng t\u1ED1t h\u01A1n y\xEAu c\u1EA7u \u0111\u1ECBnh l\u01B0\u1EE3ng c\u1EE7a ti\xEAu ch\xED Rubric sau khi \u0111\xEDnh ch\xEDnh/b\u1ED5 sung." : "\u0110i\u1EC3m s\u1ED1 gi\u1EEF nguy\xEAn v\xEC ch\u01B0a \u0111\u1EE7 c\u0103n c\u1EE9 t\u0103ng \u0111i\u1EC3m theo quy \u0111\u1ECBnh.",
+      rubricMetReason: `Quy t\u1EAFc Rubric chu\u1EA9n: ${critName}`
+    });
+  }
+  const finalNewScore = Number(calculatedNewTotal.toFixed(1));
+  const effectiveOldScore = oldTotalScore !== null ? oldTotalScore : finalNewScore;
+  const scoreDifference = Number((finalNewScore - effectiveOldScore).toFixed(1));
+  return {
+    success: true,
+    evaluationMethod: "rubric_rule",
+    previousScore: effectiveOldScore,
+    newScore: finalNewScore,
+    scoreDifference,
+    fixedIssues,
+    remainingIssues,
+    newIssuesArisen: [],
+    newEvidenceAdded,
+    newFiguresAdded,
+    justificationForChange: "\u0110\xE1nh gi\xE1 theo Rubric chu\u1EA9n kh\xF4ng c\u1EA7n AI (Quy t\u1EAFc \u0111\u1ECBnh l\u01B0\u1EE3ng). K\u1EBFt qu\u1EA3 \u0111\u1ED1i so\xE1t tr\u1EF1c ti\u1EBFp gi\u1EEFa v\u0103n b\u1EA3n gi\u1EA3i tr\xECnh, \u0111\xEDnh ch\xEDnh s\u1ED1 li\u1EC7u v\xE0 c\xE1c ti\xEAu ch\xED c\u1EE7a phi\u1EBFu ch\u1EA5m Rubric.",
+    issueComparisons,
+    updatedCriteria
+  };
+}
 async function handler(req, res) {
   if (handleCors(req, res)) return;
   res.setHeader("Content-Type", "application/json");
@@ -45915,7 +46007,7 @@ async function handler(req, res) {
   let oldTotalScore = null;
   try {
     const body = getRequestBody(req);
-    const { previousResult, revisedNotes, revisedText } = body || {};
+    const { previousResult, revisedNotes, revisedText, method } = body || {};
     const rawContent = revisedNotes || revisedText || "";
     const contentToEvaluate = typeof rawContent === "string" ? rawContent.slice(0, 15e4).trim() : "";
     if (!contentToEvaluate) {
@@ -45931,23 +46023,33 @@ async function handler(req, res) {
     const oldCriteria = Array.isArray(previousResult?.rubricCriteria) ? previousResult.rubricCriteria : [];
     if (typeof previousResult?.evaluation?.score === "number") {
       oldTotalScore = previousResult.evaluation.score;
+    } else if (typeof previousResult?.score === "number") {
+      oldTotalScore = previousResult.score;
     } else if (oldCriteria.length > 0) {
       oldTotalScore = oldCriteria.reduce((acc, c) => acc + (c.proposedScore || 0), 0);
     } else {
       oldTotalScore = null;
     }
+    if (method === "rubric_rule") {
+      const ruleBasedResult = evaluateRescoreByRubricRules(
+        oldCriteria,
+        oldIssues,
+        contentToEvaluate,
+        oldTotalScore
+      );
+      return res.status(200).json(ruleBasedResult);
+    }
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      console.error("[rescore-skkn] GEMINI_API_KEY is not configured in environment variables.");
-      return res.status(503).json({
-        success: false,
-        code: "RESCORE_AI_UNAVAILABLE",
-        retryable: true,
-        message: "Ch\u01B0a th\u1EC3 ch\u1EA5m l\u1EA1i l\xFAc n\xE0y do ch\u01B0a c\u1EA5u h\xECnh GEMINI_API_KEY tr\xEAn m\xF4i tr\u01B0\u1EDDng tri\u1EC3n khai. K\u1EBFt qu\u1EA3 \u0111\xE1nh gi\xE1 hi\u1EC7n t\u1EA1i \u0111\u01B0\u1EE3c gi\u1EEF nguy\xEAn.",
-        previousScore: oldTotalScore,
-        scoreChanged: false,
-        issuesChanged: false
-      });
+      console.warn("[rescore-skkn] GEMINI_API_KEY is not configured. Falling back to Rubric rule evaluation.");
+      const fallbackRuleResult = evaluateRescoreByRubricRules(
+        oldCriteria,
+        oldIssues,
+        contentToEvaluate,
+        oldTotalScore
+      );
+      fallbackRuleResult.justificationForChange += " (L\u01B0u \xFD: API Gemini hi\u1EC7n ch\u01B0a c\u1EA5u h\xECnh tr\xEAn m\xF4i tr\u01B0\u1EDDng, h\u1EC7 th\u1ED1ng \u0111\xE3 t\u1EF1 \u0111\u1ED9ng chuy\u1EC3n sang ph\u01B0\u01A1ng th\u1EE9c \u0111\xE1nh gi\xE1 theo quy t\u1EAFc Rubric \u0111\u1ECBnh l\u01B0\u1EE3ng).";
+      return res.status(200).json(fallbackRuleResult);
     }
     const ai = new GoogleGenAI2({
       apiKey,
@@ -46051,6 +46153,7 @@ H\xE3y ph\xE2n t\xEDch k\u1EF9 l\u01B0\u1EE1ng v\xE0 tr\u1EA3 v\u1EC1 \u0111\xFA
     const parsed = cleanAndParseJson(rawText);
     const safeResult = {
       success: true,
+      evaluationMethod: "gemini_ai",
       previousScore: oldTotalScore !== null ? oldTotalScore : parsed.previousScore ?? null,
       newScore: typeof parsed.newScore === "number" ? parsed.newScore : oldTotalScore ?? 0,
       scoreDifference: typeof parsed.scoreDifference === "number" ? parsed.scoreDifference : 0,
@@ -46073,7 +46176,7 @@ H\xE3y ph\xE2n t\xEDch k\u1EF9 l\u01B0\u1EE1ng v\xE0 tr\u1EA3 v\u1EC1 \u0111\xFA
       success: false,
       code: "RESCORE_AI_UNAVAILABLE",
       retryable: isRetryable,
-      message: "Ch\u01B0a th\u1EC3 ch\u1EA5m l\u1EA1i l\xFAc n\xE0y. K\u1EBFt qu\u1EA3 \u0111\xE1nh gi\xE1 hi\u1EC7n t\u1EA1i \u0111\u01B0\u1EE3c gi\u1EEF nguy\xEAn. Vui l\xF2ng th\u1EED l\u1EA1i.",
+      message: 'Ch\u01B0a th\u1EC3 ch\u1EA5m l\u1EA1i b\u1EB1ng Gemini AI l\xFAc n\xE0y. Th\u1EA7y/C\xF4 c\xF3 th\u1EC3 chuy\u1EC3n sang ph\u01B0\u01A1ng th\u1EE9c "\u0110\xE1nh gi\xE1 theo Rubric kh\xF4ng c\u1EA7n AI" ho\u1EB7c th\u1EED l\u1EA1i sau.',
       previousScore: oldTotalScore,
       scoreChanged: false,
       issuesChanged: false,

@@ -1282,7 +1282,10 @@ export default function App() {
   };
 
   // Rescore after revisions
-  const handleRescore = async (revisedNotes: string) => {
+  const handleRescore = async (
+    revisedNotes: string,
+    method: 'gemini_ai' | 'rubric_rule' = 'gemini_ai'
+  ) => {
     if (isRescoringRef.current) return;
     isRescoringRef.current = true;
     setIsRescoring(true);
@@ -1303,6 +1306,7 @@ export default function App() {
         body: JSON.stringify({
           previousResult: compactPreviousResult,
           revisedNotes,
+          method,
         }),
       });
 
@@ -1361,7 +1365,7 @@ export default function App() {
               evaluationId: currentEvaluationId,
               newAnalysisResult,
               newScore: calculatedScore,
-              notes: revisedNotes || 'Chấm lại sau khi chỉnh sửa sáng kiến',
+              notes: `${method === 'rubric_rule' ? 'Đánh giá theo Rubric không cần AI' : 'Chấm chuyên sâu bằng Gemini AI'}: ${revisedNotes || 'Chấm lại sau khi chỉnh sửa sáng kiến'}`,
             }),
           });
           const saveVerData = await saveVerResp.json().catch(() => null);

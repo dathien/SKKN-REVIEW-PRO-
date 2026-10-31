@@ -19,6 +19,8 @@ import {
   Award,
   Layers,
   ArrowLeft,
+  Calculator,
+  Cpu,
 } from 'lucide-react';
 import {
   RescoreComparison,
@@ -29,9 +31,11 @@ import {
 } from '../../types';
 import { ActiveTab } from '../Sidebar';
 
+export type RescoreMethod = 'gemini_ai' | 'rubric_rule';
+
 interface RescoreViewProps {
   analysis: SKKNAnalysisResult;
-  onRescore: (revisedNotes: string) => Promise<void>;
+  onRescore: (revisedNotes: string, method?: RescoreMethod) => Promise<void>;
   isRescoring?: boolean;
   onNavigateTab?: (tab: ActiveTab) => void;
   rescoreError?: { message: string; retryable?: boolean } | null;
@@ -62,6 +66,7 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
   const [revisedText, setRevisedText] = useState('');
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [rescoreMethod, setRescoreMethod] = useState<RescoreMethod>('gemini_ai');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const history = analysis.rescoreHistory;
@@ -104,7 +109,7 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
   const handleConfirmRescore = async () => {
     if (isRescoring || !revisedText.trim()) return;
     try {
-      await onRescore(revisedText);
+      await onRescore(revisedText, rescoreMethod);
       setShowConfirmModal(false);
     } catch (_) {
       setShowConfirmModal(false);
@@ -249,7 +254,7 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
           </div>
           <button
             type="button"
-            onClick={() => onRescore(revisedText)}
+            onClick={() => onRescore(revisedText, rescoreMethod)}
             disabled={isRescoring || !revisedText.trim()}
             className="px-4 py-2.5 bg-amber-700 hover:bg-amber-800 text-white font-bold text-[13.5px] rounded-xl shadow-xs transition-colors shrink-0 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
           >
@@ -318,6 +323,88 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
             >
               Dán mẫu giải trình
             </button>
+          </div>
+        </div>
+
+        {/* LỰA CHỌN PHƯƠNG PHÁP ĐÁNH GIÁ: GEMINI AI vs RUBRIC KHÔNG AI */}
+        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[13.5px] font-bold text-slate-800 flex items-center gap-1.5">
+              <span>Phương pháp thẩm định lại:</span>
+            </span>
+            <span className="text-[12px] text-slate-500 font-medium">
+              {rescoreMethod === 'gemini_ai' ? 'Mô hình Gemini AI' : 'Bộ quy tắc Rubric định lượng'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Phương pháp 1: Gemini AI */}
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => setRescoreMethod('gemini_ai')}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setRescoreMethod('gemini_ai'); }}
+              className={`p-3 rounded-xl border-2 transition-all cursor-pointer flex items-start gap-2.5 text-left ${
+                rescoreMethod === 'gemini_ai'
+                  ? 'border-teal-600 bg-white shadow-xs ring-1 ring-teal-500/30'
+                  : 'border-slate-200 bg-white/70 hover:border-slate-300'
+              }`}
+            >
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                rescoreMethod === 'gemini_ai' ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-500'
+              }`}>
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div className="space-y-0.5 min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-[13.5px] font-bold text-slate-900">
+                    Chấm chuyên sâu bằng Gemini AI
+                  </span>
+                  {rescoreMethod === 'gemini_ai' && (
+                    <span className="text-[11px] font-bold px-1.5 py-0.2 rounded bg-teal-100 text-teal-800 shrink-0">
+                      Đang chọn
+                    </span>
+                  )}
+                </div>
+                <p className="text-[12px] text-slate-600 leading-relaxed">
+                  Đối chiếu ngữ nghĩa đa chiều bản cũ ↔ bản mới, phân tích độ chặt chẽ của lập luận và rà soát mâu thuẫn mới bằng AI.
+                </p>
+              </div>
+            </div>
+
+            {/* Phương pháp 2: Rubric không cần AI */}
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => setRescoreMethod('rubric_rule')}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setRescoreMethod('rubric_rule'); }}
+              className={`p-3 rounded-xl border-2 transition-all cursor-pointer flex items-start gap-2.5 text-left ${
+                rescoreMethod === 'rubric_rule'
+                  ? 'border-indigo-600 bg-white shadow-xs ring-1 ring-indigo-500/30'
+                  : 'border-slate-200 bg-white/70 hover:border-slate-300'
+              }`}
+            >
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                rescoreMethod === 'rubric_rule' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'
+              }`}>
+                <Calculator className="w-4 h-4" />
+              </div>
+              <div className="space-y-0.5 min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-[13.5px] font-bold text-slate-900">
+                    Đánh giá theo Rubric không cần AI
+                  </span>
+                  {rescoreMethod === 'rubric_rule' && (
+                    <span className="text-[11px] font-bold px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-800 shrink-0">
+                      Đang chọn
+                    </span>
+                  )}
+                </div>
+                <p className="text-[12px] text-slate-600 leading-relaxed">
+                  Đánh giá định lượng theo quy tắc Rubric chuẩn, đối soát trực tiếp số liệu đính chính và minh chứng thực tế. Không phụ thuộc AI.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -463,6 +550,26 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
                   </span>
                 </div>
               </div>
+
+              {/* Phương pháp thẩm định được chọn */}
+              <div className="pt-2 border-t border-slate-200/70 space-y-0.5">
+                <span className="text-slate-500 font-semibold block text-[12px] uppercase tracking-wider">
+                  Phương pháp thẩm định:
+                </span>
+                <div className="mt-1">
+                  {rescoreMethod === 'gemini_ai' ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-teal-100 text-teal-900 font-bold text-[13px] border border-teal-200">
+                      <Sparkles className="w-3.5 h-3.5 text-teal-700" />
+                      <span>Chấm chuyên sâu bằng Gemini AI</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-100 text-indigo-900 font-bold text-[13px] border border-indigo-200">
+                      <Calculator className="w-3.5 h-3.5 text-indigo-700" />
+                      <span>Đánh giá theo Rubric không cần AI (Quy tắc định lượng)</span>
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Hộp xác nhận tạo phiên bản đánh giá mới */}
@@ -518,9 +625,22 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
           {/* Header & Overall Score Change */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-4">
             <div>
-              <span className="text-[13px] font-bold text-teal-700 uppercase tracking-wider block">
-                Kết quả đối chiếu thẩm định lại
-              </span>
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <span className="text-[13px] font-bold text-teal-700 uppercase tracking-wider block">
+                  Kết quả đối chiếu thẩm định lại
+                </span>
+                {history.evaluationMethod === 'rubric_rule' ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-900 text-[11.5px] font-bold border border-indigo-200">
+                    <Calculator className="w-3.5 h-3.5 text-indigo-700" />
+                    <span>Phương pháp: Đánh giá theo Rubric chuẩn (Quy tắc định lượng • Không dùng AI)</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-900 text-[11.5px] font-bold border border-teal-200">
+                    <Sparkles className="w-3.5 h-3.5 text-teal-700" />
+                    <span>Phương pháp: Chấm chuyên sâu bằng Gemini AI</span>
+                  </span>
+                )}
+              </div>
               <h3 className="text-[17px] font-bold text-slate-900">
                 So sánh bản trước ↔ bản sau & Chấm Rubric mới
               </h3>

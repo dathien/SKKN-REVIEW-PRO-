@@ -330,6 +330,7 @@ export interface RescoreComparison {
   issueComparisons?: IssueComparisonItem[];
   updatedCriteria?: UpdatedCriterionItem[];
   evaluatedAt?: string;
+  evaluationMethod?: 'gemini_ai' | 'rubric_rule';
 }
 
 export type LanguageIssueType =
