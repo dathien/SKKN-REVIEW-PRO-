@@ -368,9 +368,44 @@ loadStore();
 // src/server/evaluationStore.ts
 import fs2 from "fs";
 import path2 from "path";
+import os from "os";
 import crypto2 from "crypto";
+
+// src/utils/evaluationNotes.ts
+function normalizeTeacherNotes(rawNotes, evalId) {
+  if (!rawNotes || typeof rawNotes !== "object") return {};
+  const normalized = {};
+  const evalPrefix = evalId ? `${evalId}_` : "";
+  for (const [key, value] of Object.entries(rawNotes)) {
+    if (typeof value !== "string") continue;
+    let cleanKey = key.trim();
+    if (!cleanKey) continue;
+    if (evalPrefix && cleanKey.startsWith(evalPrefix)) {
+      cleanKey = cleanKey.slice(evalPrefix.length);
+    } else if (cleanKey.includes("_rtc-")) {
+      cleanKey = cleanKey.substring(cleanKey.lastIndexOf("_rtc-") + 1);
+    } else if (cleanKey.includes("_PB-")) {
+      cleanKey = cleanKey.substring(cleanKey.lastIndexOf("_PB-") + 1);
+    }
+    const existingVal = normalized[cleanKey];
+    if (existingVal === void 0) {
+      normalized[cleanKey] = value;
+    } else if (!existingVal.trim() && value.trim()) {
+      normalized[cleanKey] = value;
+    } else if (value.trim() && value.trim() !== existingVal.trim()) {
+      if (value.trim().length >= existingVal.trim().length) {
+        normalized[cleanKey] = value;
+      }
+    }
+  }
+  return normalized;
+}
+
+// src/server/evaluationStore.ts
 var DATA_DIR2 = path2.resolve("data");
 var EVALUATIONS_FILE = path2.join(DATA_DIR2, "evaluations_store.json");
+var TMP_DATA_DIR = path2.join(os.tmpdir(), "skkn_data");
+var TMP_EVALUATIONS_FILE = path2.join(TMP_DATA_DIR, "evaluations_store.json");
 var store2 = {
   evaluations: {},
   auditLogs: []
@@ -699,7 +734,10 @@ S\xE1ng ki\u1EBFn mang l\u1EA1i hi\u1EC7u qu\u1EA3 thi\u1EBFt th\u1EF1c trong vi
 function loadEvaluationsStore() {
   try {
     if (!fs2.existsSync(DATA_DIR2)) {
-      fs2.mkdirSync(DATA_DIR2, { recursive: true });
+      try {
+        fs2.mkdirSync(DATA_DIR2, { recursive: true });
+      } catch (_) {
+      }
     }
     if (fs2.existsSync(EVALUATIONS_FILE)) {
       const content = fs2.readFileSync(EVALUATIONS_FILE, "utf-8");
@@ -709,7 +747,30 @@ function loadEvaluationsStore() {
         auditLogs: parsed.auditLogs || []
       };
     }
+    if (fs2.existsSync(TMP_EVALUATIONS_FILE)) {
+      try {
+        const tmpContent = fs2.readFileSync(TMP_EVALUATIONS_FILE, "utf-8");
+        const tmpParsed = JSON.parse(tmpContent);
+        if (tmpParsed && tmpParsed.evaluations) {
+          Object.entries(tmpParsed.evaluations).forEach(([id, item]) => {
+            store2.evaluations[id] = {
+              ...store2.evaluations[id] || {},
+              ...item
+            };
+          });
+        }
+      } catch (_) {
+      }
+    }
     ensureDefaultEvaluations();
+    Object.values(store2.evaluations).forEach((item) => {
+      if (item.teacherNotes) {
+        item.teacherNotes = normalizeTeacherNotes(item.teacherNotes, item.id);
+      }
+      if (item.analysisResult && item.analysisResult.teacherNotes) {
+        item.analysisResult.teacherNotes = normalizeTeacherNotes(item.analysisResult.teacherNotes, item.id);
+      }
+    });
   } catch (err) {
     console.error("Kh\xF4ng th\u1EC3 t\u1EA3i evaluations_store.json, kh\u1EDFi t\u1EA1o b\u1ED9 nh\u1EDB r\u1ED7ng:", err);
     ensureDefaultEvaluations();
@@ -726,19 +787,58 @@ function reloadEvaluationsStoreFromDisk() {
         store2.auditLogs = parsed.auditLogs || [];
       }
     }
+    if (fs2.existsSync(TMP_EVALUATIONS_FILE)) {
+      try {
+        const tmpContent = fs2.readFileSync(TMP_EVALUATIONS_FILE, "utf-8");
+        const tmpParsed = JSON.parse(tmpContent);
+        if (tmpParsed && tmpParsed.evaluations) {
+          Object.entries(tmpParsed.evaluations).forEach(([id, item]) => {
+            store2.evaluations[id] = {
+              ...store2.evaluations[id] || {},
+              ...item
+            };
+          });
+        }
+      } catch (_) {
+      }
+    }
     ensureDefaultEvaluations();
+    Object.values(store2.evaluations).forEach((item) => {
+      if (item.teacherNotes) {
+        item.teacherNotes = normalizeTeacherNotes(item.teacherNotes, item.id);
+      }
+      if (item.analysisResult && item.analysisResult.teacherNotes) {
+        item.analysisResult.teacherNotes = normalizeTeacherNotes(item.analysisResult.teacherNotes, item.id);
+      }
+      if (!item.versionsHistory || !Array.isArray(item.versionsHistory) || item.versionsHistory.length === 0) {
+        item.versionsHistory = [{
+          version: item.currentVersion || item.versionCount || 1,
+          createdAt: item.createdAt || (/* @__PURE__ */ new Date()).toISOString(),
+          score: item.score,
+          notes: "B\u1EA3n ph\xE2n t\xEDch \u0111\u1EA7u ti\xEAn",
+          resultSummary: item.analysisResult?.executiveSummary?.strengthsSummary || item.analysisResult?.metadata?.title || item.title
+        }];
+      }
+    });
   } catch (_) {
     ensureDefaultEvaluations();
   }
 }
 function saveEvaluationsStore() {
+  const serialized = JSON.stringify(store2, null, 2);
   try {
     if (!fs2.existsSync(DATA_DIR2)) {
       fs2.mkdirSync(DATA_DIR2, { recursive: true });
     }
-    fs2.writeFileSync(EVALUATIONS_FILE, JSON.stringify(store2, null, 2), "utf-8");
+    fs2.writeFileSync(EVALUATIONS_FILE, serialized, "utf-8");
   } catch (err) {
-    console.error("Kh\xF4ng th\u1EC3 l\u01B0u evaluations_store.json v\xE0o \u0111\u0129a:", err);
+  }
+  try {
+    if (!fs2.existsSync(TMP_DATA_DIR)) {
+      fs2.mkdirSync(TMP_DATA_DIR, { recursive: true });
+    }
+    fs2.writeFileSync(TMP_EVALUATIONS_FILE, serialized, "utf-8");
+  } catch (_) {
   }
 }
 function addAuditLog(log) {
@@ -929,19 +1029,23 @@ async function getEvaluationDetail(evalId, userEmail) {
         ...item.customProposals
       };
     }
-    if (item.teacherNotes) {
-      item.analysisResult.teacherNotes = {
-        ...item.analysisResult.teacherNotes || {},
-        ...item.teacherNotes
-      };
-      if (Array.isArray(item.analysisResult.redTeamCards)) {
-        item.analysisResult.redTeamCards.forEach((c) => {
-          if ((c.userNotes === void 0 || c.userNotes === null || c.userNotes === "") && item.teacherNotes?.[c.id]) {
-            c.userNotes = item.teacherNotes[c.id];
-          }
-        });
-      }
+    const rawNotesToMerge = {
+      ...item.analysisResult.teacherNotes || {},
+      ...item.teacherNotes || {}
+    };
+    const cleanNotes = normalizeTeacherNotes(rawNotesToMerge, item.id);
+    if (Array.isArray(item.analysisResult.redTeamCards)) {
+      item.analysisResult.redTeamCards.forEach((c) => {
+        const cleanCardNote = cleanNotes[c.id];
+        if (typeof cleanCardNote === "string" && cleanCardNote.trim()) {
+          c.userNotes = cleanCardNote;
+        } else if (c.userNotes && typeof c.userNotes === "string" && c.userNotes.trim() && !cleanNotes[c.id]) {
+          cleanNotes[c.id] = c.userNotes.trim();
+        }
+      });
     }
+    item.teacherNotes = cleanNotes;
+    item.analysisResult.teacherNotes = { ...cleanNotes };
   }
   return { success: true, evaluation: item };
 }
@@ -969,27 +1073,51 @@ async function saveEvaluationResultRecord(params) {
     ...params.analysisResult?.customProposals || {}
   };
   item.customProposals = mergedProposals;
-  const mergedNotes = {
-    ...item.teacherNotes || {},
-    ...item.analysisResult?.teacherNotes || {},
-    ...params.teacherNotes || {},
-    ...params.analysisResult?.teacherNotes || {}
+  const rawMergedNotes = {
+    ...normalizeTeacherNotes(item.analysisResult?.teacherNotes, params.evaluationId),
+    ...normalizeTeacherNotes(item.teacherNotes, params.evaluationId)
   };
   if (Array.isArray(params.analysisResult?.redTeamCards)) {
     params.analysisResult.redTeamCards.forEach((c) => {
-      if (c.userNotes !== void 0 && c.userNotes !== null) {
-        mergedNotes[c.id] = c.userNotes;
+      if (typeof c.userNotes === "string" && c.userNotes.trim()) {
+        rawMergedNotes[c.id] = c.userNotes.trim();
       }
     });
   }
-  item.teacherNotes = mergedNotes;
+  if (params.analysisResult?.teacherNotes && typeof params.analysisResult.teacherNotes === "object") {
+    const norm = normalizeTeacherNotes(params.analysisResult.teacherNotes, params.evaluationId);
+    Object.entries(norm).forEach(([cardId, noteText]) => {
+      if (typeof noteText === "string" && noteText.trim()) {
+        rawMergedNotes[cardId] = noteText;
+      }
+    });
+  }
+  if (params.teacherNotes && typeof params.teacherNotes === "object") {
+    const normDirect = normalizeTeacherNotes(params.teacherNotes, params.evaluationId);
+    Object.entries(normDirect).forEach(([cardId, noteText]) => {
+      if (typeof noteText === "string") {
+        rawMergedNotes[cardId] = noteText;
+      }
+    });
+  }
+  const finalCleanNotes = normalizeTeacherNotes(rawMergedNotes, params.evaluationId);
+  item.teacherNotes = finalCleanNotes;
   let synchronizedCards = params.analysisResult?.redTeamCards || item.analysisResult?.redTeamCards || [];
   if (Array.isArray(synchronizedCards)) {
     const existingCardsMap = new Map((item.analysisResult?.redTeamCards || []).map((c) => [c.id, c]));
     synchronizedCards = synchronizedCards.map((newCard) => {
       const existing = existingCardsMap.get(newCard.id);
-      const noteFromMap = mergedNotes[newCard.id];
-      const effectiveNote = newCard.userNotes !== void 0 ? newCard.userNotes : noteFromMap !== void 0 ? noteFromMap : existing?.userNotes || "";
+      const noteFromMap = finalCleanNotes[newCard.id];
+      let effectiveNote = "";
+      if (params.teacherNotes && (params.teacherNotes[newCard.id] !== void 0 || params.teacherNotes[`${params.evaluationId}_${newCard.id}`] !== void 0)) {
+        effectiveNote = finalCleanNotes[newCard.id] ?? "";
+      } else if (typeof noteFromMap === "string" && noteFromMap.trim()) {
+        effectiveNote = noteFromMap;
+      } else if (typeof newCard.userNotes === "string" && newCard.userNotes.trim()) {
+        effectiveNote = newCard.userNotes;
+      } else if (typeof existing?.userNotes === "string" && existing.userNotes.trim()) {
+        effectiveNote = existing.userNotes;
+      }
       return {
         ...existing || {},
         ...newCard,
@@ -1002,7 +1130,7 @@ async function saveEvaluationResultRecord(params) {
     ...params.analysisResult,
     redTeamCards: synchronizedCards,
     customProposals: mergedProposals,
-    teacherNotes: mergedNotes
+    teacherNotes: finalCleanNotes
   };
   if (params.draftText !== void 0) {
     item.draftText = params.draftText;
@@ -1047,7 +1175,7 @@ async function saveEvaluationResultRecord(params) {
       score: item.score,
       status: item.status,
       title: item.title,
-      analysisResult: JSON.stringify(params.analysisResult),
+      analysisResult: JSON.stringify(item.analysisResult),
       operatorEmail: cleanEmail
     });
     if (remote.success && remote.data?.latestResultFileId) {
@@ -1067,22 +1195,46 @@ async function createEvaluationVersionRecord(params) {
   if (item.userEmail.toLowerCase() !== cleanEmail) {
     return { success: false, error: "B\u1EA3o m\u1EADt: Quy\u1EC1n s\u1EDF h\u1EEFu kh\xF4ng h\u1EE3p l\u1EC7" };
   }
+  if (!params.newAnalysisResult || !Array.isArray(params.newAnalysisResult.rubricCriteria) || params.newAnalysisResult.rubricCriteria.length === 0) {
+    return { success: false, error: "K\u1EBFt qu\u1EA3 ch\u1EA5m m\u1EDBi kh\xF4ng h\u1EE3p l\u1EC7 ho\u1EB7c thi\u1EBFu ti\xEAu ch\xED Rubric" };
+  }
   const now = (/* @__PURE__ */ new Date()).toISOString();
-  const newVersionNumber = (item.versionCount || 1) + 1;
   const calculatedScore = typeof params.newScore === "number" ? params.newScore : params.newAnalysisResult.rubricCriteria?.reduce((acc, c) => acc + (c.proposedScore ?? 0), 0) ?? item.score;
-  item.versionCount = newVersionNumber;
+  item.versionsHistory = item.versionsHistory || [];
+  if (item.versionsHistory.length === 0) {
+    item.versionsHistory.push({
+      version: 1,
+      createdAt: item.createdAt || now,
+      score: item.score,
+      notes: "B\u1EA3n ph\xE2n t\xEDch \u0111\u1EA7u ti\xEAn (v1)",
+      resultSummary: item.analysisResult?.executiveSummary?.strengthsSummary || item.analysisResult?.metadata?.title || item.title,
+      analysisResult: item.analysisResult ? JSON.parse(JSON.stringify(item.analysisResult)) : void 0
+    });
+  } else {
+    const currentEntry = item.versionsHistory.find((v) => v.version === (item.currentVersion || 1));
+    if (currentEntry && !currentEntry.analysisResult && item.analysisResult) {
+      currentEntry.analysisResult = JSON.parse(JSON.stringify(item.analysisResult));
+    }
+  }
+  const lastEntry = item.versionsHistory[item.versionsHistory.length - 1];
+  if (lastEntry && lastEntry.version > 1 && Math.abs(lastEntry.score - calculatedScore) < 1e-3 && Date.now() - new Date(lastEntry.createdAt).getTime() < 4e3) {
+    return { success: true, evaluation: item };
+  }
+  const maxExistingVersion = item.versionsHistory.reduce((max, v) => Math.max(max, v.version || 0), item.versionCount || 1);
+  const newVersionNumber = maxExistingVersion + 1;
+  item.versionCount = item.versionsHistory.length + 1;
   item.currentVersion = newVersionNumber;
   item.score = calculatedScore;
   item.status = "REVISED";
   item.updatedAt = now;
   item.analysisResult = params.newAnalysisResult;
-  item.versionsHistory = item.versionsHistory || [];
   item.versionsHistory.push({
     version: newVersionNumber,
     createdAt: now,
     score: calculatedScore,
     notes: params.notes || `Phi\xEAn b\u1EA3n ch\u1EC9nh s\u1EEDa v${newVersionNumber}`,
-    resultSummary: params.newAnalysisResult?.executiveSummary?.strengthsSummary || params.newAnalysisResult.metadata?.title || ""
+    resultSummary: params.newAnalysisResult?.executiveSummary?.strengthsSummary || params.newAnalysisResult.metadata?.title || "",
+    analysisResult: JSON.parse(JSON.stringify(params.newAnalysisResult))
   });
   saveEvaluationsStore();
   addAuditLog({

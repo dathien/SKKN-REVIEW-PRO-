@@ -14,9 +14,19 @@ import {
   Copy,
   Check,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  ShieldCheck,
+  Award,
+  Layers,
+  ArrowLeft,
 } from 'lucide-react';
-import { RescoreComparison, SKKNAnalysisResult, IssueComparisonItem, UpdatedCriterionItem } from '../../types';
+import {
+  RescoreComparison,
+  SKKNAnalysisResult,
+  IssueComparisonItem,
+  UpdatedCriterionItem,
+  EvaluationVersionItem,
+} from '../../types';
 import { ActiveTab } from '../Sidebar';
 
 interface RescoreViewProps {
@@ -27,6 +37,11 @@ interface RescoreViewProps {
   rescoreError?: { message: string; retryable?: boolean } | null;
   draftText?: string;
   originalText?: string;
+  dossierTitle?: string;
+  currentVersion?: number;
+  previousScore?: number;
+  originalFileName?: string;
+  versionsHistory?: EvaluationVersionItem[];
 }
 
 export const RescoreView: React.FC<RescoreViewProps> = ({
@@ -36,11 +51,17 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
   onNavigateTab,
   rescoreError,
   draftText,
-  originalText
+  originalText,
+  dossierTitle,
+  currentVersion = 1,
+  previousScore,
+  originalFileName,
+  versionsHistory,
 }) => {
   const [inputMode, setInputMode] = useState<'paste' | 'file'>('paste');
   const [revisedText, setRevisedText] = useState('');
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const history = analysis.rescoreHistory;
@@ -48,6 +69,12 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
   const totalIssues = analysis.redTeamCards.length;
   const resolvedCount = analysis.redTeamCards.filter(c => c.status === 'Đã xử lý' || c.status === 'resolved').length;
   const remainingCount = totalIssues - resolvedCount;
+
+  const effectiveCurrentVersion = currentVersion || 1;
+  const effectivePreviousScore = typeof previousScore === 'number' ? previousScore : currentScore;
+  const effectiveSelectedFileName = uploadedFileName || originalFileName || (
+    inputMode === 'file' ? 'Tệp bản thảo cập nhật (.docx)' : `Văn bản dán trực tiếp (${revisedText.trim().length} ký tự)`
+  );
 
   const approvedChanges = (analysis.changeSet || []).filter(c => c.status === 'approved' || c.status === 'applied');
 
@@ -64,10 +91,24 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
     }
   }, [draftText, approvedChanges.length]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!revisedText.trim()) return;
-    await onRescore(revisedText);
+    if (!revisedText.trim() || isRescoring) return;
+    setShowConfirmModal(true);
+  };
+
+  const handleCancelConfirmation = () => {
+    setShowConfirmModal(false);
+  };
+
+  const handleConfirmRescore = async () => {
+    if (isRescoring || !revisedText.trim()) return;
+    try {
+      await onRescore(revisedText);
+      setShowConfirmModal(false);
+    } catch (_) {
+      setShowConfirmModal(false);
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -295,14 +336,27 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
             />
           )}
 
-          <div className="flex items-center justify-between pt-1">
+          {/* 1. Thông tin bảo vệ phiên bản ngay phía trên nút */}
+          <div className="p-3.5 bg-emerald-50/90 border border-emerald-200 rounded-xl text-emerald-950 text-[13.5px] flex items-start gap-3 shadow-2xs">
+            <ShieldCheck className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
+            <div className="space-y-0.5">
+              <p className="font-semibold text-emerald-950">
+                Kết quả chấm lại sẽ được lưu thành phiên bản đánh giá mới. Bản đánh giá trước đó được giữ nguyên, không bị ghi đè.
+              </p>
+              <p className="text-[12.5px] text-emerald-800">
+                Toàn bộ dữ liệu của phiên bản trước (v{effectiveCurrentVersion}) bao gồm điểm số, nhận xét, minh chứng và phản biện đều được bảo tồn nguyên vẹn.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
             <span className="text-[13px] text-slate-500 italic">
               * Điểm chỉ thay đổi khi nội dung thực sự đáp ứng các tiêu chí của phiếu chấm Rubric.
             </span>
             <button
               type="submit"
               disabled={isRescoring || !revisedText.trim()}
-              className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white font-bold text-[14px] rounded-xl shadow-md shadow-teal-500/20 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+              className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white font-bold text-[14px] rounded-xl shadow-md shadow-teal-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer shrink-0"
             >
               {isRescoring ? (
                 <>
@@ -319,6 +373,122 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
           </div>
         </form>
       </div>
+
+      {/* 2. BƯỚC XÁC NHẬN TRONG GIAO DIỆN (KHÔNG SỬ DỤNG POPUP TRÌNH DUYỆT) */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-xl w-full p-6 sm:p-7 shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150 space-y-5">
+            {/* Header */}
+            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+              <div className="w-11 h-11 rounded-xl bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-[17px] font-bold text-slate-900 leading-tight">
+                  XÁC NHẬN CHẤM LẠI & TẠO PHIÊN BẢN MỚI
+                </h3>
+                <p className="text-[13px] text-slate-500 mt-0.5">
+                  Bước thẩm định đối chiếu trước khi ghi nhận phiên bản mới vào hệ thống
+                </p>
+              </div>
+            </div>
+
+            {/* Chi tiết thông tin xác nhận theo đúng 6 yêu cầu */}
+            <div className="space-y-3 bg-slate-50 p-4.5 rounded-xl border border-slate-200 text-[13.5px]">
+              {/* Tên hồ sơ SKKN */}
+              <div className="space-y-0.5">
+                <span className="text-slate-500 font-semibold block text-[12px] uppercase tracking-wider">
+                  Tên hồ sơ SKKN:
+                </span>
+                <p className="font-bold text-slate-900 text-[14.5px] leading-snug">
+                  {dossierTitle || analysis.metadata?.title || 'Hồ sơ Sáng kiến kinh nghiệm'}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-200/70">
+                {/* Phiên bản đánh giá hiện tại */}
+                <div>
+                  <span className="text-slate-500 font-semibold block text-[12px] uppercase tracking-wider">
+                    Phiên bản đánh giá hiện tại:
+                  </span>
+                  <div className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white border border-slate-300 font-bold text-slate-800 text-[13px]">
+                    <Layers className="w-3.5 h-3.5 text-teal-600" />
+                    <span>Phiên bản v{effectiveCurrentVersion}</span>
+                  </div>
+                </div>
+
+                {/* Điểm đánh giá trước đó */}
+                <div>
+                  <span className="text-slate-500 font-semibold block text-[12px] uppercase tracking-wider">
+                    Điểm đánh giá trước đó:
+                  </span>
+                  <div className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white border border-slate-300 font-black text-teal-900 text-[13.5px]">
+                    <Award className="w-3.5 h-3.5 text-teal-600" />
+                    <span>{effectivePreviousScore.toFixed(1)} / 100 điểm</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tên tệp SKKN được chọn */}
+              <div className="pt-2 border-t border-slate-200/70 space-y-0.5">
+                <span className="text-slate-500 font-semibold block text-[12px] uppercase tracking-wider">
+                  Tên tệp SKKN được chọn:
+                </span>
+                <div className="flex items-center gap-2 mt-0.5 text-slate-800">
+                  <FileText className="w-4 h-4 text-teal-600 shrink-0" />
+                  <span className="font-mono text-[13px] font-semibold truncate">
+                    {effectiveSelectedFileName}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Hộp xác nhận tạo phiên bản đánh giá mới */}
+            <div className="p-3.5 rounded-xl bg-teal-50/80 border border-teal-200 text-teal-950 text-[13.5px] flex items-start gap-2.5">
+              <CheckCircle2 className="w-5 h-5 text-teal-700 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <strong className="block font-bold text-teal-950 text-[13.5px]">
+                  Xác nhận tạo phiên bản đánh giá mới:
+                </strong>
+                <p className="text-[13px] text-teal-900 leading-relaxed">
+                  Kết quả sau khi thẩm định sẽ được lưu thành <strong>Phiên bản v{effectiveCurrentVersion + 1}</strong>. Toàn bộ bản đánh giá trước đó (<strong>Phiên bản v{effectiveCurrentVersion}</strong>, {effectivePreviousScore.toFixed(1)} điểm, nhận xét, minh chứng và phản biện) được <strong>giữ nguyên vẹn 100%</strong> trong kho hồ sơ, không bị ghi đè hay xóa bỏ.
+                </p>
+              </div>
+            </div>
+
+            {/* Hai nút hành động: QUAY LẠI và XÁC NHẬN CHẤM LẠI */}
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleCancelConfirmation}
+                disabled={isRescoring}
+                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[13.5px] rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>QUAY LẠI</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmRescore}
+                disabled={isRescoring || !revisedText.trim()}
+                className="px-6 py-2.5 bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white font-bold text-[13.5px] rounded-xl shadow-md shadow-teal-500/20 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {isRescoring ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Đang chấm lại & tạo phiên bản...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>XÁC NHẬN CHẤM LẠI</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Comparison Results Card (If rescore history exists) */}
       {history && (

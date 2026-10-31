@@ -427,6 +427,15 @@ export function reloadEvaluationsStoreFromDisk() {
       if (item.analysisResult && (item.analysisResult as any).teacherNotes) {
         (item.analysisResult as any).teacherNotes = normalizeTeacherNotes((item.analysisResult as any).teacherNotes, item.id);
       }
+      if (!item.versionsHistory || !Array.isArray(item.versionsHistory) || item.versionsHistory.length === 0) {
+        item.versionsHistory = [{
+          version: item.currentVersion || item.versionCount || 1,
+          createdAt: item.createdAt || new Date().toISOString(),
+          score: item.score,
+          notes: 'Bản phân tích đầu tiên',
+          resultSummary: (item.analysisResult as any)?.executiveSummary?.strengthsSummary || item.analysisResult?.metadata?.title || item.title,
+        }];
+      }
     });
   } catch (_) {
     ensureDefaultEvaluations();
@@ -951,26 +960,62 @@ export async function createEvaluationVersionRecord(params: {
     return { success: false, error: 'Bảo mật: Quyền sở hữu không hợp lệ' };
   }
 
+  if (!params.newAnalysisResult || !Array.isArray(params.newAnalysisResult.rubricCriteria) || params.newAnalysisResult.rubricCriteria.length === 0) {
+    return { success: false, error: 'Kết quả chấm mới không hợp lệ hoặc thiếu tiêu chí Rubric' };
+  }
+
   const now = new Date().toISOString();
-  const newVersionNumber = (item.versionCount || 1) + 1;
   const calculatedScore = typeof params.newScore === 'number'
     ? params.newScore
     : (params.newAnalysisResult.rubricCriteria?.reduce((acc, c) => acc + (c.proposedScore ?? 0), 0) ?? item.score);
 
-  item.versionCount = newVersionNumber;
+  // Bảo đảm versionsHistory tồn tại và bản đánh giá v1/trước đó được lưu trữ snapshot độc lập
+  item.versionsHistory = item.versionsHistory || [];
+  if (item.versionsHistory.length === 0) {
+    item.versionsHistory.push({
+      version: 1,
+      createdAt: item.createdAt || now,
+      score: item.score,
+      notes: 'Bản phân tích đầu tiên (v1)',
+      resultSummary: (item.analysisResult as any)?.executiveSummary?.strengthsSummary || item.analysisResult?.metadata?.title || item.title,
+      analysisResult: item.analysisResult ? JSON.parse(JSON.stringify(item.analysisResult)) : undefined,
+    });
+  } else {
+    // Bảo lưu snapshot của phiên bản trước đó nếu chưa lưu
+    const currentEntry = item.versionsHistory.find(v => v.version === (item.currentVersion || 1));
+    if (currentEntry && !currentEntry.analysisResult && item.analysisResult) {
+      currentEntry.analysisResult = JSON.parse(JSON.stringify(item.analysisResult));
+    }
+  }
+
+  // Chống tạo phiên bản trùng lặp (Anti-duplicate idempotent protection khi người dùng bấm nhiều lần)
+  const lastEntry = item.versionsHistory[item.versionsHistory.length - 1];
+  if (
+    lastEntry &&
+    lastEntry.version > 1 &&
+    Math.abs(lastEntry.score - calculatedScore) < 0.001 &&
+    (Date.now() - new Date(lastEntry.createdAt).getTime() < 4000)
+  ) {
+    return { success: true, evaluation: item };
+  }
+
+  const maxExistingVersion = item.versionsHistory.reduce((max, v) => Math.max(max, v.version || 0), item.versionCount || 1);
+  const newVersionNumber = maxExistingVersion + 1;
+
+  item.versionCount = item.versionsHistory.length + 1;
   item.currentVersion = newVersionNumber;
   item.score = calculatedScore;
   item.status = 'REVISED';
   item.updatedAt = now;
   item.analysisResult = params.newAnalysisResult;
 
-  item.versionsHistory = item.versionsHistory || [];
   item.versionsHistory.push({
     version: newVersionNumber,
     createdAt: now,
     score: calculatedScore,
     notes: params.notes || `Phiên bản chỉnh sửa v${newVersionNumber}`,
     resultSummary: (params.newAnalysisResult as any)?.executiveSummary?.strengthsSummary || params.newAnalysisResult.metadata?.title || '',
+    analysisResult: JSON.parse(JSON.stringify(params.newAnalysisResult)),
   });
 
   saveEvaluationsStore();

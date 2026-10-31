@@ -171,6 +171,8 @@ export default function App() {
   // Quản lý lưu trữ hồ sơ cá nhân & Bản gốc v1 bất biến vs Bản nháp (Requirement B & C)
   // ID hồ sơ được quản lý trong trạng thái ứng dụng và session storage, TUYỆT ĐỐI không đưa vào URL
   const [currentEvaluationId, setCurrentEvaluationId] = useState<string | null>(initialUrlState.migratedEvalId || null);
+  const [currentEvaluationItem, setCurrentEvaluationItem] = useState<EvaluationItem | null>(null);
+  const isRescoringRef = useRef(false);
   const [originalSkknText, setOriginalSkknText] = useState<string>('');
   const [draftSkknText, setDraftSkknText] = useState<string>('');
   const [originalDocxBuffer, setOriginalDocxBuffer] = useState<ArrayBuffer | null>(null);
@@ -363,6 +365,7 @@ export default function App() {
           };
 
           setCurrentEvaluationId(targetEvalId);
+          setCurrentEvaluationItem(data.evaluation);
           setCustomAnalysis(fullAnalysis);
           setAnalysis(fullAnalysis);
           setDraftSkknText(data.evaluation.draftText || data.evaluation.originalText || '');
@@ -385,6 +388,7 @@ export default function App() {
         } else if (data.error && (resp.status === 403 || data.error.includes('Bảo mật') || data.error.includes('quyền') || resp.status === 404)) {
           console.warn('Không có quyền truy cập hoặc không tìm thấy hồ sơ này:', data.error);
           setCurrentEvaluationId(null);
+          setCurrentEvaluationItem(null);
           try {
             sessionStorage.removeItem('skkn_active_eval_id');
             localStorage.removeItem('skkn_active_eval_id');
@@ -520,6 +524,7 @@ export default function App() {
 
         if (data.evaluation?.id) {
           setCurrentEvaluationId(data.evaluation.id);
+          setCurrentEvaluationItem(data.evaluation);
           if (typeof localStorage !== 'undefined') {
             localStorage.setItem('skkn_current_eval_id', data.evaluation.id);
           }
@@ -1278,6 +1283,8 @@ export default function App() {
 
   // Rescore after revisions
   const handleRescore = async (revisedNotes: string) => {
+    if (isRescoringRef.current) return;
+    isRescoringRef.current = true;
     setIsRescoring(true);
     setRescoreError(null);
     try {
@@ -1293,7 +1300,7 @@ export default function App() {
       const rescoreData = await resp.json().catch(() => null);
 
       if (!resp.ok || !rescoreData || rescoreData.success === false) {
-        // FACT SAFETY: AI Thất bại -> Giữ nguyên previousResult, không thay đổi điểm, không đổi issue
+        // FACT SAFETY: AI Thất bại -> Giữ nguyên previousResult, không thay đổi điểm, không đổi issue, không tạo phiên bản mới
         setRescoreError({
           message: rescoreData?.message || 'Chưa thể chấm lại lúc này. Kết quả đánh giá hiện tại được giữ nguyên. Vui lòng thử lại.',
           retryable: rescoreData?.retryable ?? true
@@ -1303,58 +1310,35 @@ export default function App() {
 
       setRescoreError(null);
 
-      setAnalysis(prev => {
-        // If criteria scores updated
-        let updatedCriteria = [...prev.rubricCriteria];
-        if (rescoreData.updatedCriteria && Array.isArray(rescoreData.updatedCriteria)) {
-          updatedCriteria = prev.rubricCriteria.map(c => {
-            const match = rescoreData.updatedCriteria.find((u: any) => u.criterionName === c.criterionName);
-            if (match && typeof match.newScore === 'number') {
-              return { ...c, proposedScore: match.newScore };
-            }
-            return c;
-          });
-        }
-
-        return {
-          ...prev,
-          rubricCriteria: updatedCriteria,
-          rescoreHistory: rescoreData
-        };
-      });
-
-      if (customAnalysis) {
-        setCustomAnalysis(prev => {
-          if (!prev) return null;
-          let updatedCriteria = [...prev.rubricCriteria];
-          if (rescoreData.updatedCriteria && Array.isArray(rescoreData.updatedCriteria)) {
-            updatedCriteria = prev.rubricCriteria.map(c => {
-              const match = rescoreData.updatedCriteria.find((u: any) => u.criterionName === c.criterionName);
-              if (match && typeof match.newScore === 'number') {
-                return { ...c, proposedScore: match.newScore };
-              }
-              return c;
-            });
+      let updatedCriteria = [...analysis.rubricCriteria];
+      if (rescoreData.updatedCriteria && Array.isArray(rescoreData.updatedCriteria)) {
+        updatedCriteria = analysis.rubricCriteria.map(c => {
+          const match = rescoreData.updatedCriteria.find((u: any) => u.criterionName === c.criterionName);
+          if (match && typeof match.newScore === 'number') {
+            return { ...c, proposedScore: match.newScore };
           }
-          return {
-            ...prev,
-            rubricCriteria: updatedCriteria,
-            rescoreHistory: rescoreData
-          };
+          return c;
         });
+      }
+
+      const calculatedScore = updatedCriteria.reduce((sum, c) => sum + (c.proposedScore ?? 0), 0);
+
+      const newAnalysisResult: SKKNAnalysisResult = {
+        ...analysis,
+        rubricCriteria: updatedCriteria,
+        rescoreHistory: rescoreData,
+      };
+
+      setAnalysis(newAnalysisResult);
+      if (customAnalysis) {
+        setCustomAnalysis(newAnalysisResult);
       }
 
       // Tự động lưu phiên bản mới vào cơ sở dữ liệu nếu đã có hồ sơ
       if (currentEvaluationId && isLoggedIn && user?.email) {
         try {
           const sessionToken = (user as any)?.sessionToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('skkn_session_token') : '') || '';
-          const calculatedScore = analysis.rubricCriteria.reduce((sum, c) => {
-            const match = rescoreData.updatedCriteria?.find((u: any) => u.criterionName === c.criterionName);
-            const scoreVal = (match && typeof match.newScore === 'number') ? match.newScore : (c.proposedScore ?? 0);
-            return sum + scoreVal;
-          }, 0);
-
-          fetch('/api/user/evaluations/new-version', {
+          const saveVerResp = await fetch('/api/user/evaluations/new-version', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -1363,16 +1347,18 @@ export default function App() {
             },
             body: JSON.stringify({
               evaluationId: currentEvaluationId,
-              newAnalysisResult: {
-                ...analysis,
-                rescoreHistory: rescoreData,
-              },
+              newAnalysisResult,
               newScore: calculatedScore,
               notes: revisedNotes || 'Chấm lại sau khi chỉnh sửa sáng kiến',
             }),
-          }).catch(err => console.error('Lỗi tự động lưu phiên bản mới:', err));
+          });
+          const saveVerData = await saveVerResp.json().catch(() => null);
+          if (saveVerData?.success && saveVerData?.evaluation) {
+            setCurrentEvaluationItem(saveVerData.evaluation);
+            setSaveStatus('saved');
+          }
         } catch (syncErr) {
-          console.error('Lỗi đồng bộ rescore:', syncErr);
+          console.error('Lỗi đồng bộ phiên bản mới:', syncErr);
         }
       }
     } catch (err: any) {
@@ -1383,6 +1369,7 @@ export default function App() {
       });
     } finally {
       setIsRescoring(false);
+      isRescoringRef.current = false;
     }
   };
 
@@ -1899,6 +1886,13 @@ export default function App() {
                     isRescoring={isRescoring}
                     onNavigateTab={(tab) => navigateToTab(tab)}
                     rescoreError={rescoreError}
+                    draftText={draftSkknText}
+                    originalText={originalSkknText}
+                    dossierTitle={currentEvaluationItem?.title || currentAnalysis.metadata?.title}
+                    currentVersion={currentEvaluationItem?.currentVersion || currentEvaluationItem?.versionCount || 1}
+                    previousScore={currentEvaluationItem?.score ?? currentAnalysis.rubricCriteria.reduce((sum, c) => sum + c.proposedScore, 0)}
+                    originalFileName={currentEvaluationItem?.originalFileName || lastSavedMetadata?.originalFileName}
+                    versionsHistory={currentEvaluationItem?.versionsHistory}
                   />
                 )}
 

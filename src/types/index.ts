@@ -519,6 +519,7 @@ export interface EvaluationVersionItem {
   notes?: string;
   resultSummary?: string;
   resultFileId?: string;
+  analysisResult?: SKKNAnalysisResult;
 }
 
 export interface EvaluationItem {
