@@ -46,6 +46,22 @@
       "destination": "/api/admin?__subpath=:path*"
     },
     {
+      "source": "/api/rescore-skkn",
+      "destination": "/api/rescore-skkn"
+    },
+    {
+      "source": "/api/rescore-skkn/:path*",
+      "destination": "/api/rescore-skkn"
+    },
+    {
+      "source": "/api/parse-docx",
+      "destination": "/api/parse-docx"
+    },
+    {
+      "source": "/api/parse-docx/:path*",
+      "destination": "/api/parse-docx"
+    },
+    {
       "source": "/ho-so",
       "destination": "/index.html"
     },

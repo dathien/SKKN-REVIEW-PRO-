@@ -1288,22 +1288,34 @@ export default function App() {
     setIsRescoring(true);
     setRescoreError(null);
     try {
+      const currentScore = analysis.rubricCriteria.reduce((sum, c) => sum + (c.proposedScore ?? 0), 0);
+      // Tối ưu hóa payload gửi đi: chỉ gửi các trường cần thiết cho Rubric và đối chiếu, tránh vượt quá giới hạn 4.5MB của Vercel
+      const compactPreviousResult = {
+        score: currentScore,
+        evaluation: { score: currentScore },
+        rubricCriteria: analysis.rubricCriteria,
+        redTeamCards: analysis.redTeamCards,
+      };
+
       const resp = await fetch('/api/rescore-skkn', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          previousResult: analysis,
-          revisedNotes
-        })
+          previousResult: compactPreviousResult,
+          revisedNotes,
+        }),
       });
 
       const rescoreData = await resp.json().catch(() => null);
 
       if (!resp.ok || !rescoreData || rescoreData.success === false) {
         // FACT SAFETY: AI Thất bại -> Giữ nguyên previousResult, không thay đổi điểm, không đổi issue, không tạo phiên bản mới
+        const fallbackMsg = resp.status === 404
+          ? 'Không tìm thấy API chấm lại (/api/rescore-skkn). Vui lòng kiểm tra triển khai serverless trên Vercel.'
+          : 'Chưa thể chấm lại lúc này. Kết quả đánh giá hiện tại được giữ nguyên. Vui lòng thử lại.';
         setRescoreError({
-          message: rescoreData?.message || 'Chưa thể chấm lại lúc này. Kết quả đánh giá hiện tại được giữ nguyên. Vui lòng thử lại.',
-          retryable: rescoreData?.retryable ?? true
+          message: rescoreData?.message || rescoreData?.error || fallbackMsg,
+          retryable: rescoreData?.retryable ?? true,
         });
         return;
       }

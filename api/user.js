@@ -1,3 +1,5 @@
+import { createRequire as _topCreateRequire } from 'module'; const require = _topCreateRequire(import.meta.url);
+
 // src/server/authStore.ts
 import fs from "fs";
 import path from "path";
@@ -1416,7 +1418,7 @@ function getRequestBody(req) {
 function handleCors(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-user-email, x-user-id");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-user-email, x-user-id, x-session-token, x-google-credential");
   if (req.method === "OPTIONS") {
     res.status(204).end();
     return true;

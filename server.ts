@@ -31,6 +31,8 @@ import authHandler from './server/api/auth';
 import userHandler from './server/api/user';
 import licenseHandler from './server/api/license';
 import adminHandler from './server/api/admin';
+import rescoreSkknHandler from './server/api/rescore-skkn';
+import parseDocxHandler from './server/api/parse-docx';
 
 const app = express();
 const PORT = 3000;
@@ -97,21 +99,9 @@ function parseGeminiError(error: any) {
   return { status, code, message };
 }
 
-// Helper to parse DOCX buffer to text
-app.post('/api/parse-docx', async (req, res) => {
-  try {
-    const { base64Data } = req.body;
-    if (!base64Data) {
-      return res.status(400).json({ error: 'Thiếu dữ liệu base64' });
-    }
-    const buffer = Buffer.from(base64Data, 'base64');
-    const result = await mammoth.extractRawText({ buffer });
-    return res.json({ text: result.value });
-  } catch (error: any) {
-    console.error('Error parsing docx:', error);
-    return res.status(500).json({ error: 'Không thể đọc nội dung file Word: ' + error.message });
-  }
-});
+// Canonical parser for DOCX
+app.all('/api/parse-docx', (req, res) => parseDocxHandler(req, res));
+app.all('/api/parse-docx/*', (req, res) => parseDocxHandler(req, res));
 
 // Core Analysis Endpoint
 app.post('/api/analyze-skkn', async (req, res) => {
@@ -559,128 +549,9 @@ Trả về JSON mảng các câu hỏi:
   }
 });
 
-// Rescore after revision endpoint
-app.post('/api/rescore-skkn', async (req, res) => {
-  let oldTotalScore: number | null = null;
-  try {
-    const { previousResult, revisedNotes, revisedText } = req.body;
-    const contentToEvaluate = revisedNotes || revisedText || '';
-    const oldIssues = previousResult?.redTeamCards || [];
-    const oldCriteria = previousResult?.rubricCriteria || [];
-    
-    // FACT SAFETY: Không được mặc định điểm cũ = 70. Nếu không xác định được: oldTotalScore = null
-    if (typeof previousResult?.evaluation?.score === 'number') {
-      oldTotalScore = previousResult.evaluation.score;
-    } else if (Array.isArray(oldCriteria) && oldCriteria.length > 0) {
-      oldTotalScore = oldCriteria.reduce((acc: number, c: any) => acc + (c.proposedScore || 0), 0);
-    } else {
-      oldTotalScore = null;
-    }
-
-    const prompt = `
-Bạn là "SKKN REVIEW PRO – Chuyên gia Thẩm định lại sau chỉnh sửa (Rescore Engine)".
-Tác giả SKKN vừa nộp phiên bản chỉnh sửa hoặc văn bản giải trình sau phản biện.
-
-NGUYÊN TẮC THẨM ĐỊNH BẮT BUỘC:
-1. KHÔNG PHẢI NÚT TĂNG ĐIỂM:
-   - Tuyệt đối KHÔNG tự động tăng điểm chỉ vì vấn đề đã được tác giả đánh dấu là "Đã xử lý".
-   - Tuyệt đối KHÔNG tăng điểm chỉ vì văn phong mượt mà, câu từ hoa mỹ hơn ("đã sửa câu" KHÔNG PHẢI LÀ "đã sửa nghiên cứu").
-   - Điểm số chỉ thay đổi khi NỘI DUNG / MINH CHỨNG / SỐ LIỆU / LOGIC THỰC NGHIỆM thực sự thay đổi và đáp ứng tiêu chí Rubric.
-2. NẾU GIỮ NGUYÊN HOẶC CHƯA ĐỦ CĂN CỨ:
-   - Điểm giữ nguyên (changeDifference = 0).
-   - Nếu bản sửa gây mâu thuẫn mới hoặc loại bỏ phần quan trọng, điểm có thể giảm (changeDifference < 0).
-3. ĐỐI CHIẾU TRỰC TIẾP TỪNG VẤN ĐỀ (ISSUES COMPARISON):
-   - So sánh Bản gốc (Original) vs Bản mới (Revised).
-   - Xác định rõ trạng thái: "ĐÃ KHẮC PHỤC", "CẢI THIỆN MỘT PHẦN", "CHƯA KHẮC PHỤC", "PHÁT SINH MÂU THUẪN MỚI", hoặc "KHÔNG XÁC ĐỊNH".
-
-DỮ LIỆU ĐÁNH GIÁ LẦN TRƯỚC:
-- Điểm tổng cũ: ${oldTotalScore !== null ? oldTotalScore : 'Chưa có điểm tổng'}
-- Tiêu chí Rubric cũ: ${JSON.stringify(oldCriteria.map((c: any) => ({ name: c.criterionName, score: c.proposedScore, max: c.maxScore, reason: c.deductionReason })))}
-- Danh sách vấn đề phản biện cũ (Issues): ${JSON.stringify(oldIssues.map((c: any) => ({ id: c.id, issue: c.issueDetected, quote: c.relatedQuote, location: c.location })))}
-
-NỘI DUNG BẢN SKKN ĐÃ CHỈNH SỬA / MINH CHỨNG MỚI NỘP:
-"""${contentToEvaluate}"""
-
-Hãy phân tích kỹ lưỡng và trả về đúng JSON theo cấu trúc sau:
-{
-  "previousScore": ${oldTotalScore !== null ? oldTotalScore : 'null'},
-  "newScore": number,
-  "scoreDifference": number,
-  "fixedIssues": ["Tên vấn đề đã giải quyết triệt để"],
-  "remainingIssues": ["Tên vấn đề còn tồn tại chưa khắc phục"],
-  "newIssuesArisen": ["Vấn đề mới phát sinh nếu có"],
-  "newEvidenceAdded": ["Minh chứng thực tế mới được ghi nhận"],
-  "newFiguresAdded": ["Số liệu thực tế mới được đối soát"],
-  "justificationForChange": "Giải trình tổng hợp căn cứ thay đổi hoặc giữ nguyên điểm số",
-  "issueComparisons": [
-    {
-      "issueTitle": "Tên vấn đề",
-      "originalQuote": "Nội dung / số liệu bản gốc",
-      "revisedQuote": "Nội dung / số liệu bản mới (trích dẫn cụ thể)",
-      "status": "ĐÃ KHẮC PHỤC" | "CẢI THIỆN MỘT PHẦN" | "CHƯA KHẮC PHỤC" | "PHÁT SINH MÂU THUẪN MỚI" | "KHÔNG XÁC ĐỊNH",
-      "explanation": "Phân tích vì sao đạt trạng thái này"
-    }
-  ],
-  "updatedCriteria": [
-    {
-      "criterionName": "Tên tiêu chí",
-      "previousScore": number,
-      "newScore": number,
-      "changeDifference": number,
-      "whatChanged": "Điều gì cụ thể đã thay đổi?",
-      "evidenceFoundAt": "Minh chứng nằm ở đâu trong bản sửa?",
-      "impactReason": "Vì sao thay đổi này ảnh hưởng đến điểm số?",
-      "rubricMetReason": "Tiêu chí Rubric nào được đáp ứng tốt hơn?"
-    }
-  ]
-}
-`;
-
-    let response: any;
-    try {
-      response = await ai.models.generateContent({
-        model: 'gemini-3.1-flash-lite',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-          temperature: 0.2,
-        },
-      });
-    } catch {
-      response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-          temperature: 0.2,
-        },
-      });
-    }
-
-    const parsed = JSON.parse(response.text || '{}');
-    return res.json({
-      success: true,
-      ...parsed,
-    });
-  } catch (error: any) {
-    console.error('Error in rescore-skkn (AI models failed):', error);
-    const { status, message } = parseGeminiError(error);
-    const finalStatus: number = (status === 429 || status === 503 || status === 403) ? status : 503;
-    const isRetryable = finalStatus === 429 || finalStatus === 503;
-
-    // FACT SAFETY: Tuyệt đối KHÔNG tự tạo số liệu/minh chứng/điểm số giả khi AI thất bại.
-    return res.status(finalStatus).json({
-      success: false,
-      code: 'RESCORE_AI_UNAVAILABLE',
-      retryable: isRetryable,
-      message: 'Chưa thể chấm lại lúc này. Kết quả đánh giá hiện tại được giữ nguyên. Vui lòng thử lại.',
-      previousScore: oldTotalScore,
-      scoreChanged: false,
-      issuesChanged: false,
-      originalError: message,
-    });
-  }
-});
+// Rescore after revision endpoint (Canonical Handler)
+app.all('/api/rescore-skkn', (req, res) => rescoreSkknHandler(req, res));
+app.all('/api/rescore-skkn/*', (req, res) => rescoreSkknHandler(req, res));
 
 // Reference Verification Endpoint
 app.post('/api/verify-reference', async (req, res) => {

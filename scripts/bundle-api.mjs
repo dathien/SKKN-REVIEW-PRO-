@@ -41,8 +41,9 @@ for (const file of sourceFiles) {
 
   const esbuildBin = fs.existsSync('./node_modules/.bin/esbuild') ? './node_modules/.bin/esbuild' : 'npx esbuild';
   try {
+    const bannerFlag = `--banner:js="import { createRequire as _topCreateRequire } from 'module'; const require = _topCreateRequire(import.meta.url);"`;
     cp.execSync(
-      `${esbuildBin} ${file} --bundle --platform=node --format=esm --target=node20 --outfile=${outfile}`,
+      `${esbuildBin} ${file} --bundle --platform=node --format=esm --target=node20 ${bannerFlag} --outfile=${outfile}`,
       { stdio: 'inherit' }
     );
     console.log(`[bundle-api] ✓ Bundled ${file} -> ${outfile}`);

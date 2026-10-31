@@ -111,11 +111,33 @@ export const RescoreView: React.FC<RescoreViewProps> = ({
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setUploadedFileName(file.name);
+
+    if (file.name.toLowerCase().endsWith('.docx')) {
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const base64 = btoa(
+          new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+        );
+        const resp = await fetch('/api/parse-docx', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ base64Data: base64 }),
+        });
+        const result = await resp.json();
+        if (result.text && result.text.trim()) {
+          setRevisedText(result.text.trim());
+          return;
+        }
+      } catch (docErr) {
+        console.warn('Lỗi đọc file docx qua API, thử đọc text trực tiếp:', docErr);
+      }
+    }
+
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target?.result as string;
