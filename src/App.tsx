@@ -165,6 +165,7 @@ export default function App() {
   const [isRescoring, setIsRescoring] = useState(false);
   const [isGeneratingSuggestion, setIsGeneratingSuggestion] = useState(false);
   const [isLoadingMoreCouncil, setIsLoadingMoreCouncil] = useState(false);
+  const [councilGenerateError, setCouncilGenerateError] = useState<string | null>(null);
   const [pendingInitialFile, setPendingInitialFile] = useState<File | null>(null);
   const [uploadInitialMethod, setUploadInitialMethod] = useState<'file' | 'paste'>('file');
 
@@ -1254,10 +1255,11 @@ export default function App() {
   const handleGenerateMoreCouncilQuestions = async () => {
     if (isLoadingMoreCouncil) return;
     setIsLoadingMoreCouncil(true);
+    setCouncilGenerateError(null);
     try {
       const skknText = draftSkknText || originalSkknText || '';
       if (skknText.trim().length < 250) {
-        window.alert('Không tìm thấy nội dung file SKKN đang mở. Vui lòng tải lại hồ sơ gốc trước khi tạo câu hỏi.');
+        setCouncilGenerateError('Không tìm thấy nội dung file SKKN đang mở. Vui lòng tải lại hồ sơ gốc trước khi tạo câu hỏi.');
         return;
       }
       const resp = await fetch('/api/ask-council', {
@@ -1274,7 +1276,7 @@ export default function App() {
       setAnalysis(prev => ({...prev, councilQuestions: [...prev.councilQuestions, ...payload]}));
     } catch (err: any) {
       console.error('[COUNCIL]', err);
-      window.alert(err.message || 'Không thể tạo câu hỏi có căn cứ từ SKKN.');
+      setCouncilGenerateError(err.message || 'Không thể tạo câu hỏi có căn cứ từ SKKN.');
     } finally { setIsLoadingMoreCouncil(false); }
   };
 
@@ -1889,6 +1891,7 @@ export default function App() {
                     questions={currentAnalysis.councilQuestions}
                     onGenerateMoreQuestions={handleGenerateMoreCouncilQuestions}
                     isLoadingMore={isLoadingMoreCouncil}
+                    generateError={councilGenerateError}
                   />
                 )}
 
