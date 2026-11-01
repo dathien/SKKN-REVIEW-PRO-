@@ -15,6 +15,7 @@ import { UploadWorkspace } from './components/UploadWorkspace';
 import { CheckCircle2, FileText, ShieldAlert, Shield, FolderOpen } from 'lucide-react';
 import { FriendlyErrorInfo, classifyError, sleep, getRetryDelay } from './utils/aiErrorHandler';
 import { extractGeminiOutput, parseAnalysisResponse, normalizeAnalysisResult } from './utils/analysisPipeline';
+import { buildCouncilQuestions } from './utils/councilAutoQuestions';
 
 export type WorkflowStatus = 'IDLE' | 'ANALYZING' | 'COMPLETED' | 'ERROR';
 
@@ -165,7 +166,6 @@ export default function App() {
   const [isRescoring, setIsRescoring] = useState(false);
   const [isGeneratingSuggestion, setIsGeneratingSuggestion] = useState(false);
   const [isLoadingMoreCouncil, setIsLoadingMoreCouncil] = useState(false);
-  const [councilGenerateError, setCouncilGenerateError] = useState<string | null>(null);
   const [pendingInitialFile, setPendingInitialFile] = useState<File | null>(null);
   const [uploadInitialMethod, setUploadInitialMethod] = useState<'file' | 'paste'>('file');
 
@@ -1255,11 +1255,10 @@ export default function App() {
   const handleGenerateMoreCouncilQuestions = async () => {
     if (isLoadingMoreCouncil) return;
     setIsLoadingMoreCouncil(true);
-    setCouncilGenerateError(null);
     try {
       const skknText = draftSkknText || originalSkknText || '';
       if (skknText.trim().length < 250) {
-        setCouncilGenerateError('Không tìm thấy nội dung file SKKN đang mở. Vui lòng tải lại hồ sơ gốc trước khi tạo câu hỏi.');
+        window.alert('Không tìm thấy nội dung file SKKN đang mở. Vui lòng tải lại hồ sơ gốc trước khi tạo câu hỏi.');
         return;
       }
       const resp = await fetch('/api/ask-council', {
@@ -1276,7 +1275,7 @@ export default function App() {
       setAnalysis(prev => ({...prev, councilQuestions: [...prev.councilQuestions, ...payload]}));
     } catch (err: any) {
       console.error('[COUNCIL]', err);
-      setCouncilGenerateError(err.message || 'Không thể tạo câu hỏi có căn cứ từ SKKN.');
+      window.alert(err.message || 'Không thể tạo câu hỏi có căn cứ từ SKKN.');
     } finally { setIsLoadingMoreCouncil(false); }
   };
 
@@ -1888,10 +1887,9 @@ export default function App() {
 
                 {activeTab === 'council' && (
                   <CouncilSimulatorView
-                    questions={currentAnalysis.councilQuestions}
+                    questions={buildCouncilQuestions(currentAnalysis, draftSkknText || originalSkknText || '')}
                     onGenerateMoreQuestions={handleGenerateMoreCouncilQuestions}
                     isLoadingMore={isLoadingMoreCouncil}
-                    generateError={councilGenerateError}
                   />
                 )}
 
