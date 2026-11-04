@@ -595,14 +595,16 @@ async function getAllUsersAndGuests() {
         if (!Array.isArray(data?.users) && !Array.isArray(data)) {
           throw new Error("API Google Sheets không trả về danh sách USERS hợp lệ.");
         }
-        const allowedEmails = new Set([
-          "dathien2412@gmail.com",
-          "nguyenthithanhtam3410@gmail.com",
-        ]);
+        // Google Sheets USERS is authoritative: include every valid account, not only the initial two.
         const authoritativeEmails = new Set(
           list.map((u) => mapRawSheetUserToAccount(u)?.email?.trim().toLowerCase())
-            .filter((email) => Boolean(email) && allowedEmails.has(email))
+            .filter(Boolean)
         );
+        // Remove stale local accounts without deleting records from Google Sheets.
+        for (const key of Object.keys(store.users)) {
+          const email = String(store.users[key]?.email || key).trim().toLowerCase();
+          if (!authoritativeEmails.has(email) && !ROOT_ADMIN_EMAILS.includes(email)) delete store.users[key];
+        }
         list.forEach((u) => {
           if (u) {
             const mapped = mapRawSheetUserToAccount(u);
