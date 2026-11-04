@@ -579,6 +579,7 @@ async function getAllUsersAndGuests() {
   if (process.env.LICENSE_API_URL) {
     try {
       const resp = await fetch(process.env.LICENSE_API_URL, {
+        cache: "no-store",
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -591,6 +592,7 @@ async function getAllUsersAndGuests() {
       });
       if (resp.ok) {
         const data = await resp.json().catch(() => null);
+        if (data?.success === false) throw new Error(data.error || "Google Sheets từ chối đọc danh sách USERS.");
         const list = Array.isArray(data?.users) ? data.users : Array.isArray(data) ? data : [];
         if (!Array.isArray(data?.users) && !Array.isArray(data)) {
           throw new Error("API Google Sheets không trả về danh sách USERS hợp lệ.");
@@ -662,6 +664,8 @@ async function getAllUsersAndGuests() {
         });
         saveStore();
         return {
+          source: "GOOGLE_SHEETS_USERS",
+          sheetCount: authoritativeEmails.size,
           users: Object.values(store.users).filter((u) => authoritativeEmails.has(u.email.trim().toLowerCase())),
           guests: Object.values(store.guests),
           licenses: Object.values(store.licenses),
