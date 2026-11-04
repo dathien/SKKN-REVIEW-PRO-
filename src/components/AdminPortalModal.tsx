@@ -161,6 +161,7 @@ export const AdminPortalModal: React.FC = () => {
 
   // Modal thêm người dùng mới
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [addUserFeedback, setAddUserFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserName, setNewUserName] = useState('');
   const [newUserPlan, setNewUserPlan] = useState<'TRIAL' | 'LICENSED' | 'PRO'>('TRIAL');
@@ -720,6 +721,7 @@ export const AdminPortalModal: React.FC = () => {
 
   // 4B. Thao tác Thêm người dùng mới
   const handleOpenAddUser = () => {
+    setAddUserFeedback(null);
     setNewUserEmail('');
     setNewUserName('');
     setNewUserPlan('TRIAL');
@@ -734,7 +736,7 @@ export const AdminPortalModal: React.FC = () => {
     e.preventDefault();
     const cleanEmail = newUserEmail.trim().toLowerCase();
     if (!cleanEmail || !cleanEmail.includes('@')) {
-      setActionFeedback({
+      setAddUserFeedback({
         type: 'error',
         text: 'Vui lòng nhập địa chỉ email hợp lệ.'
       });
@@ -742,6 +744,7 @@ export const AdminPortalModal: React.FC = () => {
     }
 
     setIsSubmittingUser(true);
+    setAddUserFeedback(null);
     try {
       const expiresAt = newUserPlan === 'LICENSED' && newUserHasExpiry && newUserExpiryDate
         ? new Date(newUserExpiryDate).toISOString()
@@ -769,7 +772,7 @@ export const AdminPortalModal: React.FC = () => {
       });
 
       const data = (await safeJson(res)) || {};
-      if (res.ok && data.success) {
+      if (res.ok && data.success && data.sheetSynced !== false) {
         setActionFeedback({
           type: 'success',
           text: `Đã thêm tài khoản ${cleanEmail} vào hệ thống thành công.`
@@ -777,15 +780,15 @@ export const AdminPortalModal: React.FC = () => {
         setIsAddUserOpen(false);
         fetchAdminData();
       } else {
-        setActionFeedback({
+        setAddUserFeedback({
           type: 'error',
-          text: data.error || 'Thêm người dùng thất bại.'
+          text: data.sheetSynced === false ? (data.warning || 'Chưa lưu được tài khoản vào Google Sheets. Vui lòng kiểm tra kết nối Google Sheets/Apps Script.') : (data.error || `Không thể thêm tài khoản (HTTP ${res.status}).`)
         });
       }
     } catch {
-      setActionFeedback({
+      setAddUserFeedback({
         type: 'error',
-        text: 'Lỗi kết nối khi thêm người dùng.'
+        text: 'Lỗi kết nối khi thêm người dùng. Vui lòng thử lại.'
       });
     } finally {
       setIsSubmittingUser(false);
@@ -3761,6 +3764,11 @@ export const AdminPortalModal: React.FC = () => {
               </div>
 
               <form onSubmit={handleCreateUser} className="p-5 space-y-4">
+                {addUserFeedback && (
+                  <div role="alert" aria-live="polite" className={`rounded-xl border px-3 py-2.5 text-[13px] font-medium ${addUserFeedback.type === 'error' ? 'border-rose-300 bg-rose-50 text-rose-800' : 'border-emerald-300 bg-emerald-50 text-emerald-800'}`}>
+                    {addUserFeedback.text}
+                  </div>
+                )}
                 {/* Email người dùng */}
                 <div>
                   <label className="block text-[12.5px] font-bold text-slate-700 mb-1.5">
