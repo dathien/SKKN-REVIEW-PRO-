@@ -99,11 +99,6 @@ export const AdminPortalModal: React.FC = () => {
     remoteValue: string;
   }> | null>(null);
   const [confirmDeleteUser, setConfirmDeleteUser] = useState<UserAccount | null>(null);
-  const [cleanupOpen, setCleanupOpen] = useState(false);
-  const [cleanupConfirmation, setCleanupConfirmation] = useState('');
-  const [cleanupBackupReady, setCleanupBackupReady] = useState(false);
-  const [cleanupBusy, setCleanupBusy] = useState(false);
-  const [cleanupReport, setCleanupReport] = useState('');
   const [copiedCodeGs, setCopiedCodeGs] = useState<boolean>(false);
   const [pingStatus, setPingStatus] = useState<{ loading: boolean; message?: string; error?: boolean } | null>(null);
   const [stats, setStats] = useState<SystemStats | null>(null);
@@ -240,7 +235,7 @@ export const AdminPortalModal: React.FC = () => {
     try {
       const [statsRes, usersRes, settingsRes, licensesRes] = await Promise.all([
         fetch('/api/admin/stats', { headers: getAuthHeaders() }),
-        fetch('/api/admin/users', { headers: getAuthHeaders() }),
+        fetch('/api/admin/users', { headers: getAuthHeaders(), cache: 'no-store' }),
         fetch('/api/admin/settings', { headers: getAuthHeaders() }).catch(() => null),
         fetch('/api/admin/licenses', { headers: getAuthHeaders() }).catch(() => null)
       ]);
@@ -259,10 +254,15 @@ export const AdminPortalModal: React.FC = () => {
       }
       if (usersRes && usersRes.ok) {
         const u = await safeJson(usersRes);
-        if (u) {
-          setUsersList(u.users || []);
-          setGuestsList(u.guests || []);
+        if (!u || !Array.isArray(u.users)) {
+          setActionFeedback({ type: 'error', text: 'Dữ liệu USERS từ máy chủ không hợp lệ. Danh sách cũ được giữ lại.' });
+        } else {
+          setUsersList(u.users);
+          setGuestsList(Array.isArray(u.guests) ? u.guests : []);
         }
+      } else {
+        const errorData = usersRes ? await safeJson(usersRes) : null;
+        setActionFeedback({ type: 'error', text: `Không thể đồng bộ USERS từ Google Sheets: ${errorData?.error || `HTTP ${usersRes?.status || 'mất kết nối'}`}. Danh sách cũ được giữ lại.` });
       }
       if (settingsRes && settingsRes.ok) {
         const setJson = await safeJson(settingsRes);
@@ -1047,43 +1047,6 @@ export const AdminPortalModal: React.FC = () => {
         type: 'error',
         text: 'Lỗi kết nối khi xóa người dùng.'
       });
-    }
-  };
-
-  // Làm sạch có xác nhận: chỉ Root Admin được thao tác, không ẩn danh sách bằng bộ lọc.
-  const protectedCleanupEmails = ['dathien2412@gmail.com', 'nguyenthithanhtam3410@gmail.com'];
-  const cleanupCandidates = usersList.filter(u => !protectedCleanupEmails.includes(u.email.trim().toLowerCase()));
-  const cleanupSecondAccountExists = usersList.some(u => u.email.trim().toLowerCase() === protectedCleanupEmails[1]);
-  const canCleanup = user?.email?.trim().toLowerCase() === protectedCleanupEmails[0];
-
-  const executeAccountCleanup = async () => {
-    if (!canCleanup || !cleanupBackupReady || cleanupConfirmation !== 'XOA TAI KHOAN' || cleanupBusy) return;
-    setCleanupBusy(true);
-    let deleted = 0;
-    try {
-      for (const candidate of cleanupCandidates) {
-        const res = await fetch('/api/admin/delete-user', {
-          method: 'POST', headers: getAuthHeaders(),
-          body: JSON.stringify({ email: candidate.email })
-        });
-        const result = (await safeJson(res)) || {};
-        if (!res.ok || !result.success) {
-          setCleanupReport(`Đã xóa ${deleted} tài khoản. Dừng tại ${candidate.email}: ${result.error || 'API từ chối xóa'}. Kiểm tra đồng bộ dữ liệu trước khi tiếp tục.`);
-          await fetchAdminData();
-          return;
-        }
-        deleted++;
-      }
-      setCleanupReport(`Đã xử lý ${deleted} tài khoản. Kiểm tra lại danh sách từ máy chủ và Google Sheets trước khi kết luận hoàn tất.`);
-      setCleanupOpen(false);
-      setCleanupConfirmation('');
-      setCleanupBackupReady(false);
-      await fetchAdminData();
-    } catch {
-      setCleanupReport(`Đã xóa ${deleted} tài khoản trước khi kết nối bị gián đoạn. Vui lòng tải lại danh sách và kiểm tra nguồn dữ liệu.`);
-      await fetchAdminData();
-    } finally {
-      setCleanupBusy(false);
     }
   };
 
@@ -1952,7 +1915,7 @@ export const AdminPortalModal: React.FC = () => {
                     <Download className="w-3.5 h-3.5 text-slate-500" />
                     <span className="hidden sm:inline">Xuất CSV</span>
                   </button>
-                  {canCleanup && <button type="button" onClick={() => { setCleanupOpen(true); setCleanupBackupReady(false); setCleanupConfirmation(''); setCleanupReport(''); }} className="px-3 py-2 rounded-xl border border-rose-300 bg-rose-50 text-rose-700 font-bold text-[13px] hover:bg-rose-100">Chỉ giữ 2 tài khoản</button>}
+
                   <button
                     type="button"
                     onClick={fetchAdminData}
@@ -2017,7 +1980,6 @@ export const AdminPortalModal: React.FC = () => {
                 })()}
               </div>
 
-              {cleanupReport && <div role="status" className="p-3 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 text-sm">{cleanupReport}</div>}
               <div className="text-xs text-slate-600">Thời hạn PRO: chọn nút <strong>GIA HẠN</strong> hoặc <strong>CHỈNH SỬA</strong> trên dòng tài khoản. Biểu mẫu đã hỗ trợ 3, 6, 12 tháng và số tháng tùy chỉnh.</div>
               {/* Bảng Danh sách Người dùng */}
               <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
@@ -3097,22 +3059,6 @@ export const AdminPortalModal: React.FC = () => {
           </div>
         )}
 
-        {cleanupOpen && canCleanup && (
-          <div className="fixed inset-0 z-[90] bg-slate-950/70 flex items-center justify-center p-4">
-            <div className="w-full max-w-xl bg-white rounded-2xl shadow-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
-              <h3 className="font-bold text-lg text-rose-800">Xác nhận làm sạch tài khoản</h3>
-              <p className="text-sm text-slate-700">Chỉ giữ: <strong>dathien2412@gmail.com</strong> và <strong>nguyenthithanhtam3410@gmail.com</strong>. Các tài khoản khác sẽ bị xóa khỏi nguồn quản lý thông qua API hiện tại.</p>
-              {!cleanupSecondAccountExists && <p className="text-sm text-amber-800 bg-amber-50 p-3 rounded-lg">Chưa tìm thấy nguyenthithanhtam3410@gmail.com trong danh sách hiện tại. Không tự tạo tài khoản hoặc cấp quyền.</p>}
-              <div className="text-sm bg-slate-50 p-3 rounded-lg"><strong>Dự kiến xóa {cleanupCandidates.length} tài khoản:</strong><ul className="list-disc pl-5 mt-2 space-y-1">{cleanupCandidates.map(u => <li key={u.email}>{u.email}</li>)}</ul></div>
-              <p className="text-xs text-rose-700">Thao tác này có thể không khôi phục được. Bắt buộc xuất CSV trước và nên sao lưu Google Sheets USERS. Không xóa tài khoản Google bên ngoài ứng dụng.</p>
-              <button type="button" onClick={() => { handleExportUsersCsv(); setCleanupBackupReady(true); }} className="px-3 py-2 bg-slate-100 rounded-lg font-semibold text-sm">Tải bản sao lưu CSV</button>
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={cleanupBackupReady} onChange={e => setCleanupBackupReady(e.target.checked)} /> Tôi đã sao lưu danh sách tài khoản và dữ liệu USERS</label>
-              <label className="block text-sm">Nhập chính xác <strong>XOA TAI KHOAN</strong> để xác nhận:</label>
-              <input className="w-full border rounded-lg p-2" value={cleanupConfirmation} onChange={e => setCleanupConfirmation(e.target.value)} />
-              <div className="flex justify-end gap-2"><button type="button" disabled={cleanupBusy} onClick={() => setCleanupOpen(false)} className="px-4 py-2 rounded-lg bg-slate-100">HỦY</button><button type="button" disabled={cleanupBusy || !cleanupBackupReady || cleanupConfirmation !== 'XOA TAI KHOAN' || cleanupCandidates.length === 0} onClick={executeAccountCleanup} className="px-4 py-2 rounded-lg bg-rose-700 text-white disabled:opacity-40">{cleanupBusy ? 'Đang xử lý...' : `XÓA ${cleanupCandidates.length} TÀI KHOẢN`}</button></div>
-            </div>
-          </div>
-        )}
         {/* Modal Con 3: Xác nhận Thu hồi quyền PRO trước hạn (Không xóa dữ liệu hồ sơ) */}
         {confirmRevokeUser && (
           <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs select-none">
