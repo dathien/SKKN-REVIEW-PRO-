@@ -61,12 +61,7 @@ export const ROOT_ADMIN_EMAILS: string[] = [
   'dathien2412@gmail.com',
 ];
 
-// Danh sách tài khoản được chủ hệ thống xác nhận giữ lại (31/10/2026).
-// Không sử dụng dữ liệu cục bộ cũ để tạo lại tài khoản đã xóa khỏi USERS.
-const RETAINED_ACCOUNT_EMAILS = new Set([
-  'dathien2412@gmail.com',
-  'nguyenthithanhtam3410@gmail.com',
-]);
+// Google Sheets USERS là danh sách tài khoản có hiệu lực; không khóa cứng email.
 
 
 // Initialize default sample licenses and Root Admin
@@ -1206,14 +1201,14 @@ export async function getAllUsersAndGuests() {
         const remoteEmails = new Set(list.map((u: any) => String(u?.email || u?.EMAIL || u?.USER_EMAIL || '').trim().toLowerCase()));
         for (const key of Object.keys(store.users)) {
           const email = String(store.users[key]?.email || key).trim().toLowerCase();
-          if (!RETAINED_ACCOUNT_EMAILS.has(email) || (!remoteEmails.has(email) && !ROOT_ADMIN_EMAILS.includes(email))) {
+          if (!remoteEmails.has(email) && !ROOT_ADMIN_EMAILS.includes(email)) {
             delete store.users[key];
           }
         }
         list.forEach((u: any) => {
           if (u) {
             const mapped = mapRawSheetUserToAccount(u);
-            if (mapped && mapped.email && RETAINED_ACCOUNT_EMAILS.has(mapped.email)) {
+            if (mapped && mapped.email) {
               const email = mapped.email;
               const existing = store.users[email];
               const isRootAdmin = ROOT_ADMIN_EMAILS.includes(email);
@@ -1275,7 +1270,7 @@ export async function getAllUsersAndGuests() {
   }
 
   return {
-    users: Object.values(store.users).filter(u => RETAINED_ACCOUNT_EMAILS.has(u.email.trim().toLowerCase())),
+    users: Object.values(store.users),
     guests: Object.values(store.guests),
     licenses: Object.values(store.licenses),
   };
@@ -1871,7 +1866,7 @@ export async function syncAllUsersToGoogleSheet(operatorEmail?: string): Promise
   totalCount: number;
   error?: string;
 }> {
-  const users = Object.values(store.users).filter(u => RETAINED_ACCOUNT_EMAILS.has(u.email.trim().toLowerCase()));
+  const users = Object.values(store.users);
   if (!process.env.LICENSE_API_URL) {
     return { success: false, syncedCount: 0, totalCount: users.length, error: 'Chưa cấu hình LICENSE_API_URL' };
   }
@@ -2019,13 +2014,13 @@ export async function adminSyncGoogleSheets(params?: {
         // Loại bỏ bản ghi cục bộ ngoài danh sách được giữ trước khi đồng bộ.
         for (const key of Object.keys(store.users)) {
           const email = String(store.users[key]?.email || key).trim().toLowerCase();
-          if (!RETAINED_ACCOUNT_EMAILS.has(email)) delete store.users[key];
+          if (!new Set(list.map((u: any) => mapRawSheetUserToAccount(u)?.email).filter(Boolean)).has(email) && !ROOT_ADMIN_EMAILS.includes(email)) delete store.users[key];
         }
         // Áp dụng dữ liệu theo phương án
         list.forEach((u: any) => {
           if (u) {
             const mapped = mapRawSheetUserToAccount(u);
-            if (mapped && mapped.email && RETAINED_ACCOUNT_EMAILS.has(mapped.email)) {
+            if (mapped && mapped.email) {
               const email = mapped.email;
               const existing = store.users[email];
               const isRootAdmin = ROOT_ADMIN_EMAILS.includes(email);
