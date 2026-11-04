@@ -225,11 +225,10 @@ export function reloadStoreFromDisk() {
 }
 
 export function saveStore() {
-  // Vercel Functions có hệ thống tệp triển khai chỉ đọc. Google Sheets là nguồn
-  // lưu bền vững cho tài khoản; không ghi snapshot cục bộ trên serverless.
-  if (process.env.VERCEL) return;
   try {
-    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
     fs.writeFileSync(STORE_FILE, JSON.stringify(store, null, 2), 'utf-8');
   } catch (err) {
     console.error('Could not save auth store to disk:', err);
@@ -883,7 +882,6 @@ export async function activateLicenseKey(params: {
   if (!lic && process.env.LICENSE_API_URL) {
     try {
       const resp = await fetch(process.env.LICENSE_API_URL, {
-        cache: 'no-store',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1177,13 +1175,9 @@ export async function checkSheetCompatibility(): Promise<{
 
 export async function getAllUsersAndGuests() {
   reloadStoreFromDisk();
-  if (process.env.LICENSE_API_URL) {
-    try {
-      const resp = await fetch(process.env.LICENSE_API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' export async function getAllUsersAndGuests() {
-  reloadStoreFromDisk();
-  if (!process.env.LICENSE_API_URL) throw new Error('Chưa cấu hình LICENSE_API_URL để đọc USERS từ Google Sheets.');
+  if (!process.env.LICENSE_API_URL) {
+    throw new Error("Chưa cấu hình LICENSE_API_URL: không thể xác thực danh sách USERS từ Google Sheets.");
+  }
   if (process.env.LICENSE_API_URL) {
     try {
       const resp = await fetch(process.env.LICENSE_API_URL, {
@@ -1199,18 +1193,14 @@ export async function getAllUsersAndGuests() {
       });
       if (resp.ok) {
         const data = await resp.json().catch(() => null);
-        if (data?.success === false) throw new Error(data.error || 'Không đọc được USERS');
-        const list = Array.isArray(data?.users) ? data.users : (Array.isArray(data) ? data : null);
-        if (!list) throw new Error('Phản hồi USERS không hợp lệ');
-        // Google Sheets USERS là nguồn chính. Xóa bản ghi cục bộ không còn trong Sheets,
-        // tránh hiện lại tài khoản thử nghiệm sau F5 hoặc khi đồng bộ ngược.
-        const remoteEmails = new Set(list.map((u: any) => String(u?.email || u?.EMAIL || u?.USER_EMAIL || '').trim().toLowerCase()));
-        for (const key of Object.keys(store.users)) {
-          const email = String(store.users[key]?.email || key).trim().toLowerCase();
-          if (!remoteEmails.has(email) && !ROOT_ADMIN_EMAILS.includes(email)) {
-            delete store.users[key];
-          }
+        const list = Array.isArray(data?.users) ? data.users : (Array.isArray(data) ? data : []);
+        if (!Array.isArray(data?.users) && !Array.isArray(data)) {
+          throw new Error("API Google Sheets không trả về danh sách USERS hợp lệ.");
         }
+const authoritativeEmails = new Set(
+          list.map((u: any) => mapRawSheetUserToAccount(u)?.email?.trim().toLowerCase())
+            .filter((email: string | undefined) => Boolean(email))
+        );
         list.forEach((u: any) => {
           if (u) {
             const mapped = mapRawSheetUserToAccount(u);
@@ -1269,19 +1259,36 @@ export async function getAllUsersAndGuests() {
           }
         });
         saveStore();
+        return {
+          users: Object.values(store.users).filter((u) => authoritativeEmails.has(u.email.trim().toLowerCase())),
+          guests: Object.values(store.guests),
+          licenses: Object.values(store.licenses),
+        };
+      } else {
+        throw new Error(`Google Sheets USERS không phản hồi thành công (HTTP ${resp.status}).`);
       }
     } catch (error) {
-      throw error; // Không trả danh sách cũ khi Google Sheets không đọc được.
+      throw error;
     }
   }
 
-  return {
-    users: Object.values(store.users),
-    guests: Object.values(store.guests),
-    licenses: Object.values(store.licenses),
-  };
+  throw new Error("Không thể xác thực danh sách người dùng từ Google Sheets USERS.");
 }
- 'PERMANENT' | 'NONE';
+
+export async function adminUpdateUser(params: {
+  operatorEmail?: string;
+  email: string;
+  name?: string;
+  newEmail?: string;
+  role?: UserRole;
+  plan?: LicensePlan;
+  quota?: { easy: number; advanced: number };
+  isBlocked?: boolean;
+  expiresAt?: string | null;
+  proStartDate?: string | null;
+  proDurationMonths?: number | null;
+  proEndDate?: string | null;
+  proStatus?: 'ACTIVE' | 'EXPIRED' | 'REVOKED' | 'PERMANENT' | 'NONE';
   proNote?: string;
 }): Promise<{ success: boolean; user?: UserAccount; error?: string; sheetSynced?: boolean; warning?: string; message?: string }> {
   let user = findUserByEmailOrId(params.email);
