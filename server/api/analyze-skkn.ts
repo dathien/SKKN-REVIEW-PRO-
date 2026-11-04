@@ -1,5 +1,26 @@
 import { GoogleGenAI } from '@google/genai';
-import { getRequestBody, handleCors, parseGeminiError } from './_lib/routeHelper';
+
+function getRequestBody(req: any): any {
+  if (req.body && typeof req.body === "object") return req.body;
+  if (typeof req.body === "string") { try { return JSON.parse(req.body); } catch { return {}; } }
+  return {};
+}
+function handleCors(req: any, res: any) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') { res.status(204).end(); return true; }
+  return false;
+}
+function parseGeminiError(error: any) {
+  const msg = String(error?.message || 'Không thể phân tích SKKN.');
+  const status = Number(error?.status || error?.statusCode) || (/(high demand|overload|UNAVAILABLE|503)/i.test(msg) ? 503 : /(quota|429|RESOURCE_EXHAUSTED)/i.test(msg) ? 429 : 500);
+  return {status: [400,401,403,404,408,413,422,429,500,502,503,504].includes(status) ? status : 500,
+    code: status === 429 ? 'RESOURCE_EXHAUSTED' : status === 503 ? 'UNAVAILABLE' : 'AI_ERROR',
+    message: msg.slice(0,900)};
+}
+
+
 
 /** Chấm SKKN dựa trên văn bản người dùng tải lên; không sử dụng hồ sơ mẫu. */
 export default async function handler(req: any, res: any) {
@@ -15,7 +36,7 @@ export default async function handler(req: any, res: any) {
 
   const rubric = typeof body.rubricContent === 'string' ? body.rubricContent.slice(0, 18000) : '';
   const notes = typeof body.promptNotes === 'string' ? body.promptNotes.slice(0, 3000) : '';
-  const evidence = Array.isArray(body.evidenceFiles) ? body.evidenceFiles.slice(0, 12).map((f: any) => ({
+  const evidence = Array.isArray(body.evidenceFiles) ? body.evidenceFiles.slice(0, 12).map((f) => ({
     name: String(f.name || '').slice(0, 180),
     category: String(f.category || '').slice(0, 60),
     text: String(f.text || '').slice(0, 3500),
@@ -50,11 +71,11 @@ export default async function handler(req: any, res: any) {
       return res.status(502).json({ code: 'INVALID_ANALYSIS', error: 'AI chưa tạo được kết quả thẩm định có cấu trúc.' });
     }
     // Không đưa trích dẫn không có trong hồ sơ vào báo cáo.
-    if (Array.isArray(result.redTeamCards)) result.redTeamCards = result.redTeamCards.filter((x: any) =>
+    if (Array.isArray(result.redTeamCards)) result.redTeamCards = result.redTeamCards.filter((x) =>
       typeof x.relatedQuote === 'string' && x.relatedQuote.trim().length >= 12 && skkn.includes(x.relatedQuote.trim())
     );
     return res.status(200).json(result);
-  } catch (error: any) {
+  } catch (error) {
     const info = parseGeminiError(error);
     return res.status(info.status).json({ code: info.code, error: info.message });
   }
