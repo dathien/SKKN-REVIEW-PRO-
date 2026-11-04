@@ -572,15 +572,13 @@ async function checkSheetCompatibility() {
   }
 }
 async function getAllUsersAndGuests() {
-  // USERS must be read from the authoritative Google Sheets service on each request.
-  // Never silently replace its response with bundled/default users.
+  reloadStoreFromDisk();
   if (!process.env.LICENSE_API_URL) {
     throw new Error("Chưa cấu hình LICENSE_API_URL: không thể xác thực danh sách USERS từ Google Sheets.");
   }
   if (process.env.LICENSE_API_URL) {
     try {
       const resp = await fetch(process.env.LICENSE_API_URL, {
-        cache: "no-store",
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -593,21 +591,14 @@ async function getAllUsersAndGuests() {
       });
       if (resp.ok) {
         const data = await resp.json().catch(() => null);
-        if (data?.success === false) throw new Error(data.error || "Google Sheets từ chối đọc danh sách USERS.");
         const list = Array.isArray(data?.users) ? data.users : Array.isArray(data) ? data : [];
         if (!Array.isArray(data?.users) && !Array.isArray(data)) {
           throw new Error("API Google Sheets không trả về danh sách USERS hợp lệ.");
         }
-        // Google Sheets USERS is authoritative: include every valid account, not only the initial two.
-        const authoritativeEmails = new Set(
+const authoritativeEmails = new Set(
           list.map((u) => mapRawSheetUserToAccount(u)?.email?.trim().toLowerCase())
-            .filter(Boolean)
+            .filter((email) => Boolean(email))
         );
-        // Remove stale local accounts without deleting records from Google Sheets.
-        for (const key of Object.keys(store.users)) {
-          const email = String(store.users[key]?.email || key).trim().toLowerCase();
-          if (!authoritativeEmails.has(email) && !ROOT_ADMIN_EMAILS.includes(email)) delete store.users[key];
-        }
         list.forEach((u) => {
           if (u) {
             const mapped = mapRawSheetUserToAccount(u);
@@ -663,10 +654,8 @@ async function getAllUsersAndGuests() {
             }
           }
         });
+        saveStore();
         return {
-          source: "GOOGLE_SHEETS_USERS",
-          syncVersion: "users-live-20261104-v3",
-          sheetCount: authoritativeEmails.size,
           users: Object.values(store.users).filter((u) => authoritativeEmails.has(u.email.trim().toLowerCase())),
           guests: Object.values(store.guests),
           licenses: Object.values(store.licenses),
@@ -1582,7 +1571,7 @@ async function handler(req, res) {
     }
     if (subpath === "users") {
       res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
-      res.setHeader("X-SKKN-Users-Version", "users-live-20261104-v3");
+      res.setHeader("X-SKKN-Users-Version", "all-sheet-users-v4");
       const data = await getAllUsersAndGuests();
       return res.status(200).json(data);
     }
