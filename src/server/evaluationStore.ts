@@ -929,10 +929,15 @@ export async function saveEvaluationResultRecord(params: {
       analysisResult: JSON.stringify(item.analysisResult),
       operatorEmail: cleanEmail,
     });
-    if (remote.success && remote.data?.latestResultFileId) {
+    if (!remote.success) {
+      return { success: false, error: `Không thể lưu kết quả lên Google Sheets/Drive: ${remote.error || 'dịch vụ lưu trữ không phản hồi'}. Kết quả chưa được xác nhận lưu bền vững.` };
+    }
+    if (remote.data?.latestResultFileId) {
       item.latestResultFileId = remote.data.latestResultFileId;
       saveEvaluationsStore();
     }
+  } else if (process.env.VERCEL) {
+    return { success: false, error: 'Chưa cấu hình LICENSE_API_URL để lưu kết quả bền vững trên Vercel.' };
   }
 
   return { success: true, evaluation: item };
@@ -1041,10 +1046,15 @@ export async function createEvaluationVersionRecord(params: {
       analysisResult: JSON.stringify(params.newAnalysisResult),
       operatorEmail: cleanEmail,
     });
-    if (remote.success && remote.data?.latestResultFileId) {
+    if (!remote.success) {
+      return { success: false, error: `Không thể lưu kết quả lên Google Sheets/Drive: ${remote.error || 'dịch vụ lưu trữ không phản hồi'}. Kết quả chưa được xác nhận lưu bền vững.` };
+    }
+    if (remote.data?.latestResultFileId) {
       item.latestResultFileId = remote.data.latestResultFileId;
       saveEvaluationsStore();
     }
+  } else if (process.env.VERCEL) {
+    return { success: false, error: 'Chưa cấu hình LICENSE_API_URL để lưu kết quả bền vững trên Vercel.' };
   }
 
   return { success: true, evaluation: item };
