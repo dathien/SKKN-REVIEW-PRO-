@@ -572,7 +572,8 @@ async function checkSheetCompatibility() {
   }
 }
 async function getAllUsersAndGuests() {
-  reloadStoreFromDisk();
+  // USERS must be read from the authoritative Google Sheets service on each request.
+  // Never silently replace its response with bundled/default users.
   if (!process.env.LICENSE_API_URL) {
     throw new Error("Chưa cấu hình LICENSE_API_URL: không thể xác thực danh sách USERS từ Google Sheets.");
   }
@@ -662,9 +663,9 @@ async function getAllUsersAndGuests() {
             }
           }
         });
-        saveStore();
         return {
           source: "GOOGLE_SHEETS_USERS",
+          syncVersion: "users-live-20261104-v3",
           sheetCount: authoritativeEmails.size,
           users: Object.values(store.users).filter((u) => authoritativeEmails.has(u.email.trim().toLowerCase())),
           guests: Object.values(store.guests),
@@ -1580,6 +1581,8 @@ async function handler(req, res) {
       return res.status(200).json(stats);
     }
     if (subpath === "users") {
+      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+      res.setHeader("X-SKKN-Users-Version", "users-live-20261104-v3");
       const data = await getAllUsersAndGuests();
       return res.status(200).json(data);
     }
