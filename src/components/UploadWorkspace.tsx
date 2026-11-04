@@ -590,7 +590,7 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
                     Phân tích chưa hoàn tất. Nội dung của Thầy/Cô vẫn được giữ lại.
                   </p>
                   <p className="text-slate-600 mt-0.5">
-                    Hệ thống đã lưu tài liệu. Thầy/Cô hãy bấm thử lại để tiếp tục.
+                    {typeof analysisError === 'string' ? analysisError : (analysisError.message || 'Vui lòng kiểm tra kết nối hoặc thử lại khi dịch vụ AI sẵn sàng.')}
                   </p>
                 </div>
               </div>
