@@ -94,6 +94,7 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
   // Drag & drop & parsing state
   const [isDragOver, setIsDragOver] = useState(false);
   const [isParsingDocx, setIsParsingDocx] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   const skknInputRef = useRef<HTMLInputElement>(null);
   const rubricInputRef = useRef<HTMLInputElement>(null);
@@ -120,21 +121,19 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
           body: JSON.stringify({ base64Data: base64 })
         });
         const result = await resp.json();
-        if (result.text) {
-          textContent = result.text;
+        if (!resp.ok) throw new Error(result.error || 'Máy chủ chưa đọc được tệp Word.');
+        if (typeof result.text !== 'string' || result.text.trim().length < 250) {
+          throw new Error('Tệp Word không có đủ nội dung văn bản để chấm. Hãy kiểm tra tệp hoặc dán nội dung SKKN.');
         }
+        textContent = result.text;
       } catch (err) {
-        console.error('Lỗi phân tích docx:', err);
+        console.error('Lỗi đọc DOCX:', err);
+        throw err;
       } finally {
         setIsParsingDocx(false);
       }
     } else {
-      const arrayBuffer = await file.arrayBuffer();
-      const base64 = btoa(
-        new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-      );
-      dataBase64 = base64;
-      textContent = `[Tài liệu đính kèm: ${file.name}]`;
+      throw new Error('Hiện chưa trích xuất được nội dung định dạng này. Vui lòng chuyển sang DOCX/TXT hoặc dán nội dung SKKN; không thể chấm chỉ từ tên tệp.');
     }
 
     return { textContent, dataBase64 };
@@ -142,7 +141,21 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
 
   // SKKN Handlers
   const handleSelectSkkn = async (file: File) => {
-    const { textContent, dataBase64 } = await processFile(file);
+    setFileError(null);
+    setIsParsingDocx(true);
+    let textContent: string;
+    let dataBase64: string | undefined;
+    try {
+      ({ textContent, dataBase64 } = await processFile(file));
+      if (textContent.trim().length < 250) throw new Error('Nội dung SKKN quá ngắn hoặc không đọc được. Vui lòng chọn tệp đầy đủ.');
+    } catch (error: any) {
+      setFileError(error?.message || 'Không thể đọc tệp SKKN.');
+      setSkknFile(null);
+      setActiveMode('none');
+      return;
+    } finally {
+      setIsParsingDocx(false);
+    }
     setSkknFile({
       file,
       name: file.name,
@@ -229,7 +242,7 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
 
   // Validation
   const hasSkknContent = Boolean(
-    (activeMode === 'file' && skknFile) ||
+    (activeMode === 'file' && skknFile && skknFile.textContent.trim().length >= 250) ||
     (activeMode === 'paste' && pastedText.trim().length > 20)
   );
 
@@ -241,7 +254,7 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
 
     let finalSkknText = '';
     if (activeMode === 'file' && skknFile) {
-      finalSkknText = skknFile.textContent || `[Tài liệu SKKN: ${skknFile.name}]`;
+      finalSkknText = skknFile.textContent;
     } else {
       finalSkknText = pastedText;
     }
@@ -581,16 +594,27 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
           </div>
 
           {/* ERROR ALERT (NẾU CÓ LỖI) */}
+          {fileError && (
+            <div role="alert" className="p-3 rounded-xl border border-red-200 bg-red-50 text-red-800 text-[14px]">
+              {fileError}
+            </div>
+          )}
           {analysisError && (
             <div className="p-3.5 rounded-xl border border-amber-200 bg-amber-50/60 text-slate-800 space-y-2 animate-in fade-in duration-200">
               <div className="flex items-start gap-2.5">
                 <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <div className="text-[14px]">
                   <p className="font-bold text-slate-900">
-                    Phân tích chưa hoàn tất. Nội dung của Thầy/Cô vẫn được giữ lại.
+                    {typeof analysisError === 'string' ? 'Phân tích chưa hoàn tất' : analysisError.title}
                   </p>
                   <p className="text-slate-600 mt-0.5">
-                    {typeof analysisError === 'string' ? analysisError : (analysisError.message || 'Vui lòng kiểm tra kết nối hoặc thử lại khi dịch vụ AI sẵn sàng.')}
+                    {typeof analysisError === 'string' ? analysisError : analysisError.message}
+                  </p>
+                  {typeof analysisError !== 'string' && analysisError.subtext && (
+                    <p className="text-slate-500 mt-1">{analysisError.subtext}</p>
+                  )}
+                  <p className="text-slate-600 mt-0.5">
+                    Hồ sơ trên màn hình được giữ nguyên; có thể thử lại sau khi khắc phục lỗi.
                   </p>
                 </div>
               </div>
