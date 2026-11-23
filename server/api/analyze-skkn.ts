@@ -57,26 +57,34 @@ export default async function handler(req: any, res: any) {
   Không trả markdown. Yêu cầu bổ sung: ${JSON.stringify(notes)}.
   RUBRIC: ${JSON.stringify(rubric)}.
   MINH CHỨNG: ${JSON.stringify(evidence)}.
-  SKKN: ${JSON.stringify(skkn)}`;
+  SKKN: ${JSON.stringify(skkn.slice(0, 75000))}`;
   const model = process.env.GEMINI_ANALYSIS_MODEL || 'gemini-3.1-flash-lite';
-  try {
-    const response = await ai.models.generateContent({
-      model, contents: prompt,
-      config: { responseMimeType: 'application/json', temperature: 0.15 },
-    });
-    const raw = (response.text || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
-    let result: any;
-    try { result = JSON.parse(raw); } catch { return res.status(502).json({ code: 'PARSE_ERROR', error: 'AI trả về dữ liệu chưa hợp lệ. Hồ sơ gốc không bị thay đổi.' }); }
-    if (!result || typeof result !== 'object' || (!Array.isArray(result.rubric) && !Array.isArray(result.redTeamCards))) {
-      return res.status(502).json({ code: 'INVALID_ANALYSIS', error: 'AI chưa tạo được kết quả thẩm định có cấu trúc.' });
+  // Thử lại tại máy chủ cho lỗi quá tải tạm thời; không thay đổi model.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const response = await ai.models.generateContent({
+        model, contents: prompt,
+        config: { responseMimeType: 'application/json', temperature: 0.15, maxOutputTokens: 8192 },
+      });
+      const raw = (response.text || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+      let result: any;
+      try { result = JSON.parse(raw); }
+      catch { return res.status(502).json({ code: 'PARSE_ERROR', error: 'Phản hồi AI chưa hoàn chỉnh.' }); }
+      if (!result || typeof result !== 'object' || (!Array.isArray(result.rubric) && !Array.isArray(result.redTeamCards) && !Array.isArray(result.issues))) {
+        return res.status(502).json({ code: 'INVALID_ANALYSIS', error: 'AI chưa tạo được dữ liệu chấm SKKN.' });
+      }
+      if (Array.isArray(result.redTeamCards)) result.redTeamCards = result.redTeamCards.filter((x: any) =>
+        typeof x.relatedQuote === 'string' && x.relatedQuote.trim().length >= 12 && skkn.includes(x.relatedQuote.trim())
+      );
+      return res.status(200).json(result);
+    } catch (error: any) {
+      const info = parseGeminiError(error);
+      if ((info.status === 429 || info.status === 503) && attempt < 2) {
+        await new Promise(resolve => setTimeout(resolve, 800 * (attempt + 1)));
+        continue;
+      }
+      console.error('[analyze-skkn] AI failed', { status: info.status, code: info.code, model, attempt: attempt + 1 });
+      return res.status(info.status).json({ code: info.code, error: info.message });
     }
-    // Không đưa trích dẫn không có trong hồ sơ vào báo cáo.
-    if (Array.isArray(result.redTeamCards)) result.redTeamCards = result.redTeamCards.filter((x) =>
-      typeof x.relatedQuote === 'string' && x.relatedQuote.trim().length >= 12 && skkn.includes(x.relatedQuote.trim())
-    );
-    return res.status(200).json(result);
-  } catch (error) {
-    const info = parseGeminiError(error);
-    return res.status(info.status).json({ code: info.code, error: info.message });
   }
 }
