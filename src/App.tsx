@@ -15,7 +15,6 @@ import { UploadWorkspace } from './components/UploadWorkspace';
 import { CheckCircle2, FileText, ShieldAlert, Shield, FolderOpen } from 'lucide-react';
 import { FriendlyErrorInfo, classifyError, sleep, getRetryDelay } from './utils/aiErrorHandler';
 import { extractGeminiOutput, parseAnalysisResponse, normalizeAnalysisResult } from './utils/analysisPipeline';
-import { buildCouncilQuestions } from './utils/councilAutoQuestions';
 
 export type WorkflowStatus = 'IDLE' | 'ANALYZING' | 'COMPLETED' | 'ERROR';
 
@@ -862,7 +861,7 @@ export default function App() {
     console.log('ANALYSIS INPUT LENGTH:', skknText.length);
     console.log('ANALYSIS INPUT PREVIEW:', skknText.slice(0, 150).replace(/\n/g, ' '));
 
-    const MAX_RETRIES = 3;
+    const MAX_RETRIES = 1;
     let success = false;
     let lastError: FriendlyErrorInfo | null = null;
 
@@ -877,7 +876,7 @@ export default function App() {
 
         // 9. Timeout cho phân tích tài liệu dài
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 95000);
+        const timeoutId = setTimeout(() => controller.abort(), 180000);
 
         try {
           const response = await fetch('/api/analyze-skkn', {
@@ -936,7 +935,8 @@ export default function App() {
           try {
             const resText = await response.text();
             console.log('[STAGE: EXTRACT] Trích xuất dữ liệu kết quả');
-            const extracted = extractGeminiOutput(resText);
+            const responseObject = JSON.parse(resText);
+            const extracted = extractGeminiOutput(responseObject);
             console.log('[STAGE: PARSE] Parse an toàn cấu trúc kết quả');
             rawData = parseAnalysisResponse(extracted);
           } catch (jsonErr) {
@@ -1887,7 +1887,7 @@ export default function App() {
 
                 {activeTab === 'council' && (
                   <CouncilSimulatorView
-                    questions={buildCouncilQuestions(currentAnalysis, draftSkknText || originalSkknText || '')}
+                    questions={currentAnalysis.councilQuestions}
                     onGenerateMoreQuestions={handleGenerateMoreCouncilQuestions}
                     isLoadingMore={isLoadingMoreCouncil}
                   />
