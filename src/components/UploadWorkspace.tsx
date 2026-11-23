@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import JSZip from 'jszip';
 import {
   UploadCloud,
   FileText,
@@ -94,11 +95,38 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
   // Drag & drop & parsing state
   const [isDragOver, setIsDragOver] = useState(false);
   const [isParsingDocx, setIsParsingDocx] = useState(false);
-  const [fileError, setFileError] = useState<string | null>(null);
+  const [fileReadError, setFileReadError] = useState('');
 
   const skknInputRef = useRef<HTMLInputElement>(null);
   const rubricInputRef = useRef<HTMLInputElement>(null);
   const evidenceInputRef = useRef<HTMLInputElement>(null);
+
+  // Đọc trực tiếp OOXML trong trình duyệt; không phụ thuộc API trên Vercel.
+  const readDocxLocally = async (file: File): Promise<string> => {
+    const archive = await JSZip.loadAsync(await file.arrayBuffer());
+    const entry = archive.file('word/document.xml');
+    if (!entry) throw new Error('Tệp không có nội dung Word hợp lệ.');
+    const xml = await entry.async('string');
+    const documentXml = new DOMParser().parseFromString(xml, 'application/xml');
+    if (documentXml.getElementsByTagName('parsererror').length) throw new Error('Nội dung Word bị lỗi cấu trúc XML.');
+    const paragraphs = Array.from(documentXml.getElementsByTagNameNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'p'));
+    const lines = paragraphs.map(p => {
+      const parts: string[] = [];
+      const visit = (node: Node) => {
+        if (node.nodeType === 1) {
+          const element = node as Element;
+          const ns = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+          if (element.namespaceURI === ns && element.localName === 't') { parts.push(element.textContent || ''); return; }
+          if (element.namespaceURI === ns && element.localName === 'tab') { parts.push('\t'); return; }
+          if (element.namespaceURI === ns && (element.localName === 'br' || element.localName === 'cr')) { parts.push('\n'); return; }
+        }
+        node.childNodes.forEach(visit);
+      };
+      visit(p);
+      return parts.join('').trim();
+    });
+    return lines.filter(Boolean).join('\n');
+  };
 
   // File processing helper
   const processFile = async (file: File): Promise<{ textContent: string; dataBase64?: string }> => {
@@ -107,33 +135,42 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
 
     if (file.type.includes('text') || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
       textContent = await file.text();
-    } else if (file.name.endsWith('.docx')) {
+    } else if (/\.docx$/i.test(file.name)) {
       setIsParsingDocx(true);
       try {
-        const arrayBuffer = await file.arrayBuffer();
-        const base64 = btoa(
-          new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-        );
-        dataBase64 = base64;
-        const resp = await fetch('/api/parse-docx', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ base64Data: base64 })
-        });
-        const result = await resp.json();
-        if (!resp.ok) throw new Error(result.error || 'Máy chủ chưa đọc được tệp Word.');
-        if (typeof result.text !== 'string' || result.text.trim().length < 250) {
-          throw new Error('Tệp Word không có đủ nội dung văn bản để chấm. Hãy kiểm tra tệp hoặc dán nội dung SKKN.');
+        // Ưu tiên đọc tại máy người dùng, tránh lỗi mạng hoặc API.
+        try {
+          textContent = await readDocxLocally(file);
+        } catch (localError) {
+          console.warn('Đọc DOCX tại trình duyệt không thành công, chuyển sang API:', localError);
         }
-        textContent = result.text;
-      } catch (err) {
-        console.error('Lỗi đọc DOCX:', err);
-        throw err;
+        if (!textContent.trim()) {
+          const arrayBuffer = await file.arrayBuffer();
+          const bytes = new Uint8Array(arrayBuffer);
+          let binary = '';
+          for (let offset = 0; offset < bytes.length; offset += 8192) {
+            binary += String.fromCharCode(...bytes.subarray(offset, offset + 8192));
+          }
+          const resp = await fetch('/api/parse-docx', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ base64Data: btoa(binary) })
+          });
+          const payload = await resp.json();
+          if (!resp.ok) throw new Error(payload.error || 'Máy chủ không đọc được Word.');
+          textContent = typeof payload.text === 'string' ? payload.text : '';
+        }
+        if (!textContent.trim()) throw new Error('Không trích xuất được nội dung Word.');
       } finally {
         setIsParsingDocx(false);
       }
     } else {
-      throw new Error('Hiện chưa trích xuất được nội dung định dạng này. Vui lòng chuyển sang DOCX/TXT hoặc dán nội dung SKKN; không thể chấm chỉ từ tên tệp.');
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = btoa(
+        new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+      );
+      dataBase64 = base64;
+      textContent = `[Tài liệu đính kèm: ${file.name}]`;
     }
 
     return { textContent, dataBase64 };
@@ -141,20 +178,15 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
 
   // SKKN Handlers
   const handleSelectSkkn = async (file: File) => {
-    setFileError(null);
-    setIsParsingDocx(true);
+    setFileReadError('');
     let textContent: string;
     let dataBase64: string | undefined;
     try {
       ({ textContent, dataBase64 } = await processFile(file));
-      if (textContent.trim().length < 250) throw new Error('Nội dung SKKN quá ngắn hoặc không đọc được. Vui lòng chọn tệp đầy đủ.');
+      if (!textContent.trim()) throw new Error('Không tìm thấy nội dung trong tệp.');
     } catch (error: any) {
-      setFileError(error?.message || 'Không thể đọc tệp SKKN.');
-      setSkknFile(null);
-      setActiveMode('none');
+      setFileReadError(error?.message || 'Không thể đọc tệp Word.');
       return;
-    } finally {
-      setIsParsingDocx(false);
     }
     setSkknFile({
       file,
@@ -243,7 +275,7 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
   // Validation
   const hasSkknContent = Boolean(
     (activeMode === 'file' && skknFile && skknFile.textContent.trim().length >= 250) ||
-    (activeMode === 'paste' && pastedText.trim().length > 20)
+    (activeMode === 'paste' && pastedText.trim().length > 0)
   );
 
   const wordCount = pastedText.trim() ? pastedText.trim().split(/\s+/).filter(Boolean).length : 0;
@@ -287,7 +319,7 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
   };
 
   const currentMascotState = getMascotState();
-  const uploadMethod = skknFile ? 'file' : (pastedText && pastedText.trim().length > 20 ? 'paste' : 'file');
+  const uploadMethod = skknFile ? 'file' : (pastedText.trim() ? 'paste' : 'file');
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 sm:p-6 lg:p-7 select-none animate-in fade-in duration-200">
@@ -594,10 +626,8 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
           </div>
 
           {/* ERROR ALERT (NẾU CÓ LỖI) */}
-          {fileError && (
-            <div role="alert" className="p-3 rounded-xl border border-red-200 bg-red-50 text-red-800 text-[14px]">
-              {fileError}
-            </div>
+          {fileReadError && (
+            <div role="alert" className="p-3 rounded-xl border border-red-200 bg-red-50 text-red-800 text-[15px]">{fileReadError}</div>
           )}
           {analysisError && (
             <div className="p-3.5 rounded-xl border border-amber-200 bg-amber-50/60 text-slate-800 space-y-2 animate-in fade-in duration-200">
