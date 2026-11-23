@@ -837,13 +837,13 @@ export default function App() {
       return;
     }
 
-    if (!skknText || skknText.trim().length < 20) {
+    if (!skknText || !skknText.trim()) {
       setWorkflowStatus('ERROR');
       setAnalysisError({
         category: 'INVALID_INPUT',
         title: 'Nội dung SKKN chưa đủ',
         message: 'Thầy/Cô vui lòng dán hoặc tải tài liệu SKKN đầy đủ trước khi thẩm định.',
-        subtext: 'Nội dung SKKN cần có độ dài tối thiểu để hệ thống phân tích cấu trúc.',
+        subtext: 'Hãy nhập ít nhất một ký tự có nội dung.',
         canRetry: false,
         isTemporary: false
       });
@@ -861,7 +861,7 @@ export default function App() {
     console.log('ANALYSIS INPUT LENGTH:', skknText.length);
     console.log('ANALYSIS INPUT PREVIEW:', skknText.slice(0, 150).replace(/\n/g, ' '));
 
-    const MAX_RETRIES = 1;
+    const MAX_RETRIES = 3;
     let success = false;
     let lastError: FriendlyErrorInfo | null = null;
 
@@ -876,7 +876,7 @@ export default function App() {
 
         // 9. Timeout cho phân tích tài liệu dài
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 180000);
+        const timeoutId = setTimeout(() => controller.abort(), 95000);
 
         try {
           const response = await fetch('/api/analyze-skkn', {
@@ -935,8 +935,7 @@ export default function App() {
           try {
             const resText = await response.text();
             console.log('[STAGE: EXTRACT] Trích xuất dữ liệu kết quả');
-            const responseObject = JSON.parse(resText);
-            const extracted = extractGeminiOutput(responseObject);
+            const extracted = extractGeminiOutput(resText);
             console.log('[STAGE: PARSE] Parse an toàn cấu trúc kết quả');
             rawData = parseAnalysisResponse(extracted);
           } catch (jsonErr) {
@@ -1257,7 +1256,7 @@ export default function App() {
     setIsLoadingMoreCouncil(true);
     try {
       const skknText = draftSkknText || originalSkknText || '';
-      if (skknText.trim().length < 250) {
+      if (!skknText.trim()) {
         window.alert('Không tìm thấy nội dung file SKKN đang mở. Vui lòng tải lại hồ sơ gốc trước khi tạo câu hỏi.');
         return;
       }
