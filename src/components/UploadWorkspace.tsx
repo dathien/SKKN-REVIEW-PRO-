@@ -274,7 +274,7 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
 
   // Validation
   const hasSkknContent = Boolean(
-    (activeMode === 'file' && skknFile && skknFile.textContent.trim().length >= 250) ||
+    (activeMode === 'file' && skknFile && skknFile.textContent.trim().length > 0) ||
     (activeMode === 'paste' && pastedText.trim().length > 0)
   );
 
