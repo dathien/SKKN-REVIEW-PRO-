@@ -105,5 +105,10 @@
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "functions": {
+    "api/analyze-skkn.js": {
+      "maxDuration": 180
+    }
+  }
 }
