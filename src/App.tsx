@@ -861,7 +861,7 @@ export default function App() {
     console.log('ANALYSIS INPUT LENGTH:', skknText.length);
     console.log('ANALYSIS INPUT PREVIEW:', skknText.slice(0, 150).replace(/\n/g, ' '));
 
-    const MAX_RETRIES = 3;
+    const MAX_RETRIES = 0;
     let success = false;
     let lastError: FriendlyErrorInfo | null = null;
 
@@ -876,7 +876,7 @@ export default function App() {
 
         // 9. Timeout cho phân tích tài liệu dài
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 95000);
+        const timeoutId = setTimeout(() => controller.abort(), 190000);
 
         try {
           const response = await fetch('/api/analyze-skkn', {
